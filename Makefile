@@ -1,14 +1,18 @@
-# AppTemplate — build/run wrapper around xcodebuild. Mirrors sidekick-ios so the
+# Clonk — build/run wrapper around xcodebuild. Mirrors sidekick-ios so the
 # muscle memory carries across our apps.
 #
-#   make run     — build + launch in the sim
+#   make run     — build + launch in the simulator
 #   make device  — build + install + launch on a paired iPhone
 #
-APP_NAME       := AppTemplate
-SCHEME         := AppTemplate
-BUNDLE_ID      := ltd.anti.apptemplate
+# Clonk is a custom keyboard: the `Clonk` scheme builds the container app AND
+# embeds the `ClonkKeyboard` extension. To actually type with it you must enable
+# it once in Settings → General → Keyboard → Keyboards → Add New Keyboard.
+#
+APP_NAME       := Clonk
+SCHEME         := Clonk
+BUNDLE_ID      := ltd.anti.clonk
 
-PROJECT        := AppTemplate.xcodeproj
+PROJECT        := Clonk.xcodeproj
 BUILD_DIR      := build
 DERIVED        := $(BUILD_DIR)/DerivedData
 CONFIG         ?= Debug
@@ -24,24 +28,34 @@ DEVICE         ?=
 DEVICE_NAME    ?=
 
 .PHONY: all project icon build run sim install clean stop help test \
-        device device-install device-launch build-device
+        device device-install device-launch build-device \
+        device-showcase build-device-showcase
+
+# Extra Swift compilation conditions for the showcase build. SHOWCASE flips the
+# app's root to the typing-simulator screen (Sources/Clonk/UI/ShowcaseView.swift);
+# DEBUG is kept so the rest of the debug-only scaffolding still compiles.
+SHOWCASE_CONDITIONS := DEBUG SHOWCASE
 
 all: build
 
 help:
 	@echo "Simulator targets:"
 	@echo "  make project — regenerate $(PROJECT) from project.yml (needs xcodegen)"
-	@echo "  make icon    — render the AppTemplate app icon PNGs into Assets.xcassets"
+	@echo "  make icon    — render the app icon PNGs into Assets.xcassets"
 	@echo "  make build   — xcodebuild for the iOS simulator"
-	@echo "  make run     — boot the sim, install, launch"
-	@echo "  make stop    — terminate the running AppTemplate sim instance"
+	@echo "  make run     — boot the sim, install, launch Clonk"
+	@echo "  make stop    — terminate the running sim instance"
 	@echo "  make test    — run unit tests on the simulator"
 	@echo "  make clean   — remove $(BUILD_DIR) and $(PROJECT)"
 	@echo ""
 	@echo "Device targets (requires a paired, unlocked iPhone):"
-	@echo "  make device         — build + install + launch on the paired iPhone"
+	@echo "  make device         — build + install + launch Clonk on the paired iPhone"
 	@echo "  make device-install — build + install (no launch)"
-	@echo "  make device-launch  — just relaunch the installed AppTemplate app"
+	@echo "  make device-launch  — just relaunch the installed app"
+	@echo ""
+	@echo "Showcase target (typing-simulator build for demo capture):"
+	@echo "  make device-showcase — build + install + launch the showcase build"
+	@echo "                         on the paired iPhone (boots into the typer)"
 	@echo ""
 	@echo "Overrides:"
 	@echo "  SIM_NAME=\"iPhone 16 Pro Max\"  pick a different simulator"
@@ -161,4 +175,49 @@ device-install: build-device
 device-launch:
 	@if [ -z "$(DEVICE_UDID)" ]; then echo "No paired iPhone — see \`make device-install\`."; exit 1; fi
 	@echo "Launching $(BUNDLE_ID) on $(DEVICE_UDID)..."
+	xcrun devicectl device process launch --device "$(DEVICE_UDID)" "$(BUNDLE_ID)" || true
+
+# ============================================================
+# Showcase build — the typing-simulator demo build. Same device pipeline as
+# `make device`, but compiled with the SHOWCASE condition so the app boots into
+# ShowcaseView. Regenerates the project first so a freshly-added showcase source
+# is always picked up.
+# ============================================================
+build-device-showcase: project
+	@mkdir -p $(BUILD_DIR)
+	xcodebuild \
+		-project $(PROJECT) \
+		-scheme $(SCHEME) \
+		-configuration $(CONFIG) \
+		-destination 'generic/platform=iOS' \
+		-derivedDataPath $(DERIVED) \
+		-allowProvisioningUpdates \
+		SWIFT_ACTIVE_COMPILATION_CONDITIONS="$(SHOWCASE_CONDITIONS)" \
+		build | xcbeautify --quiet 2>/dev/null || \
+	xcodebuild \
+		-project $(PROJECT) \
+		-scheme $(SCHEME) \
+		-configuration $(CONFIG) \
+		-destination 'generic/platform=iOS' \
+		-derivedDataPath $(DERIVED) \
+		-allowProvisioningUpdates \
+		SWIFT_ACTIVE_COMPILATION_CONDITIONS="$(SHOWCASE_CONDITIONS)" \
+		build
+
+device-showcase: build-device-showcase
+	@if [ -z "$(DEVICE_UDID)" ]; then \
+		echo ""; \
+		echo "No paired iPhone found. Steps:" >&2; \
+		echo "  1. Plug your phone in (or pair over Wi-Fi via Finder)." >&2; \
+		echo "  2. Unlock it and accept the 'Trust This Computer' prompt." >&2; \
+		echo "  3. Run: xcrun devicectl list devices" >&2; \
+		echo "     If it lists the phone, re-run \`make device-showcase\`." >&2; \
+		echo ""; \
+		exit 1; \
+	fi
+	@APP=$$(find $(DERIVED)/Build/Products/Debug-iphoneos -name "$(APP_NAME).app" -type d | head -n1); \
+	if [ -z "$$APP" ]; then echo "No iOS-device .app found in $(DERIVED)"; exit 1; fi; \
+	echo "Installing showcase build $$APP to device $(DEVICE_UDID)..."; \
+	xcrun devicectl device install app --device "$(DEVICE_UDID)" "$$APP"; \
+	echo "Launching $(BUNDLE_ID) on $(DEVICE_UDID)..."; \
 	xcrun devicectl device process launch --device "$(DEVICE_UDID)" "$(BUNDLE_ID)" || true

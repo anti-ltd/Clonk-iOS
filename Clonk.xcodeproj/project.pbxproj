@@ -1,0 +1,774 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02DDF5D74E389A9D871FA8B9 /* KeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25F75F20A5494A4B684EF32 /* KeyboardController.swift */; };
+		07F55AFAD8112EB37782CBAC /* KeyboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6113F9D169C0B7536E310EC8 /* KeyboardSettings.swift */; };
+		0BE1E5CAF6C6E2609D5CB8B8 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC1610713CFD4E0438A024E /* KeyboardLayout.swift */; };
+		0FAD38562945266F6B0F136D /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C13A994CB55BF252B67CE86C /* SoundPack.swift */; };
+		13D4F130D6583FEEF347FD9B /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */; };
+		176D2EA764BF96CEB32DBD7A /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC1610713CFD4E0438A024E /* KeyboardLayout.swift */; };
+		1C0BC443EB2896A9B1034B65 /* AppStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2726D104440DFF6A34597D32 /* AppStage.swift */; };
+		1C6431268C28788D598A307D /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4D2A1BF24596BDD04C6F63 /* KeyboardViewController.swift */; };
+		1D35C7B4670E03ABC13D08AE /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = B930641D944F39AB97AC4B42 /* iUXiOS */; };
+		1F2F9A2114758E801C638402 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */; };
+		20D9F37F5CD813E6930786D4 /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C9C863E017544F25F474275 /* SoundPlayer.swift */; };
+		22DB31EB46E1295BCCADD7F8 /* RGBA.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */; };
+		28119574A5E13E30D06E5CF7 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */; };
+		2A06CD7F7070899FAAFB6590 /* SoundPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E06A50486DF8BEAE1574D98 /* SoundPickerView.swift */; };
+		2B151A1078C134619F007A5C /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56BAF1F711A0509D91F78CA /* SharedStore.swift */; };
+		2C959B142DDA07E0874B1E66 /* ThemeBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129453CAF34D378AC8EBA8A7 /* ThemeBuilderView.swift */; };
+		3596BA082F7088D65718D720 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */; };
+		3DD644329C8F2FEB4CCF2639 /* ClonkEmoji.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C6CC1F287ADDC49A1FB45C7C /* ClonkEmoji.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		49D8EDC105A047E1962FF783 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B95B22E5406247DB205029 /* Theme.swift */; };
+		49EA71A7E8FAF70C2543F2D4 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */; };
+		4EB711B668C889F26D5FEC15 /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895F15C1CBE50956C39FC12A /* EmojiData.swift */; };
+		4F34491B126728FE24B3925E /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */; };
+		56704D2C6ED6F06C1DEA26B8 /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895F15C1CBE50956C39FC12A /* EmojiData.swift */; };
+		58DA020896E1FAD12193AFC0 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC1610713CFD4E0438A024E /* KeyboardLayout.swift */; };
+		5A092915ACB0177FF6F3D359 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B95B22E5406247DB205029 /* Theme.swift */; };
+		5A6F81F8B6D68EC4484658EC /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C9C863E017544F25F474275 /* SoundPlayer.swift */; };
+		5AC8A066B319825B1DFEE880 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = FD56EC2631288485785925D7 /* iUXiOS */; };
+		5FDBCDED4127113008B656FA /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 884400100A1655FBDCE44B39 /* iUXiOS */; };
+		60A5A4D87A7E4617527DAC22 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B95B22E5406247DB205029 /* Theme.swift */; };
+		7096F064F1885600801890BD /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */; };
+		8131C58256FAB194F8F1DA2F /* KeyboardPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D24726AD195475AB0C896AA /* KeyboardPreview.swift */; };
+		8139EB0EF99198AB8D91CA98 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7FA6710A816B72295E299762 /* Assets.xcassets */; };
+		88773DA8CBF174C87B5401E6 /* KeyboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6113F9D169C0B7536E310EC8 /* KeyboardSettings.swift */; };
+		8A97D4BA5B1E1ADDE1569E2F /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */; };
+		8F9BA1A7837465B4FC05AA8C /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */; };
+		9024BD55D40C7DEC548A8983 /* ClonkKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 471FA9A6FDF96DA8D9FDEDF8 /* ClonkKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		91390A0EB8F291B2554BDE9B /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56BAF1F711A0509D91F78CA /* SharedStore.swift */; };
+		9CEAF843E6A4BC4794AEC630 /* ThemeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6E36A41FDFF54407F6243E /* ThemeEditorView.swift */; };
+		AC18A42B6949466C6AA4FDF1 /* RGBA.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */; };
+		B3E128BF8065C32B2EF83065 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */; };
+		B5AD265BD4F65ED92D1E4294 /* KeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25F75F20A5494A4B684EF32 /* KeyboardController.swift */; };
+		B6DBFA199E7CC24D4FC67B92 /* LayoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE576E2E8812AB169B8064B /* LayoutPickerView.swift */; };
+		B7E6579D116E1D7B129B9E17 /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895F15C1CBE50956C39FC12A /* EmojiData.swift */; };
+		BD51ADEA3FFFBABC7459CD18 /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */; };
+		C3CE59505D079115DE4078B9 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A640E42BEF1FBCCFBCF64835 /* RootView.swift */; };
+		CA5C59A9C07E085C4DB7C7E4 /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C9C863E017544F25F474275 /* SoundPlayer.swift */; };
+		CBF34AE14E3BD2A73F85C09D /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C13A994CB55BF252B67CE86C /* SoundPack.swift */; };
+		D074C7254421B4E2C1AFA190 /* KeyboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6113F9D169C0B7536E310EC8 /* KeyboardSettings.swift */; };
+		D6238B44161B3C0D00E1789A /* ShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEAD3C327869A676C0378DFE /* ShowcaseView.swift */; };
+		D716444A7867A7BDCBA9E3EA /* KeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25F75F20A5494A4B684EF32 /* KeyboardController.swift */; };
+		D941194A46BB81DFF6C76441 /* ClonkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13CDD0669F2B08464127174C /* ClonkApp.swift */; };
+		DE10E16F6EF7D9FE973B0602 /* RGBA.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */; };
+		E436B73333369F0375105BC2 /* EmojiKeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFFC766484F1B441AC47E5D /* EmojiKeyboardViewController.swift */; };
+		EA791FE56141716050088783 /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C13A994CB55BF252B67CE86C /* SoundPack.swift */; };
+		EF3BA575A3AC86F35DE770A0 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */; };
+		F1BD9B5CBAB617B4198EE66A /* EnableFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5636CAC4D2AFDCCEE0F484 /* EnableFlowView.swift */; };
+		F5EFF073BB1D444B205EBBA5 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D8C2EE560646B86A59F653F /* AppModel.swift */; };
+		FFBB697B0B95BDC5061CCFC3 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56BAF1F711A0509D91F78CA /* SharedStore.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B0A979BBCF5F5B5CC84547C5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00ADE5E2BB4C30EAEC707B14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3DC3AF70EC76F682795DC457;
+			remoteInfo = ClonkKeyboard;
+		};
+		ECF9F491FF7312276791D7A8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 00ADE5E2BB4C30EAEC707B14 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F71A18A07168C8F22F175863;
+			remoteInfo = ClonkEmoji;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		56A69692DA4043838C4F0F46 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9024BD55D40C7DEC548A8983 /* ClonkKeyboard.appex in Embed Foundation Extensions */,
+				3DD644329C8F2FEB4CCF2639 /* ClonkEmoji.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		03B95B22E5406247DB205029 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		0D4D2A1BF24596BDD04C6F63 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
+		129453CAF34D378AC8EBA8A7 /* ThemeBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeBuilderView.swift; sourceTree = "<group>"; };
+		13CDD0669F2B08464127174C /* ClonkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClonkApp.swift; sourceTree = "<group>"; };
+		2726D104440DFF6A34597D32 /* AppStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStage.swift; sourceTree = "<group>"; };
+		2D24726AD195475AB0C896AA /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
+		2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLiveState.swift; sourceTree = "<group>"; };
+		417754F6616BBCBC9293BF1B /* Clonk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Clonk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		471FA9A6FDF96DA8D9FDEDF8 /* ClonkKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClonkKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DC1610713CFD4E0438A024E /* KeyboardLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLayout.swift; sourceTree = "<group>"; };
+		4F6E36A41FDFF54407F6243E /* ThemeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEditorView.swift; sourceTree = "<group>"; };
+		6113F9D169C0B7536E310EC8 /* KeyboardSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardSettings.swift; sourceTree = "<group>"; };
+		6A5636CAC4D2AFDCCEE0F484 /* EnableFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnableFlowView.swift; sourceTree = "<group>"; };
+		6E06A50486DF8BEAE1574D98 /* SoundPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPickerView.swift; sourceTree = "<group>"; };
+		750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCanvas.swift; sourceTree = "<group>"; };
+		7FA6710A816B72295E299762 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		895F15C1CBE50956C39FC12A /* EmojiData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.swift; sourceTree = "<group>"; };
+		8C9C863E017544F25F474275 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
+		8D8C2EE560646B86A59F653F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A640E42BEF1FBCCFBCF64835 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBA.swift; sourceTree = "<group>"; };
+		ABE576E2E8812AB169B8064B /* LayoutPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutPickerView.swift; sourceTree = "<group>"; };
+		AD16E37049A30BCB0C27372B /* iUX-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "iUX-ios"; path = "../iUX-ios"; sourceTree = SOURCE_ROOT; };
+		C13A994CB55BF252B67CE86C /* SoundPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPack.swift; sourceTree = "<group>"; };
+		C6CC1F287ADDC49A1FB45C7C /* ClonkEmoji.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClonkEmoji.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CDFFC766484F1B441AC47E5D /* EmojiKeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiKeyboardViewController.swift; sourceTree = "<group>"; };
+		CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCanvas.swift; sourceTree = "<group>"; };
+		D25F75F20A5494A4B684EF32 /* KeyboardController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardController.swift; sourceTree = "<group>"; };
+		DEAD3C327869A676C0378DFE /* ShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseView.swift; sourceTree = "<group>"; };
+		E56BAF1F711A0509D91F78CA /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
+		FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionEngine.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		34F2335B225FDD97576719F7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5AC8A066B319825B1DFEE880 /* iUXiOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		480CD7BCB7CD4808C33E56DD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D35C7B4670E03ABC13D08AE /* iUXiOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		49F9E5620D0FA790F14A6A86 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5FDBCDED4127113008B656FA /* iUXiOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1C421DA83AD6A861B3B4A904 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7FA6710A816B72295E299762 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		2DF8B24FE1B2199C9EBBC9F1 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				5E5630AD4D38E88D81360F31 /* Clonk */,
+				71B9C4C8C8C0CD4EA633DFB4 /* ClonkEmoji */,
+				70FB11707C8621F352C7056B /* ClonkKeyboard */,
+				EB29C42B8351F6F5ACC49A8A /* ClonkKit */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		40F0A128677D0834F0CEC229 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				AD16E37049A30BCB0C27372B /* iUX-ios */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		44E577B1D3AAD6A8670F14AA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				417754F6616BBCBC9293BF1B /* Clonk.app */,
+				C6CC1F287ADDC49A1FB45C7C /* ClonkEmoji.appex */,
+				471FA9A6FDF96DA8D9FDEDF8 /* ClonkKeyboard.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5E5630AD4D38E88D81360F31 /* Clonk */ = {
+			isa = PBXGroup;
+			children = (
+				8D8C2EE560646B86A59F653F /* AppModel.swift */,
+				2726D104440DFF6A34597D32 /* AppStage.swift */,
+				13CDD0669F2B08464127174C /* ClonkApp.swift */,
+				C89EEA9C23718A2E209F911D /* UI */,
+			);
+			path = Clonk;
+			sourceTree = "<group>";
+		};
+		70FB11707C8621F352C7056B /* ClonkKeyboard */ = {
+			isa = PBXGroup;
+			children = (
+				0D4D2A1BF24596BDD04C6F63 /* KeyboardViewController.swift */,
+			);
+			path = ClonkKeyboard;
+			sourceTree = "<group>";
+		};
+		71B9C4C8C8C0CD4EA633DFB4 /* ClonkEmoji */ = {
+			isa = PBXGroup;
+			children = (
+				CDFFC766484F1B441AC47E5D /* EmojiKeyboardViewController.swift */,
+			);
+			path = ClonkEmoji;
+			sourceTree = "<group>";
+		};
+		BD04DA7A946A6D86798A3E16 = {
+			isa = PBXGroup;
+			children = (
+				40F0A128677D0834F0CEC229 /* Packages */,
+				1C421DA83AD6A861B3B4A904 /* Resources */,
+				2DF8B24FE1B2199C9EBBC9F1 /* Sources */,
+				44E577B1D3AAD6A8670F14AA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C89EEA9C23718A2E209F911D /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				6A5636CAC4D2AFDCCEE0F484 /* EnableFlowView.swift */,
+				2D24726AD195475AB0C896AA /* KeyboardPreview.swift */,
+				ABE576E2E8812AB169B8064B /* LayoutPickerView.swift */,
+				A640E42BEF1FBCCFBCF64835 /* RootView.swift */,
+				DEAD3C327869A676C0378DFE /* ShowcaseView.swift */,
+				6E06A50486DF8BEAE1574D98 /* SoundPickerView.swift */,
+				129453CAF34D378AC8EBA8A7 /* ThemeBuilderView.swift */,
+				4F6E36A41FDFF54407F6243E /* ThemeEditorView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		EB29C42B8351F6F5ACC49A8A /* ClonkKit */ = {
+			isa = PBXGroup;
+			children = (
+				CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */,
+				895F15C1CBE50956C39FC12A /* EmojiData.swift */,
+				750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */,
+				D25F75F20A5494A4B684EF32 /* KeyboardController.swift */,
+				4DC1610713CFD4E0438A024E /* KeyboardLayout.swift */,
+				2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */,
+				6113F9D169C0B7536E310EC8 /* KeyboardSettings.swift */,
+				A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */,
+				E56BAF1F711A0509D91F78CA /* SharedStore.swift */,
+				C13A994CB55BF252B67CE86C /* SoundPack.swift */,
+				8C9C863E017544F25F474275 /* SoundPlayer.swift */,
+				FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */,
+				03B95B22E5406247DB205029 /* Theme.swift */,
+			);
+			path = ClonkKit;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2FB94024EA622B971B657625 /* Clonk */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0F375CD7FDA08B4B46199BFB /* Build configuration list for PBXNativeTarget "Clonk" */;
+			buildPhases = (
+				3B066180905B438654FE54ED /* Sources */,
+				DD33EA4A901BF3D83F23823E /* Resources */,
+				480CD7BCB7CD4808C33E56DD /* Frameworks */,
+				56A69692DA4043838C4F0F46 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				500CE8E508FF649083E5778C /* PBXTargetDependency */,
+				D98BC01EC8847F70AA72A64C /* PBXTargetDependency */,
+			);
+			name = Clonk;
+			packageProductDependencies = (
+				B930641D944F39AB97AC4B42 /* iUXiOS */,
+			);
+			productName = Clonk;
+			productReference = 417754F6616BBCBC9293BF1B /* Clonk.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3DC3AF70EC76F682795DC457 /* ClonkKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD572C62E0490A09495D366B /* Build configuration list for PBXNativeTarget "ClonkKeyboard" */;
+			buildPhases = (
+				93B97A16A869E5E36128552F /* Sources */,
+				34F2335B225FDD97576719F7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClonkKeyboard;
+			packageProductDependencies = (
+				FD56EC2631288485785925D7 /* iUXiOS */,
+			);
+			productName = ClonkKeyboard;
+			productReference = 471FA9A6FDF96DA8D9FDEDF8 /* ClonkKeyboard.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		F71A18A07168C8F22F175863 /* ClonkEmoji */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BCC8504D19E3A8C916241B1B /* Build configuration list for PBXNativeTarget "ClonkEmoji" */;
+			buildPhases = (
+				19E6ED71C743175DBA96CB16 /* Sources */,
+				49F9E5620D0FA790F14A6A86 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClonkEmoji;
+			packageProductDependencies = (
+				884400100A1655FBDCE44B39 /* iUXiOS */,
+			);
+			productName = ClonkEmoji;
+			productReference = C6CC1F287ADDC49A1FB45C7C /* ClonkEmoji.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		00ADE5E2BB4C30EAEC707B14 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					2FB94024EA622B971B657625 = {
+						DevelopmentTeam = 8248296AJX;
+						ProvisioningStyle = Automatic;
+					};
+					3DC3AF70EC76F682795DC457 = {
+						DevelopmentTeam = 8248296AJX;
+						ProvisioningStyle = Automatic;
+					};
+					F71A18A07168C8F22F175863 = {
+						DevelopmentTeam = 8248296AJX;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = B22B28C799CDFB436AB86CBA /* Build configuration list for PBXProject "Clonk" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = BD04DA7A946A6D86798A3E16;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				73482CAA6A9F881F2B2259F8 /* XCLocalSwiftPackageReference "../iUX-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 44E577B1D3AAD6A8670F14AA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2FB94024EA622B971B657625 /* Clonk */,
+				F71A18A07168C8F22F175863 /* ClonkEmoji */,
+				3DC3AF70EC76F682795DC457 /* ClonkKeyboard */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DD33EA4A901BF3D83F23823E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8139EB0EF99198AB8D91CA98 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		19E6ED71C743175DBA96CB16 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4F34491B126728FE24B3925E /* EmojiCanvas.swift in Sources */,
+				B7E6579D116E1D7B129B9E17 /* EmojiData.swift in Sources */,
+				E436B73333369F0375105BC2 /* EmojiKeyboardViewController.swift in Sources */,
+				28119574A5E13E30D06E5CF7 /* KeyboardCanvas.swift in Sources */,
+				02DDF5D74E389A9D871FA8B9 /* KeyboardController.swift in Sources */,
+				176D2EA764BF96CEB32DBD7A /* KeyboardLayout.swift in Sources */,
+				BD51ADEA3FFFBABC7459CD18 /* KeyboardLiveState.swift in Sources */,
+				88773DA8CBF174C87B5401E6 /* KeyboardSettings.swift in Sources */,
+				DE10E16F6EF7D9FE973B0602 /* RGBA.swift in Sources */,
+				2B151A1078C134619F007A5C /* SharedStore.swift in Sources */,
+				EA791FE56141716050088783 /* SoundPack.swift in Sources */,
+				CA5C59A9C07E085C4DB7C7E4 /* SoundPlayer.swift in Sources */,
+				8A97D4BA5B1E1ADDE1569E2F /* SuggestionEngine.swift in Sources */,
+				5A092915ACB0177FF6F3D359 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3B066180905B438654FE54ED /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5EFF073BB1D444B205EBBA5 /* AppModel.swift in Sources */,
+				1C0BC443EB2896A9B1034B65 /* AppStage.swift in Sources */,
+				D941194A46BB81DFF6C76441 /* ClonkApp.swift in Sources */,
+				1F2F9A2114758E801C638402 /* EmojiCanvas.swift in Sources */,
+				56704D2C6ED6F06C1DEA26B8 /* EmojiData.swift in Sources */,
+				F1BD9B5CBAB617B4198EE66A /* EnableFlowView.swift in Sources */,
+				8F9BA1A7837465B4FC05AA8C /* KeyboardCanvas.swift in Sources */,
+				D716444A7867A7BDCBA9E3EA /* KeyboardController.swift in Sources */,
+				58DA020896E1FAD12193AFC0 /* KeyboardLayout.swift in Sources */,
+				7096F064F1885600801890BD /* KeyboardLiveState.swift in Sources */,
+				8131C58256FAB194F8F1DA2F /* KeyboardPreview.swift in Sources */,
+				07F55AFAD8112EB37782CBAC /* KeyboardSettings.swift in Sources */,
+				B6DBFA199E7CC24D4FC67B92 /* LayoutPickerView.swift in Sources */,
+				22DB31EB46E1295BCCADD7F8 /* RGBA.swift in Sources */,
+				C3CE59505D079115DE4078B9 /* RootView.swift in Sources */,
+				91390A0EB8F291B2554BDE9B /* SharedStore.swift in Sources */,
+				D6238B44161B3C0D00E1789A /* ShowcaseView.swift in Sources */,
+				CBF34AE14E3BD2A73F85C09D /* SoundPack.swift in Sources */,
+				2A06CD7F7070899FAAFB6590 /* SoundPickerView.swift in Sources */,
+				5A6F81F8B6D68EC4484658EC /* SoundPlayer.swift in Sources */,
+				EF3BA575A3AC86F35DE770A0 /* SuggestionEngine.swift in Sources */,
+				60A5A4D87A7E4617527DAC22 /* Theme.swift in Sources */,
+				2C959B142DDA07E0874B1E66 /* ThemeBuilderView.swift in Sources */,
+				9CEAF843E6A4BC4794AEC630 /* ThemeEditorView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		93B97A16A869E5E36128552F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B3E128BF8065C32B2EF83065 /* EmojiCanvas.swift in Sources */,
+				4EB711B668C889F26D5FEC15 /* EmojiData.swift in Sources */,
+				3596BA082F7088D65718D720 /* KeyboardCanvas.swift in Sources */,
+				B5AD265BD4F65ED92D1E4294 /* KeyboardController.swift in Sources */,
+				0BE1E5CAF6C6E2609D5CB8B8 /* KeyboardLayout.swift in Sources */,
+				13D4F130D6583FEEF347FD9B /* KeyboardLiveState.swift in Sources */,
+				D074C7254421B4E2C1AFA190 /* KeyboardSettings.swift in Sources */,
+				1C6431268C28788D598A307D /* KeyboardViewController.swift in Sources */,
+				AC18A42B6949466C6AA4FDF1 /* RGBA.swift in Sources */,
+				FFBB697B0B95BDC5061CCFC3 /* SharedStore.swift in Sources */,
+				0FAD38562945266F6B0F136D /* SoundPack.swift in Sources */,
+				20D9F37F5CD813E6930786D4 /* SoundPlayer.swift in Sources */,
+				49EA71A7E8FAF70C2543F2D4 /* SuggestionEngine.swift in Sources */,
+				49D8EDC105A047E1962FF783 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		500CE8E508FF649083E5778C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3DC3AF70EC76F682795DC457 /* ClonkKeyboard */;
+			targetProxy = B0A979BBCF5F5B5CC84547C5 /* PBXContainerItemProxy */;
+		};
+		D98BC01EC8847F70AA72A64C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F71A18A07168C8F22F175863 /* ClonkEmoji */;
+			targetProxy = ECF9F491FF7312276791D7A8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0174E6623847CB205FAF88D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 8248296AJX;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		0D6326D37ECD82A51C6BB58C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8248296AJX;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		1AB1DC449D703CBB26A3F617 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Clonk.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "Resources/Clonk-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ltd.anti.clonk;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		62DF59F886408A0949D5BA87 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Resources/ClonkKeyboard.entitlements;
+				INFOPLIST_FILE = "Resources/ClonkKeyboard-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ltd.anti.clonk.keyboard;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A736DEC470A704C2EBD17B47 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/Clonk.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "Resources/Clonk-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ltd.anti.clonk;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BBFBA631E5F0ACFB6CF1D4EC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Resources/ClonkKeyboard.entitlements;
+				INFOPLIST_FILE = "Resources/ClonkKeyboard-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ltd.anti.clonk.keyboard;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E8F0874710EA154D1981888D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Resources/ClonkEmoji.entitlements;
+				INFOPLIST_FILE = "Resources/ClonkEmoji-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ltd.anti.clonk.emoji;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		EE85C376914DD41AAAB89419 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Resources/ClonkEmoji.entitlements;
+				INFOPLIST_FILE = "Resources/ClonkEmoji-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ltd.anti.clonk.emoji;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0F375CD7FDA08B4B46199BFB /* Build configuration list for PBXNativeTarget "Clonk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AB1DC449D703CBB26A3F617 /* Debug */,
+				A736DEC470A704C2EBD17B47 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B22B28C799CDFB436AB86CBA /* Build configuration list for PBXProject "Clonk" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0174E6623847CB205FAF88D3 /* Debug */,
+				0D6326D37ECD82A51C6BB58C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BCC8504D19E3A8C916241B1B /* Build configuration list for PBXNativeTarget "ClonkEmoji" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EE85C376914DD41AAAB89419 /* Debug */,
+				E8F0874710EA154D1981888D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DD572C62E0490A09495D366B /* Build configuration list for PBXNativeTarget "ClonkKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BBFBA631E5F0ACFB6CF1D4EC /* Debug */,
+				62DF59F886408A0949D5BA87 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		73482CAA6A9F881F2B2259F8 /* XCLocalSwiftPackageReference "../iUX-ios" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../iUX-ios";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		884400100A1655FBDCE44B39 /* iUXiOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = iUXiOS;
+		};
+		B930641D944F39AB97AC4B42 /* iUXiOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = iUXiOS;
+		};
+		FD56EC2631288485785925D7 /* iUXiOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = iUXiOS;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 00ADE5E2BB4C30EAEC707B14 /* Project object */;
+}

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Resources/banner.png" alt="AppTemplate">
+<img src="Resources/banner.png" alt="Clonk">
 
 <br>
 
@@ -8,9 +8,9 @@
 
 <br><br>
 
-# AppTemplate
+# Clonk
 
-**A new iOS app.**
+**A fully customizable iOS keyboard.**
 
 ![Platform](https://img.shields.io/badge/iOS%2017%2B-black?style=flat-square)
 ![Language](https://img.shields.io/badge/Swift%206.0-orange?style=flat-square&logo=swift)
@@ -20,84 +20,124 @@
 ![Offline-first](https://img.shields.io/badge/offline--first-✓-22c55e?style=flat-square)
 ![No accounts](https://img.shields.io/badge/no%20accounts-✓-22c55e?style=flat-square)
 ![One-time purchase](https://img.shields.io/badge/one--time%20purchase-✓-22c55e?style=flat-square)
+![Private by default](https://img.shields.io/badge/no%20Full%20Access%20needed-✓-22c55e?style=flat-square)
 
 </div>
 
 ---
 
-> A new iOS app.
+> A custom iOS keyboard you can make your own — themes, layouts, and mechanical
+> **clonk** key sounds. Private by default: it works fully without Full Access,
+> and never phones home. The iOS sibling of clonk-macos.
 
 ---
 
+## Architecture
+
+Clonk is a custom keyboard, so it ships as **two targets plus shared code** —
+not a single app:
+
+```
+Clonk (container app)  ──embeds──▶  ClonkKeyboard.appex (the keyboard)
+        │                                   │
+        └──────── App Group ────────────────┘
+              group.ltd.anti.clonk
+        (settings written by the app, read by the keyboard)
+```
+
+- **`Clonk`** — the App Store product. Onboarding / enable flow plus the
+  theme, layout and sound customization UI, with a live, interactive preview.
+- **`ClonkKeyboard`** — a `UIInputViewController` extension; the keyboard that
+  runs inside other apps.
+- **`Sources/ClonkKit`** — shared, UI-and-model code compiled into *both*
+  targets (no dynamic framework, so no extension embedding/rpath pitfalls).
+  Crucially this includes **`KeyboardCanvas`**, the SwiftUI keyboard itself —
+  so the in-app preview is the *exact same view* the extension renders.
+
+The two processes are isolated; they share state only through the App Group's
+`UserDefaults` suite (`SharedStore`).
+
+```
+Sources/
+├── ClonkKit/                 shared (compiled into both targets)
+│   ├── KeyboardSettings.swift   the Codable config that crosses processes
+│   ├── SharedStore.swift        App Group store + Darwin change-notify
+│   ├── Theme.swift              color themes + presets
+│   ├── KeyboardLayout.swift     QWERTY / AZERTY / QWERTZ / Dvorak
+│   ├── SoundPack.swift          clonk sound-pack definitions
+│   ├── RGBA.swift               Codable color
+│   └── KeyboardCanvas.swift     ⭐ the keyboard view (app + extension)
+├── Clonk/                    container app
+│   ├── ClonkApp.swift  AppModel.swift
+│   └── UI/  RootView · ThemeEditor · LayoutPicker · SoundPicker · EnableFlow · KeyboardPreview
+└── ClonkKeyboard/            extension
+    ├── KeyboardViewController.swift   hosts KeyboardCanvas, wires the document proxy
+    └── SoundPlayer.swift              clonk samples (Full Access) + system-click fallback
+```
+
+## Privacy & Full Access
+
+iOS custom keyboards can request **Full Access**, which shows a scary system
+warning. Clonk is **privacy-first**: it works completely without it (you get
+the standard system click), and never transmits anything. Full Access is an
+**optional, sounds-only opt-in** — it's the only way iOS lets an extension play
+custom audio and haptics, so the custom **clonk** packs and haptics ask for it,
+and nothing else does.
+
 ## Build
 
-Requires **Xcode 16+** with the **iOS 17+ platform installed** (Xcode →
-Settings → Components), and `xcodegen` (`brew install xcodegen`).
+Requires **Xcode 16+** with the **iOS 17+ platform installed**, and `xcodegen`
+(`brew install xcodegen`).
 
-AppTemplate depends on **[iUX-ios](../iUX-ios)** — shared iOS design-system
-library — via a local path. Check it out as a sibling directory before
-building:
+Depends on **[iUX-ios](../iUX-ios)** — our shared iOS design system — via a
+local path. Check it out as a sibling directory before building:
 
 ```
 Projects/
-├── ios-template/   ← this repo
-└── iUX-ios/        ← shared iOS design system
+├── clonk-ios/   ← this repo
+└── iUX-ios/     ← shared iOS design system
 ```
 
 ```bash
-git clone git@github.com:anti-ltd/iUX-ios.git ../iUX-ios   # one-time
-
-make icon          # render and embed the app icon
-make project       # regenerate AppTemplate.xcodeproj from project.yml (needs xcodegen)
-make build         # xcodebuild for the iOS Simulator
-make run           # boot the sim, install, launch
-make device        # build, sign, install on the paired iPhone
-make clean         # remove build/ and AppTemplate.xcodeproj
-make help          # list every target
+make icon      # render the app icon from Tools/RenderAppIcon.swift
+make project   # regenerate Clonk.xcodeproj from project.yml (needs xcodegen)
+make build     # xcodebuild for the iOS Simulator
+make run       # boot the sim, install, launch
+make device    # build, sign, install on the paired iPhone
+make clean     # remove build/ and Clonk.xcodeproj
+make help      # list every target
 ```
 
-The `.xcodeproj` is generated from `project.yml` by
-[XcodeGen](https://github.com/yonaskolb/XcodeGen) and is gitignored —
-**`project.yml` is the source of truth**, never edit the generated
-`.xcodeproj` by hand.
+`project.yml` is the source of truth — the `.xcodeproj` is generated by
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) and gitignored. **Never edit
+the generated `.xcodeproj` by hand.**
 
-## Running on your iPhone
+## Enabling the keyboard
 
-```bash
-make device          # build, install, launch on the paired phone
-make device-install  # build + install (no launch)
-make device-launch   # re-launch what's already installed
-```
+A custom keyboard can't be used until the user enables it once:
 
-`make device` wraps `xcrun devicectl`. Before the first run: cable the iPhone,
-unlock it and accept **"Trust This Computer"**, then `xcrun devicectl list
-devices` to confirm it's paired.
+1. **Settings → General → Keyboard → Keyboards → Add New Keyboard… → Clonk**
+2. Switch to it from any app by holding the 🌐 globe key.
+3. *(Optional)* tap **Clonk → Allow Full Access** for custom sounds & haptics.
 
-Codesigning uses Xcode automatic provisioning against Apple Developer team
-`8248296AJX` (declared in `project.yml`). `make device` runs
-`xcodebuild -allowProvisioningUpdates`, which auto-generates a development
-profile for the bundle ID the first time it sees a new paired phone.
+The in-app **Setup** screen walks through this and deep-links to Settings.
 
-## Architecture
+## Sound packs
 
-```
-Sources/AppTemplate/
-├── AppTemplateApp.swift     @main entry point
-├── AppState.swift           observable app-wide state
-├── AppStage.swift           DEBUG --appstage <state> deep-link (marketing capture)
-├── ContentView.swift        root content view
-└── UI/
-    └── RootView.swift       root shell (iUXiOS.RootShell)
-```
+Curated clonk samples live in `Resources/Sounds/` — see the README there. v0.1
+ships the full playback pipeline; packs without bundled samples fall back to the
+system click, so the keyboard always feels live.
 
-`Tools/RenderAppIcon.swift` is a standalone Swift script that renders the app
-icon asset; run it via `make icon`.
+## Roadmap
 
-`Resources/` holds the generated icon asset catalogue, banner, and any other
-static assets bundled with the app.
+- **v0.1** (this) — working keyboard + themes + layouts + clonk sound pipeline.
+- **v0.2** — curated sample packs, user-authored themes, key-popup polish,
+  emoji plane, one-handed mode.
+- **Later** — the clonk macOS keyboard-sound-simulator feature, brought over.
 
 ## License
 
-Source-available under the **Counter-Limitation License (CLL) v1.2** — see [LICENSE.md](LICENSE.md).
+Clonk is source-available under the **Counter-Limitation License (CLL) v1.2** —
+see [LICENSE.md](LICENSE.md).
 
 © 2026 Anti Limited.
