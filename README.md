@@ -26,9 +26,29 @@
 
 ---
 
-> A custom iOS keyboard you can make your own — themes, layouts, and mechanical
-> **clink** key sounds. Private by default: it works fully without Full Access,
-> and never phones home. The iOS sibling of clonk-macos.
+> A custom iOS keyboard you can make your own — themes, layouts, and a real
+> Liquid Glass variant, with offline autocomplete and auto-correct. Private by
+> default: it works fully without Full Access, and never phones home. The iOS
+> sibling of clonk-macos.
+
+---
+
+## Screenshots
+
+<div align="center">
+
+| Your keyboard | Themes & Liquid Glass | Layouts & keys |
+|:---:|:---:|:---:|
+| <img src="Resources/screenshots/hero.png" width="220" alt="Live in-app keyboard preview"> | <img src="Resources/screenshots/themes.png" width="220" alt="Theme gallery"> | <img src="Resources/screenshots/layout.png" width="220" alt="Layout & keys"> |
+
+</div>
+
+Regenerate these with the [AppStage](../appstage) pipeline — `appstage capture
+clink && appstage build clink && appstage sync clink`. It Debug-builds Clink,
+boots the iOS Simulator, routes the app to each screen via its DEBUG
+`--appstage <slug>` launch arg (seeding a curated theme so the live preview looks
+its best), and writes the device-framed PNGs into `Resources/screenshots/`. The
+routing is `#if DEBUG`, so none of it ships in Release.
 
 ---
 
