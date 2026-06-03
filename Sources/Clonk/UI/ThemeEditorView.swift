@@ -17,10 +17,7 @@ struct ThemeEditorView: View {
 
     var body: some View {
         @Bindable var model = model
-        ScrollView {
-            VStack(spacing: UX.cardSpacing) {
-                KeyboardPreview(settings: model.settings)
-
+        PinnedPreviewLayout(settings: model.settings) {
                 CardSection {
                     ToggleRow("Match system appearance",
                               subtitle: "Use a light theme in Light Mode and a dark theme in Dark Mode.",
@@ -38,12 +35,9 @@ struct ThemeEditorView: View {
                 }
 
                 createButton
-            }
-            .padding(UX.screenPadding)
         }
         .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.systemGroupedBackground))
         .sheet(item: $builderTheme) { theme in
             ThemeBuilderView(theme: theme)
         }

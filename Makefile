@@ -27,7 +27,7 @@ SIM_DEST       := "platform=iOS Simulator,name=$(SIM_NAME)"
 DEVICE         ?=
 DEVICE_NAME    ?=
 
-.PHONY: all project icon build run sim install clean stop help test \
+.PHONY: all project icon emoji build run sim install clean stop help test \
         device device-install device-launch build-device \
         device-showcase build-device-showcase
 
@@ -66,6 +66,11 @@ help:
 # CoreGraphics script. Re-run whenever the brand mark changes.
 icon:
 	swift Tools/RenderAppIcon.swift
+
+# Regenerate Sources/ClonkKit/EmojiData.generated.swift (the full emoji set)
+# from Tools/emoji-test.txt. Re-run after vendoring a newer emoji-test.txt.
+emoji:
+	swift Tools/GenerateEmojiData.swift
 
 # Regenerate the xcodeproj from project.yml. XcodeGen is the source of truth.
 project:

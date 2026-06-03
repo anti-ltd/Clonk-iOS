@@ -22,10 +22,18 @@ public struct EmojiCanvas: View {
     /// Asks the host to resize the keyboard — search mode is taller (it shows a
     /// QWERTY). The host pins its height constraint to the value passed back.
     private let onRequestHeight: (CGFloat) -> Void
+    /// Persist a per-emoji skin-tone choice (base emoji → tone). The host writes
+    /// it to the shared settings; we also keep `localTones` for instant feedback.
+    private let onSetSkinTone: (String, SkinTone) -> Void
 
     @State private var controller: KeyboardController
     @State private var searching = false
     @State private var query = ""
+    /// Skin-tone choices made this session, shown immediately while the host's
+    /// persisted write propagates back. Overlaid on `settings.emojiSkinTones`.
+    @State private var localTones: [String: SkinTone] = [:]
+    /// The base emoji whose skin-tone picker is currently open, if any.
+    @State private var tonePickerEmoji: String?
     @Environment(\.colorScheme) private var colorScheme
 
     /// Selected category — proxied onto the controller so an external simulator
@@ -42,7 +50,8 @@ public struct EmojiCanvas: View {
         onBackspace: @escaping () -> Void,
         onAnyTap: @escaping () -> Void = {},
         onNextKeyboard: (() -> Void)? = nil,
-        onRequestHeight: @escaping (CGFloat) -> Void = { _ in }
+        onRequestHeight: @escaping (CGFloat) -> Void = { _ in },
+        onSetSkinTone: @escaping (String, SkinTone) -> Void = { _, _ in }
     ) {
         self.settings = settings
         _controller = State(initialValue: controller ?? KeyboardController())
@@ -51,6 +60,7 @@ public struct EmojiCanvas: View {
         self.onAnyTap = onAnyTap
         self.onNextKeyboard = onNextKeyboard
         self.onRequestHeight = onRequestHeight
+        self.onSetSkinTone = onSetSkinTone
     }
 
     private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark) }
@@ -166,18 +176,22 @@ public struct EmojiCanvas: View {
 
     /// A scrollable grid of emoji. `scrollTarget` keeps the showcase simulator's
     /// pressed emoji centred; a hidden top anchor lets a category switch snap back
-    /// to the top.
+    /// to the top. Cells render with the resolved skin tone; a long-press on a
+    /// tone-capable emoji opens the swatch picker (overlaid via cell anchors).
     private func grid(_ emoji: [String], scrollTarget: String?) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 Color.clear.frame(height: 0).id("top")
                 LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(emoji, id: \.self) { e in
-                        EmojiCell(emoji: e, simulatedPressed: controller.pressedEmoji == e) {
-                            onAnyTap()
-                            onInsert(e)
-                        }
+                        EmojiCell(
+                            glyph: glyph(for: e),
+                            simulatedPressed: controller.pressedEmoji == e,
+                            action: { onAnyTap(); onInsert(glyph(for: e)) },
+                            onLongPress: { openTonePicker(for: e) }
+                        )
                         .id(e)
+                        .anchorPreference(key: EmojiCellAnchorKey.self, value: .bounds) { [e: $0] }
                     }
                 }
                 .padding(.horizontal, 6)
@@ -189,6 +203,67 @@ public struct EmojiCanvas: View {
             }
             .onChange(of: category) { _, _ in
                 withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("top", anchor: .top) }
+            }
+        }
+        .overlayPreferenceValue(EmojiCellAnchorKey.self) { anchors in
+            tonePickerOverlay(anchors)
+        }
+    }
+
+    // MARK: - Skin tones
+
+    /// The tone to use for `base`: this session's pick, else the persisted
+    /// per-emoji choice, else the global default.
+    private func resolvedTone(_ base: String) -> SkinTone {
+        localTones[base] ?? settings.skinTone(for: base)
+    }
+
+    /// The glyph to display/insert for `base` with its resolved tone applied.
+    private func glyph(for base: String) -> String {
+        guard EmojiSkinTone.supportsSkinTone(base) else { return base }
+        return EmojiSkinTone.applied(resolvedTone(base), to: base)
+    }
+
+    /// Long-press handler: only tone-capable emoji open the picker.
+    private func openTonePicker(for base: String) {
+        guard EmojiSkinTone.supportsSkinTone(base) else { return }
+        onAnyTap()
+        withAnimation(.snappy(duration: 0.18)) { tonePickerEmoji = base }
+    }
+
+    /// Pick a tone for `base`: remember it (session + persisted), insert the
+    /// toned glyph, and close the picker.
+    private func selectTone(_ tone: SkinTone, for base: String) {
+        localTones[base] = tone
+        onSetSkinTone(base, tone)
+        onAnyTap()
+        onInsert(EmojiSkinTone.applied(tone, to: base))
+        withAnimation(.snappy(duration: 0.18)) { tonePickerEmoji = nil }
+    }
+
+    /// The swatch popover, anchored above the long-pressed cell. A transparent
+    /// backdrop dismisses on an outside tap.
+    @ViewBuilder private func tonePickerOverlay(_ anchors: [String: Anchor<CGRect>]) -> some View {
+        GeometryReader { proxy in
+            if let base = tonePickerEmoji, let anchor = anchors[base] {
+                let cell = proxy[anchor]
+                let pickerWidth = SkinTonePicker.width
+                let pickerHeight = SkinTonePicker.height
+                let x = min(max(cell.midX, pickerWidth / 2 + 4),
+                            proxy.size.width - pickerWidth / 2 - 4)
+                let y = max(cell.minY - pickerHeight / 2 - 6, pickerHeight / 2 + 2)
+
+                Color.black.opacity(0.001)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .contentShape(Rectangle())
+                    .onTapGesture { withAnimation(.snappy(duration: 0.18)) { tonePickerEmoji = nil } }
+
+                SkinTonePicker(base: base, current: resolvedTone(base), theme: theme) { tone in
+                    selectTone(tone, for: base)
+                }
+                .frame(width: pickerWidth, height: pickerHeight)
+                .position(x: x, y: y)
+                .transition(.scale(scale: 0.85, anchor: .bottom).combined(with: .opacity))
             }
         }
     }
@@ -401,13 +476,14 @@ private struct EmojiBarTouchSurface: UIViewRepresentable {
 /// the button style; the showcase simulator drives `simulatedPressed` to bloom a
 /// cell with no finger on it.
 private struct EmojiCell: View {
-    let emoji: String
+    let glyph: String
     var simulatedPressed: Bool = false
     let action: () -> Void
+    var onLongPress: () -> Void = {}
 
     var body: some View {
         Button(action: action) {
-            Text(emoji)
+            Text(glyph)
                 .font(.system(size: 30))
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .scaleEffect(simulatedPressed ? 1.3 : 1)
@@ -415,6 +491,66 @@ private struct EmojiCell: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(EmojiBloomStyle())
+        // A long press opens the skin-tone picker. `maximumDistance` lets a
+        // drag past the cell cancel it so the grid still scrolls, and the
+        // simultaneous attachment leaves the Button's tap untouched.
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.35, maximumDistance: 12)
+                .onEnded { _ in onLongPress() }
+        )
+    }
+}
+
+/// The skin-tone swatch row shown on long-press: the same emoji in neutral + the
+/// five Fitzpatrick tones. Styled like the key popups (glass on glass themes).
+private struct SkinTonePicker: View {
+    let base: String
+    let current: SkinTone
+    let theme: Theme
+    let onPick: (SkinTone) -> Void
+
+    static let swatch: CGFloat = 40
+    static let width: CGFloat = swatch * CGFloat(SkinTone.allCases.count) + 16
+    static let height: CGFloat = 52
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        HStack(spacing: 0) {
+            ForEach(SkinTone.allCases) { tone in
+                Button { onPick(tone) } label: {
+                    Text(EmojiSkinTone.applied(tone, to: base))
+                        .font(.system(size: 26))
+                        .frame(width: Self.swatch, height: 40)
+                        .background(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .fill(tone == current ? theme.accent.color.opacity(0.35) : .clear)
+                        )
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: Self.height)
+        .background {
+            if theme.material == .liquidGlass, #available(iOS 26.0, *) {
+                Color.clear.glassEffect(.regular.tint(theme.keyFill.color), in: shape)
+            } else {
+                shape.fill(theme.keyFill.color)
+            }
+        }
+        .overlay(shape.strokeBorder(theme.specialKeyText.color.opacity(0.12)))
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+    }
+}
+
+/// Publishes each rendered emoji cell's bounds (keyed by base emoji) so the
+/// tone-picker overlay can anchor itself above the long-pressed cell. Mirrors
+/// `EmojiBarFrameKey` for the tab bar.
+struct EmojiCellAnchorKey: PreferenceKey {
+    static let defaultValue: [String: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [String: Anchor<CGRect>], nextValue: () -> [String: Anchor<CGRect>]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 

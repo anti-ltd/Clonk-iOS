@@ -16,16 +16,29 @@ struct RootView: View {
                         .padding(.top, 4)
 
                     CardSection("Customize") {
-                        NavRow("Theme", systemImage: "paintpalette",
+                        NavRow("Theme", subtitle: "Colors, glass, and custom themes",
+                               systemImage: "paintpalette",
                                value: model.settings.matchSystemAppearance ? "Auto" : model.settings.theme.name) {
                             ThemeEditorView()
                         }
                         Divider()
-                        NavRow("Layout & Keys", systemImage: "keyboard", value: model.settings.layout.name) {
+                        NavRow("Layout & Keys", subtitle: "Size, spacing, popups, and feel",
+                               systemImage: "keyboard", value: model.settings.layout.name) {
                             LayoutPickerView()
                         }
                         Divider()
-                        NavRow("Sound & Feel", systemImage: "speaker.wave.2",
+                        NavRow("Typing", subtitle: "Autocorrect, suggestions, punctuation",
+                               systemImage: "text.cursor", value: typingSummary) {
+                            TypingView()
+                        }
+                        Divider()
+                        NavRow("Emoji", subtitle: "Default skin tone for emoji",
+                               systemImage: "face.smiling", value: model.settings.defaultSkinTone.label) {
+                            EmojiSettingsView()
+                        }
+                        Divider()
+                        NavRow("Sound & Feel", subtitle: "Sounds, volume, and haptics",
+                               systemImage: "speaker.wave.2",
                                value: model.settings.soundEnabled ? model.settings.soundPack.name : "Off") {
                             SoundPickerView()
                         }
@@ -44,6 +57,12 @@ struct RootView: View {
             .navigationTitle("Clonk")
             .background(Color(.systemGroupedBackground))
         }
+    }
+
+    /// Short at-a-glance state for the Typing row: "On" when the keyboard is
+    /// actively predicting or correcting, otherwise "Off".
+    private var typingSummary: String {
+        (model.settings.suggestionsEnabled || model.settings.autocorrectEnabled) ? "On" : "Off"
     }
 
     private var enableBanner: some View {
@@ -74,8 +93,22 @@ struct RootView: View {
             Text("A fully customizable keyboard. Offline. No accounts. Private by default.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            if let version = appVersion {
+                Text(version)
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .padding(.top, 2)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
+    }
+
+    private var appVersion: String? {
+        let info = Bundle.main.infoDictionary
+        guard let short = info?["CFBundleShortVersionString"] as? String else { return nil }
+        if let build = info?["CFBundleVersion"] as? String, build != short {
+            return "Version \(short) (\(build))"
+        }
+        return "Version \(short)"
     }
 }

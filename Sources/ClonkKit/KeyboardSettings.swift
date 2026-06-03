@@ -4,17 +4,14 @@ import Foundation
 public enum KeyPopupStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     /// A detached rounded bubble floating above the key.
     case floating
-    /// A native-style balloon that necks down into the pressed key.
+    /// A balloon that necks down into the pressed key.
     case balloon
-    /// A small flat tile just above the key.
-    case flat
 
     public var id: String { rawValue }
     public var label: String {
         switch self {
         case .floating: return "Floating"
-        case .balloon:  return "Native"
-        case .flat:     return "Flat"
+        case .balloon:  return "Balloon"
         }
     }
 }
@@ -92,6 +89,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var soundEnabled: Bool
     public var soundVolume: Double      // 0.0 ... 1.0
     public var hapticsEnabled: Bool
+    // Emoji
+    /// The skin tone applied to any tone-capable emoji that has no per-emoji
+    /// choice in `emojiSkinTones`. `.none` = neutral (yellow).
+    public var defaultSkinTone: SkinTone
+    /// Per-emoji skin-tone choices, keyed by the BASE (neutral) emoji string.
+    /// A present entry wins over `defaultSkinTone`; an absent one falls back to
+    /// it. Set by long-pressing an emoji and picking a tone.
+    public var emojiSkinTones: [String: SkinTone]
 
     public init(
         themeID: String = Theme.default.id,
@@ -122,7 +127,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundPackID: String = SoundPack.default.id,
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
-        hapticsEnabled: Bool = false
+        hapticsEnabled: Bool = false,
+        defaultSkinTone: SkinTone = .none,
+        emojiSkinTones: [String: SkinTone] = [:]
     ) {
         self.themeID = themeID
         self.matchSystemAppearance = matchSystemAppearance
@@ -153,6 +160,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
         self.hapticsEnabled = hapticsEnabled
+        self.defaultSkinTone = defaultSkinTone
+        self.emojiSkinTones = emojiSkinTones
     }
 
     public static let `default` = KeyboardSettings()
@@ -170,7 +179,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         showNumberRow = try c.decodeIfPresent(Bool.self, forKey: .showNumberRow) ?? false
         autoCapitalize = try c.decodeIfPresent(Bool.self, forKey: .autoCapitalize) ?? true
         keyPopupEnabled = try c.decodeIfPresent(Bool.self, forKey: .keyPopupEnabled) ?? true
-        keyPopupStyle = try c.decodeIfPresent(KeyPopupStyle.self, forKey: .keyPopupStyle) ?? .balloon
+        // `try?`, not `try`: a legacy persisted value (e.g. the retired "flat")
+        // would otherwise throw and fail the whole settings decode. Fall back.
+        keyPopupStyle = (try? c.decodeIfPresent(KeyPopupStyle.self, forKey: .keyPopupStyle)) ?? .balloon
         liquidGlassPopup = try c.decodeIfPresent(Bool.self, forKey: .liquidGlassPopup) ?? true
         homeRowInset = try c.decodeIfPresent(Bool.self, forKey: .homeRowInset) ?? true
         homeRowInsetAmount = try c.decodeIfPresent(Double.self, forKey: .homeRowInsetAmount) ?? 0.05
@@ -190,6 +201,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? false
+        // `try?`: a future-retired tone case shouldn't fail the whole decode.
+        defaultSkinTone = (try? c.decodeIfPresent(SkinTone.self, forKey: .defaultSkinTone)) ?? .none
+        emojiSkinTones = (try? c.decodeIfPresent([String: SkinTone].self, forKey: .emojiSkinTones)) ?? [:]
     }
 
     // MARK: - Resolved convenience accessors
@@ -213,4 +227,26 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var theme: Theme { theme(withID: themeID) }
     public var layout: KeyboardLayout { KeyboardLayout.preset(id: layoutID) }
     public var soundPack: SoundPack { SoundPack.preset(id: soundPackID) }
+
+    // MARK: - Emoji skin tones
+
+    /// The skin tone to use for `base`: its per-emoji choice if set, else the
+    /// global default.
+    public func skinTone(for base: String) -> SkinTone {
+        emojiSkinTones[base] ?? defaultSkinTone
+    }
+
+    /// The glyph to render/insert for the base emoji `base`, with the resolved
+    /// skin tone applied. Tone-incapable emoji are returned unchanged.
+    public func displayEmoji(for base: String) -> String {
+        guard EmojiSkinTone.supportsSkinTone(base) else { return base }
+        return EmojiSkinTone.applied(skinTone(for: base), to: base)
+    }
+
+    /// Record (or clear) a per-emoji skin-tone choice. `.none` is stored
+    /// explicitly so it can pin an emoji to neutral even when the global
+    /// default is a tone.
+    public mutating func setSkinTone(_ tone: SkinTone, for base: String) {
+        emojiSkinTones[base] = tone
+    }
 }

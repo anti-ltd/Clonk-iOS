@@ -6,10 +6,8 @@ struct LayoutPickerView: View {
 
     var body: some View {
         @Bindable var model = model
-        ScrollView {
-            VStack(spacing: UX.cardSpacing) {
-                KeyboardPreview(settings: model.settings)
-
+        TabbedPreviewLayout(settings: model.settings, tabs: [
+            PreviewTab("Layout") {
                 CardSection("Layout") {
                     HStack {
                         Text("Layout")
@@ -25,6 +23,23 @@ struct LayoutPickerView: View {
                     .padding(.vertical, UX.rowVPadding)
                 }
 
+                CardSection("Rows") {
+                    ToggleRow("Number row",
+                              subtitle: "Always show 1–0 above the letters.",
+                              isOn: $model.settings.showNumberRow)
+                    Divider()
+                    ToggleRow("Inset home row",
+                              subtitle: "Indent the middle letter row, like the system keyboard.",
+                              isOn: $model.settings.homeRowInset)
+                    if model.settings.homeRowInset {
+                        Divider()
+                        SliderRow("Inset amount", value: $model.settings.homeRowInsetAmount,
+                                  in: 0...0.12, step: 0.005) { "\(Int(($0 * 100).rounded()))%" }
+                    }
+                }
+            },
+
+            PreviewTab("Size") {
                 CardSection("Size & Shape") {
                     SliderRow("Key height", value: $model.settings.keyHeight,
                               in: 38...58, step: 1) { "\(Int($0))pt" }
@@ -44,16 +59,10 @@ struct LayoutPickerView: View {
                     SliderRow("Row spacing", value: $model.settings.rowSpacing,
                               in: 0...16, step: 1) { "\(Int($0))pt" }
                 }
+            },
 
-                CardSection("Keys") {
-                    ToggleRow("Number row",
-                              subtitle: "Always show 1–0 above the letters.",
-                              isOn: $model.settings.showNumberRow)
-                    Divider()
-                    ToggleRow("Auto-capitalize",
-                              subtitle: "Capitalize the first letter of a sentence.",
-                              isOn: $model.settings.autoCapitalize)
-                    Divider()
+            PreviewTab("Popups") {
+                CardSection("Key popups") {
                     ToggleRow("Key popups",
                               subtitle: "Show an enlarged bubble when a key is pressed.",
                               isOn: $model.settings.keyPopupEnabled)
@@ -76,16 +85,13 @@ struct LayoutPickerView: View {
                     ToggleRow("Liquid Glass popups",
                               subtitle: "Render key popups as glass on Liquid Glass themes.",
                               isOn: $model.settings.liquidGlassPopup)
-                    Divider()
-                    ToggleRow("Inset home row",
-                              subtitle: "Indent the middle letter row, like the system keyboard.",
-                              isOn: $model.settings.homeRowInset)
-                    if model.settings.homeRowInset {
-                        Divider()
-                        SliderRow("Inset amount", value: $model.settings.homeRowInsetAmount,
-                                  in: 0...0.12, step: 0.005) { "\(Int(($0 * 100).rounded()))%" }
-                    }
-                    Divider()
+                    .disabled(!model.settings.keyPopupEnabled)
+                    .opacity(model.settings.keyPopupEnabled ? 1 : 0.4)
+                }
+            },
+
+            PreviewTab("Feel") {
+                CardSection("Key press") {
                     ToggleRow("Liquid key press",
                               subtitle: "Bloom and warp each key when pressed — best on Liquid Glass.",
                               isOn: $model.settings.keyPressWarp)
@@ -94,28 +100,10 @@ struct LayoutPickerView: View {
                               in: 0...0.4, step: 0.02) {
                         $0 < 0.005 ? "Off" : "\(Int(($0 * 1000).rounded()))ms"
                     }
-                    Divider()
-                    ToggleRow("Suggestions",
-                              subtitle: "Offline autocomplete bar above the keys.",
-                              isOn: $model.settings.suggestionsEnabled)
-                    Divider()
-                    ToggleRow("Auto-correction",
-                              subtitle: "Fix the word when you type a space or punctuation.",
-                              isOn: $model.settings.autocorrectEnabled)
-                    Divider()
-                    ToggleRow("Auto punctuation",
-                              subtitle: "Add apostrophes to contractions like “dont” → “don’t”.",
-                              isOn: $model.settings.autoPunctuationEnabled)
-                    Divider()
-                    ToggleRow("Return to letters",
-                              subtitle: "After typing punctuation on the symbols page, flip back to letters.",
-                              isOn: $model.settings.autoReturnToLetters)
                 }
-            }
-            .padding(UX.screenPadding)
-        }
+            },
+        ])
         .navigationTitle("Layout & Keys")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.systemGroupedBackground))
     }
 }

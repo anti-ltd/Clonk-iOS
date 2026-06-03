@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		010EE35FDD8CEDCFB9781EF5 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11618B6F341D7268CA775C77 /* EmojiData.generated.swift */; };
 		02DDF5D74E389A9D871FA8B9 /* KeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25F75F20A5494A4B684EF32 /* KeyboardController.swift */; };
+		03033BF44223009828527ABA /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9098D64125D012B26C692C67 /* EmojiSkinTone.swift */; };
 		07F55AFAD8112EB37782CBAC /* KeyboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6113F9D169C0B7536E310EC8 /* KeyboardSettings.swift */; };
+		0909EF6CF4140677DB166054 /* EmojiSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C410852695AFA326EDA2B390 /* EmojiSettingsView.swift */; };
 		0BE1E5CAF6C6E2609D5CB8B8 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC1610713CFD4E0438A024E /* KeyboardLayout.swift */; };
 		0FAD38562945266F6B0F136D /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C13A994CB55BF252B67CE86C /* SoundPack.swift */; };
 		13D4F130D6583FEEF347FD9B /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */; };
@@ -26,6 +29,7 @@
 		327918D85E438287BCD73201 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15319E561C88F44CB456F0F /* KeyTouchRouter.swift */; };
 		3596BA082F7088D65718D720 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */; };
 		3DD644329C8F2FEB4CCF2639 /* ClonkEmoji.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C6CC1F287ADDC49A1FB45C7C /* ClonkEmoji.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3EBA1097031653846199AA36 /* TypingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDCD6CB9DAA9DC6EA46A6CBC /* TypingView.swift */; };
 		3EC850FCC5E6EBCB6A39B961 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15319E561C88F44CB456F0F /* KeyTouchRouter.swift */; };
 		4225E1F676DA3B9F3B2EBBC2 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15319E561C88F44CB456F0F /* KeyTouchRouter.swift */; };
 		49D8EDC105A047E1962FF783 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B95B22E5406247DB205029 /* Theme.swift */; };
@@ -38,6 +42,7 @@
 		5A6F81F8B6D68EC4484658EC /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C9C863E017544F25F474275 /* SoundPlayer.swift */; };
 		5AC8A066B319825B1DFEE880 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = FD56EC2631288485785925D7 /* iUXiOS */; };
 		5FDBCDED4127113008B656FA /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 884400100A1655FBDCE44B39 /* iUXiOS */; };
+		602696E5F290B4A7B46917DB /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11618B6F341D7268CA775C77 /* EmojiData.generated.swift */; };
 		60A5A4D87A7E4617527DAC22 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B95B22E5406247DB205029 /* Theme.swift */; };
 		7096F064F1885600801890BD /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF21A321680BFE94F30CF94 /* KeyboardLiveState.swift */; };
 		8131C58256FAB194F8F1DA2F /* KeyboardPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D24726AD195475AB0C896AA /* KeyboardPreview.swift */; };
@@ -46,9 +51,11 @@
 		8A97D4BA5B1E1ADDE1569E2F /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */; };
 		8F9BA1A7837465B4FC05AA8C /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */; };
 		9024BD55D40C7DEC548A8983 /* ClonkKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 471FA9A6FDF96DA8D9FDEDF8 /* ClonkKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		905031489E46C789EC7EF46E /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11618B6F341D7268CA775C77 /* EmojiData.generated.swift */; };
 		91390A0EB8F291B2554BDE9B /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56BAF1F711A0509D91F78CA /* SharedStore.swift */; };
 		9CEAF843E6A4BC4794AEC630 /* ThemeEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6E36A41FDFF54407F6243E /* ThemeEditorView.swift */; };
 		9D00F69E2388D5A9576234DE /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E6EE2D0105A8936F56742EE /* SmartPunctuation.swift */; };
+		9F3EF260BFED74484B7C9E9F /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9098D64125D012B26C692C67 /* EmojiSkinTone.swift */; };
 		A203C00FB7D1B078F48754D2 /* InputViewHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F1BB2F5E554F59E63F91CC /* InputViewHeight.swift */; };
 		AC18A42B6949466C6AA4FDF1 /* RGBA.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */; };
 		B3E128BF8065C32B2EF83065 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */; };
@@ -69,6 +76,7 @@
 		E5277EFDE57F0C05E5F807BD /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E6EE2D0105A8936F56742EE /* SmartPunctuation.swift */; };
 		EA021E66122F7B984549A35E /* InputViewHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F1BB2F5E554F59E63F91CC /* InputViewHeight.swift */; };
 		EA791FE56141716050088783 /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = C13A994CB55BF252B67CE86C /* SoundPack.swift */; };
+		ECEC2CE2B6B6450686D21748 /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9098D64125D012B26C692C67 /* EmojiSkinTone.swift */; };
 		EF3BA575A3AC86F35DE770A0 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA268D7E6A856565C33FE00B /* SuggestionEngine.swift */; };
 		F1BD9B5CBAB617B4198EE66A /* EnableFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5636CAC4D2AFDCCEE0F484 /* EnableFlowView.swift */; };
 		F5EFF073BB1D444B205EBBA5 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D8C2EE560646B86A59F653F /* AppModel.swift */; };
@@ -111,6 +119,7 @@
 /* Begin PBXFileReference section */
 		03B95B22E5406247DB205029 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		0D4D2A1BF24596BDD04C6F63 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
+		11618B6F341D7268CA775C77 /* EmojiData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.generated.swift; sourceTree = "<group>"; };
 		129453CAF34D378AC8EBA8A7 /* ThemeBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeBuilderView.swift; sourceTree = "<group>"; };
 		13CDD0669F2B08464127174C /* ClonkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClonkApp.swift; sourceTree = "<group>"; };
 		2726D104440DFF6A34597D32 /* AppStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStage.swift; sourceTree = "<group>"; };
@@ -129,12 +138,15 @@
 		895F15C1CBE50956C39FC12A /* EmojiData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.swift; sourceTree = "<group>"; };
 		8C9C863E017544F25F474275 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
 		8D8C2EE560646B86A59F653F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		9098D64125D012B26C692C67 /* EmojiSkinTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSkinTone.swift; sourceTree = "<group>"; };
 		A15319E561C88F44CB456F0F /* KeyTouchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyTouchRouter.swift; sourceTree = "<group>"; };
 		A640E42BEF1FBCCFBCF64835 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		A72F7F91A42C75BD8DCF74B8 /* RGBA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBA.swift; sourceTree = "<group>"; };
 		ABE576E2E8812AB169B8064B /* LayoutPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutPickerView.swift; sourceTree = "<group>"; };
 		AD16E37049A30BCB0C27372B /* iUX-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "iUX-ios"; path = "../iUX-ios"; sourceTree = SOURCE_ROOT; };
+		BDCD6CB9DAA9DC6EA46A6CBC /* TypingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingView.swift; sourceTree = "<group>"; };
 		C13A994CB55BF252B67CE86C /* SoundPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPack.swift; sourceTree = "<group>"; };
+		C410852695AFA326EDA2B390 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		C6CC1F287ADDC49A1FB45C7C /* ClonkEmoji.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClonkEmoji.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDFFC766484F1B441AC47E5D /* EmojiKeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiKeyboardViewController.swift; sourceTree = "<group>"; };
 		CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCanvas.swift; sourceTree = "<group>"; };
@@ -250,6 +262,7 @@
 		C89EEA9C23718A2E209F911D /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				C410852695AFA326EDA2B390 /* EmojiSettingsView.swift */,
 				6A5636CAC4D2AFDCCEE0F484 /* EnableFlowView.swift */,
 				2D24726AD195475AB0C896AA /* KeyboardPreview.swift */,
 				ABE576E2E8812AB169B8064B /* LayoutPickerView.swift */,
@@ -258,6 +271,7 @@
 				6E06A50486DF8BEAE1574D98 /* SoundPickerView.swift */,
 				129453CAF34D378AC8EBA8A7 /* ThemeBuilderView.swift */,
 				4F6E36A41FDFF54407F6243E /* ThemeEditorView.swift */,
+				BDCD6CB9DAA9DC6EA46A6CBC /* TypingView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -266,7 +280,9 @@
 			isa = PBXGroup;
 			children = (
 				CF7920C59BD05A1B193DCD0F /* EmojiCanvas.swift */,
+				11618B6F341D7268CA775C77 /* EmojiData.generated.swift */,
 				895F15C1CBE50956C39FC12A /* EmojiData.swift */,
+				9098D64125D012B26C692C67 /* EmojiSkinTone.swift */,
 				E8F1BB2F5E554F59E63F91CC /* InputViewHeight.swift */,
 				750280A0870BF4B14F629A4E /* KeyboardCanvas.swift */,
 				D25F75F20A5494A4B684EF32 /* KeyboardController.swift */,
@@ -413,8 +429,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				4F34491B126728FE24B3925E /* EmojiCanvas.swift in Sources */,
+				602696E5F290B4A7B46917DB /* EmojiData.generated.swift in Sources */,
 				B7E6579D116E1D7B129B9E17 /* EmojiData.swift in Sources */,
 				E436B73333369F0375105BC2 /* EmojiKeyboardViewController.swift in Sources */,
+				ECEC2CE2B6B6450686D21748 /* EmojiSkinTone.swift in Sources */,
 				A203C00FB7D1B078F48754D2 /* InputViewHeight.swift in Sources */,
 				4225E1F676DA3B9F3B2EBBC2 /* KeyTouchRouter.swift in Sources */,
 				28119574A5E13E30D06E5CF7 /* KeyboardCanvas.swift in Sources */,
@@ -440,7 +458,10 @@
 				1C0BC443EB2896A9B1034B65 /* AppStage.swift in Sources */,
 				D941194A46BB81DFF6C76441 /* ClonkApp.swift in Sources */,
 				1F2F9A2114758E801C638402 /* EmojiCanvas.swift in Sources */,
+				905031489E46C789EC7EF46E /* EmojiData.generated.swift in Sources */,
 				56704D2C6ED6F06C1DEA26B8 /* EmojiData.swift in Sources */,
+				0909EF6CF4140677DB166054 /* EmojiSettingsView.swift in Sources */,
+				03033BF44223009828527ABA /* EmojiSkinTone.swift in Sources */,
 				F1BD9B5CBAB617B4198EE66A /* EnableFlowView.swift in Sources */,
 				F6B32AB7FAEA411BABA7213F /* InputViewHeight.swift in Sources */,
 				3EC850FCC5E6EBCB6A39B961 /* KeyTouchRouter.swift in Sources */,
@@ -463,6 +484,7 @@
 				60A5A4D87A7E4617527DAC22 /* Theme.swift in Sources */,
 				2C959B142DDA07E0874B1E66 /* ThemeBuilderView.swift in Sources */,
 				9CEAF843E6A4BC4794AEC630 /* ThemeEditorView.swift in Sources */,
+				3EBA1097031653846199AA36 /* TypingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -471,7 +493,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				B3E128BF8065C32B2EF83065 /* EmojiCanvas.swift in Sources */,
+				010EE35FDD8CEDCFB9781EF5 /* EmojiData.generated.swift in Sources */,
 				4EB711B668C889F26D5FEC15 /* EmojiData.swift in Sources */,
+				9F3EF260BFED74484B7C9E9F /* EmojiSkinTone.swift in Sources */,
 				EA021E66122F7B984549A35E /* InputViewHeight.swift in Sources */,
 				327918D85E438287BCD73201 /* KeyTouchRouter.swift in Sources */,
 				3596BA082F7088D65718D720 /* KeyboardCanvas.swift in Sources */,

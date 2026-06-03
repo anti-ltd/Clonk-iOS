@@ -211,9 +211,6 @@ public struct KeyboardCanvas: View {
         case .floating:
             positioned(tilePopup(glyph, width: 48, height: 56, fontSize: 30),
                        height: 56, centerY: keyRect.minY - 30, midX: keyRect.midX, bounds: bounds)
-        case .flat:
-            positioned(tilePopup(glyph, width: max(keyRect.width, 40), height: 44, fontSize: 26),
-                       height: 44, centerY: keyRect.minY - 18, midX: keyRect.midX, bounds: bounds)
         case .balloon:
             balloonPopup(glyph, keyRect: keyRect, bounds: bounds)
         }
@@ -227,7 +224,7 @@ public struct KeyboardCanvas: View {
         return content.position(x: midX, y: clamped)
     }
 
-    /// A rounded-rectangle popup (used by the floating + flat styles).
+    /// A rounded-rectangle popup (the floating style).
     private func tilePopup(_ glyph: String, width: CGFloat, height: CGFloat, fontSize: CGFloat) -> some View {
         let shape = RoundedRectangle(cornerRadius: popupCorner, style: .continuous)
         return Text(glyph)
@@ -238,27 +235,32 @@ public struct KeyboardCanvas: View {
                                   glass: theme.material == .liquidGlass && settings.liquidGlassPopup))
     }
 
-    /// A native-style balloon: a wide rounded bulb on a short neck that dips into
-    /// the top of the pressed key. The glyph sits in the bulb. Clamped so the top
-    /// row's bulb stays inside the keyboard rather than clipping at the top edge.
+    /// A balloon drawn as one continuous shape over the whole pressed key: the
+    /// bulb swells up out of the key, sharing its width / corner radius / accent
+    /// tint, so there is no seam between popup and key. The magnified glyph rides
+    /// in the bulb; the key's own footprint is covered by the balloon's foot. The
+    /// bulb is bottom-anchored to the key (so it always lines up) and rises above
+    /// — clamped so the top row's bulb doesn't poke past the keyboard's top edge.
     private func balloonPopup(_ glyph: String, keyRect: CGRect, bounds: CGSize) -> some View {
-        let bulbHeight: CGFloat = 48
-        let neck = min(keyRect.height, 22)          // short neck, not the whole key
-        let totalHeight = bulbHeight + neck
-        let bulbWidth = max(keyRect.width * 1.3, 46)
-        let shape = BalloonPopupShape(bulbHeight: bulbHeight, keyWidth: keyRect.width,
-                                      cornerRadius: max(popupCorner, 10))
-        // Neck dips ~8pt into the key's top; clamp so the bulb never clips.
-        let desiredCenterY = keyRect.minY + 8 - totalHeight / 2
-        let centerY = max(desiredCenterY, totalHeight / 2 + 2)
-        return Text(glyph)
-            .font(.system(size: 26, weight: .regular))
-            .foregroundStyle(theme.keyText.color)
-            .offset(y: -neck / 2)                    // lift glyph into the bulb
-            .frame(width: bulbWidth, height: totalHeight)
-            .modifier(PopupChrome(shape: shape, theme: theme,
-                                  glass: theme.material == .liquidGlass && settings.liquidGlassPopup))
-            .position(x: keyRect.midX, y: centerY)
+        // Round head ~1.45× the key, pinched neck ~0.62× the key.
+        let headWidth = max(keyRect.width * 1.45, 50)
+        let domeR = headWidth / 2
+        let bulbRise = domeR + 26                         // head + a neck above the key
+        let top = max(2, keyRect.minY - bulbRise)
+        let bottom = keyRect.maxY
+        let totalHeight = bottom - top
+        let shoulderY = keyRect.minY - top               // key's top edge within the frame
+        let keyCorner = CGFloat(settings.keyCornerRadius)
+        let shape = BalloonPopupShape(keyWidth: keyRect.width, neckWidth: keyRect.width * 0.62,
+                                      shoulderY: shoulderY, bottomCorner: keyCorner)
+        // Magnified glyph centred in the round head (whose centre is at domeR).
+        let glyphOffset = domeR - totalHeight / 2
+        // Full accent — the balloon covers the key, so it reads as the active key.
+        let tint = theme.accent.color
+        return BalloonPopup(glyph: glyph, bulbWidth: headWidth, totalHeight: totalHeight,
+                            glyphOffset: glyphOffset, shape: shape, tint: tint, theme: theme,
+                            glass: theme.material == .liquidGlass && settings.liquidGlassPopup)
+            .position(x: keyRect.midX, y: (top + bottom) / 2)
     }
 
     /// The stack of rows, wrapped in a `GlassEffectContainer` for Liquid Glass
@@ -527,59 +529,133 @@ private struct PopupChrome<S: Shape>: ViewModifier {
     let shape: S
     let theme: Theme
     let glass: Bool
+    /// When set, the popup takes this tint instead of the resting key fill — used
+    /// by the balloon so it matches the pressed key it rises out of, blending into
+    /// one continuous shape rather than reading as a detached blob.
+    var tint: Color? = nil
+    /// Override the drop shadow (opacity, radius, y). The balloon dips into the
+    /// key, so it wants a faint shadow — a strong one paints a dark line across
+    /// the key where the two shapes overlap. Defaults to the floating tile's.
+    var shadow: (opacity: Double, radius: CGFloat, y: CGFloat) = (0.3, 6, 2)
 
     @ViewBuilder func body(content: Content) -> some View {
         if glass, #available(iOS 26.0, *) {
             content
-                .glassEffect(.regular, in: shape)
-                .shadow(color: .black.opacity(0.25), radius: 6, y: 2)
+                .glassEffect(tint.map { .regular.tint($0) } ?? .regular, in: shape)
+                .shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius, y: shadow.y)
         } else {
-            let fill: Color = theme.material == .liquidGlass
+            let resting: Color = theme.material == .liquidGlass
                 ? (theme.isDark ? Color(.sRGB, white: 0.16) : Color(.sRGB, white: 0.98))
                 : theme.keyFill.color
             content
-                .background(fill, in: shape)
-                .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+                .background(tint ?? resting, in: shape)
+                .shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius, y: shadow.y)
         }
     }
 }
 
-/// A native-style key-popup outline: a wide rounded bulb on top that necks down
-/// (concave sides) to `keyWidth` at the bottom, so it reads as rising out of the
-/// pressed key. Drawn in a rect whose bottom edge aligns with the key.
+/// A water-droplet outline drawn as ONE continuous shape spanning the whole
+/// pressed key: a round bulb up top that pinches in to a narrow waist, then
+/// flares back out to the key's width and runs straight down to a rounded foot.
+/// Because the balloon *is* the key (it covers it exactly, same width / corners
+/// / tint), there's no seam — the round head reads as a droplet drawn up out of
+/// the key, joined by a teardrop neck.
 private struct BalloonPopupShape: Shape {
-    let bulbHeight: CGFloat
     let keyWidth: CGFloat
-    let cornerRadius: CGFloat
+    /// Width at the narrowest point of the neck — the droplet's pinch.
+    let neckWidth: CGFloat
+    /// Y of the key's top edge within the frame; below it the sides run straight
+    /// down to the foot, above it is the droplet head + neck.
+    let shoulderY: CGFloat
+    /// Roundness of the foot's corners — the key's own corner radius.
+    let bottomCorner: CGFloat
+
+    /// Circle → cubic-Bézier control-arm length (quarter-circle approximation).
+    private let kappa: CGFloat = 0.5523
 
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height
-        let r = min(cornerRadius, w / 2)
-        let bulbH = min(bulbHeight, h)
-        let kw = min(keyWidth, w)
-        let leftB = (w - kw) / 2
-        let rightB = (w + kw) / 2
+        let cx = w / 2
+        let kHalf = min(keyWidth, w) / 2
+        let nHalf = min(neckWidth, keyWidth) / 2
+        let br = min(bottomCorner, kHalf)
+        // Round head: a full circle of radius w/2, its apex at the frame top.
+        let domeR = w / 2
+        let domeCy = domeR
+        // Key top, kept clear of the head so there's always a neck between them.
+        let shoulder = min(max(shoulderY, domeCy + 10), h - br - 1)
+        // The pinch sits between the head and the key, biased toward the key.
+        let waistY = domeCy + (shoulder - domeCy) * 0.6
 
         var p = Path()
-        // Bulb top, with rounded top corners.
-        p.move(to: CGPoint(x: r, y: 0))
-        p.addLine(to: CGPoint(x: w - r, y: 0))
-        p.addQuadCurve(to: CGPoint(x: w, y: r), control: CGPoint(x: w, y: 0))
-        p.addLine(to: CGPoint(x: w, y: bulbH))
-        // Right neck — concave taper down to the key's right edge.
-        p.addCurve(to: CGPoint(x: rightB, y: h),
-                   control1: CGPoint(x: w, y: h),
-                   control2: CGPoint(x: rightB, y: bulbH))
-        // Bottom edge (key width).
-        p.addLine(to: CGPoint(x: leftB, y: h))
-        // Left neck — mirror of the right.
-        p.addCurve(to: CGPoint(x: 0, y: bulbH),
-                   control1: CGPoint(x: leftB, y: bulbH),
-                   control2: CGPoint(x: 0, y: h))
-        p.addLine(to: CGPoint(x: 0, y: r))
-        p.addQuadCurve(to: CGPoint(x: r, y: 0), control: CGPoint(x: 0, y: 0))
+        // Head — left quarter up to the apex, then right quarter down to the
+        // head's right edge (a clean circular dome).
+        p.move(to: CGPoint(x: cx - domeR, y: domeCy))
+        p.addCurve(to: CGPoint(x: cx, y: 0),
+                   control1: CGPoint(x: cx - domeR, y: domeCy - domeR * kappa),
+                   control2: CGPoint(x: cx - domeR * kappa, y: 0))
+        p.addCurve(to: CGPoint(x: cx + domeR, y: domeCy),
+                   control1: CGPoint(x: cx + domeR * kappa, y: 0),
+                   control2: CGPoint(x: cx + domeR, y: domeCy - domeR * kappa))
+        // Right neck — head edge pinches in to the waist (vertical tangents both
+        // ends, so the curve is a smooth concave nip).
+        p.addCurve(to: CGPoint(x: cx + nHalf, y: waistY),
+                   control1: CGPoint(x: cx + domeR, y: domeCy + (waistY - domeCy) * 0.55),
+                   control2: CGPoint(x: cx + nHalf, y: waistY - (waistY - domeCy) * 0.55))
+        // …then flares back out to the key's right edge.
+        p.addCurve(to: CGPoint(x: cx + kHalf, y: shoulder),
+                   control1: CGPoint(x: cx + nHalf, y: waistY + (shoulder - waistY) * 0.55),
+                   control2: CGPoint(x: cx + kHalf, y: shoulder - (shoulder - waistY) * 0.55))
+        // Straight down the key's right side to the foot.
+        p.addLine(to: CGPoint(x: cx + kHalf, y: h - br))
+        p.addQuadCurve(to: CGPoint(x: cx + kHalf - br, y: h), control: CGPoint(x: cx + kHalf, y: h))
+        p.addLine(to: CGPoint(x: cx - kHalf + br, y: h))
+        p.addQuadCurve(to: CGPoint(x: cx - kHalf, y: h - br), control: CGPoint(x: cx - kHalf, y: h))
+        // Up the key's left side, then the mirrored neck back to the head.
+        p.addLine(to: CGPoint(x: cx - kHalf, y: shoulder))
+        p.addCurve(to: CGPoint(x: cx - nHalf, y: waistY),
+                   control1: CGPoint(x: cx - kHalf, y: shoulder - (shoulder - waistY) * 0.55),
+                   control2: CGPoint(x: cx - nHalf, y: waistY + (shoulder - waistY) * 0.55))
+        p.addCurve(to: CGPoint(x: cx - domeR, y: domeCy),
+                   control1: CGPoint(x: cx - nHalf, y: waistY - (waistY - domeCy) * 0.55),
+                   control2: CGPoint(x: cx - domeR, y: domeCy + (waistY - domeCy) * 0.55))
         p.closeSubpath()
         return p
+    }
+}
+
+/// The balloon popup, with its "droplet" emerge: on press it springs up out of
+/// the key — anchored at the foot, it stretches from a low squash to full height
+/// and settles with a soft wobble, like a droplet drawn upward. A faint shadow
+/// keeps the foot from painting a line across the key it overlaps.
+private struct BalloonPopup: View {
+    let glyph: String
+    let bulbWidth: CGFloat
+    let totalHeight: CGFloat
+    /// Signed offset of the glyph from the frame centre, up into the bulb.
+    let glyphOffset: CGFloat
+    let shape: BalloonPopupShape
+    let tint: Color
+    let theme: Theme
+    let glass: Bool
+
+    @State private var emerged = false
+
+    var body: some View {
+        Text(glyph)
+            .font(.system(size: 26, weight: .regular))
+            .foregroundStyle(.white)
+            .offset(y: glyphOffset)                   // lift glyph into the bulb
+            .frame(width: bulbWidth, height: totalHeight)
+            .modifier(PopupChrome(shape: shape, theme: theme, glass: glass,
+                                  tint: tint, shadow: (0.22, 5, 1.5)))
+            // Droplet emerge: scale up from the foot (the key), so the bulb is
+            // drawn upward out of the key rather than fading in over it.
+            .scaleEffect(x: emerged ? 1 : 0.9, y: emerged ? 1 : 0.5, anchor: .bottom)
+            .opacity(emerged ? 1 : 0.5)
+            .onAppear {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.62)) { emerged = true }
+            }
     }
 }
 
@@ -654,9 +730,9 @@ private struct KeyView: View {
 
     private var isCharacter: Bool { spec.kind == .character }
 
-    /// Whether this key is currently showing its magnified popup — if so the
-    /// key hides its own glyph (the popup carries it) and skips the press bloom,
-    /// so the letter isn't drawn twice (key + popup) and looking off-centre.
+    /// Whether this key is currently showing its magnified popup — if so the key
+    /// skips the press bloom (the popup is the press feedback). The key keeps its
+    /// own glyph; the popup floats above it like the system keyboard.
     private var showsPopup: Bool {
         guard isPressed, popupEnabled, isCharacter else { return false }
         if case let .text(g) = spec.label, g.count == 1 { return true }
@@ -754,7 +830,9 @@ private struct KeyView: View {
             scaleX: warp.scaleX, scaleY: warp.scaleY, offsetX: warp.offset,
             // Only the backspace key bounces on auto-repeat; every other key
             // feeds 0 so a delete burst doesn't jiggle shift / globe / return.
-            hidden: showsPopup, deleteTick: spec.isRepeatable ? deleteTick : 0, multiChar: multiChar)
+            // The key keeps its own glyph even while popping — the popup sits
+            // above it (à la the system keyboard), so the letter stays put.
+            hidden: false, deleteTick: spec.isRepeatable ? deleteTick : 0, multiChar: multiChar)
     }
 
     /// The key's drawn surface: shift carries its own glyph (so its interactive
@@ -793,32 +871,22 @@ private struct KeyView: View {
         let content = shiftLabel
             .foregroundStyle(isPressed ? Color.white : textColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        let surface = Group {
-            switch theme.material {
-            case .liquidGlass:
-                if #available(iOS 26.0, *) {
-                    content.glassEffect(glass, in: shape)
-                } else {
-                    content.background {
-                        shape.fill(.ultraThinMaterial).overlay(shape.fill(glassFallbackTint))
-                    }
-                }
-            case .solid:
+        switch theme.material {
+        case .liquidGlass:
+            if #available(iOS 26.0, *) {
+                content.glassEffect(glass, in: shape)
+            } else {
                 content.background {
-                    shape
-                        .fill(isPressed ? pressedTint.opacity(0.85) : fill)
-                        .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.18), radius: 0, y: 1)
+                    shape.fill(.ultraThinMaterial).overlay(shape.fill(glassFallbackTint))
                 }
             }
+        case .solid:
+            content.background {
+                shape
+                    .fill(isPressed ? pressedTint.opacity(0.85) : fill)
+                    .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.18), radius: 0, y: 1)
+            }
         }
-        // Shift draws its own glyph, so it sits out the canvas's generic press
-        // bloom (which warps the bare surface only). Give it its own centred pop
-        // here instead — glass + glyph scale together — so the press feels as
-        // alive as every other key.
-        surface
-            .scaleEffect(pressWarp && isPressed ? 1.12 : 1)
-            .animation(pressWarp ? .interactiveSpring(response: 0.26, dampingFraction: 0.58) : nil,
-                       value: isPressed)
     }
 
     @ViewBuilder private var shiftLabel: some View {

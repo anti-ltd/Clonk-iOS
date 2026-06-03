@@ -86,7 +86,8 @@ struct ShowcaseView: View {
                 settings: model.settings,
                 controller: typer.controller,
                 onInsert: { typer.manualInsert($0) },
-                onBackspace: { typer.manualBackspace() }
+                onBackspace: { typer.manualBackspace() },
+                onSetSkinTone: { base, tone in model.settings.emojiSkinTones[base] = tone }
             )
             .transition(.move(edge: .bottom).combined(with: .opacity))
         } else {

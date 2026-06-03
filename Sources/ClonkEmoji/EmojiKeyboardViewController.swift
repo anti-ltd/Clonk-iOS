@@ -119,9 +119,23 @@ final class EmojiKeyboardViewController: UIInputViewController {
                 : nil,
             // Search mode shows a QWERTY and needs more room — grow the keyboard
             // to whatever height the canvas asks for, animating the resize.
-            onRequestHeight: { [weak self] height in self?.setKeyboardHeight(height) }
+            onRequestHeight: { [weak self] height in self?.setKeyboardHeight(height) },
+            // Persist a long-press skin-tone choice into the shared settings so
+            // it sticks across sessions and applies on the next plain tap.
+            onSetSkinTone: { [weak self] base, tone in self?.saveSkinTone(tone, for: base) }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Write a per-emoji skin-tone choice to the shared store. We re-load first
+    /// so a concurrent app-side edit isn't clobbered, then save the whole value
+    /// (the same JSON the rest of the keyboard reads). `settings` is refreshed so
+    /// later taps resolve the new tone even before the change notification lands.
+    private func saveSkinTone(_ tone: SkinTone, for base: String) {
+        var current = store.load()
+        current.setSkinTone(tone, for: base)
+        store.save(current)
+        settings = current
     }
 
     /// Animate the keyboard to a new height (e.g. entering/leaving emoji search).
