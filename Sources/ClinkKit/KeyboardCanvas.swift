@@ -355,9 +355,17 @@ public struct KeyboardCanvas: View {
 
     private var bottomRowSpecs: [KeySpec] {
         var specs: [KeySpec] = []
-        // 123 / ABC plane toggle.
+        // 123 / ABC plane toggle. On the letters plane, dragging the 123 key
+        // upward (toward shift) opens emoji — an internal mode swap, so it's
+        // instant with no system keyboard transition. A plain tap still switches
+        // to the number plane as before.
         if plane == .letters {
-            specs.append(planeKey("123", to: .numbers, weight: 1.4))
+            specs.append(planeKey("123", to: .numbers, weight: 1.4,
+                                  onDragUp: {
+                                      withAnimation(.snappy(duration: 0.22)) {
+                                          controller.showEmoji = true
+                                      }
+                                  }))
         } else {
             specs.append(planeKey("ABC", to: .letters, weight: 1.4))
         }
@@ -470,8 +478,10 @@ public struct KeyboardCanvas: View {
         ".", ",", "?", "!", ";", ":",
     ]
 
-    private func planeKey(_ glyph: String, to target: Plane, weight: Double) -> KeySpec {
-        KeySpec(kind: .function, label: .text(glyph), weight: weight) { plane = target }
+    private func planeKey(_ glyph: String, to target: Plane, weight: Double,
+                          onDragUp: (() -> Void)? = nil) -> KeySpec {
+        KeySpec(kind: .function, label: .text(glyph), weight: weight,
+                onDragUp: onDragUp) { plane = target }
     }
 
     private func insert(_ s: String) { onInsert(s) }
@@ -698,6 +708,10 @@ struct KeySpec: Identifiable {
     let isSpace: Bool
     /// Repeats `action` while held (the backspace key).
     let isRepeatable: Bool
+    /// Fired when this key is pressed and dragged upward past a threshold (the
+    /// 123→emoji gesture). When it fires, the key's normal tap `action` is
+    /// suppressed for that touch. nil for keys with no drag-up behaviour.
+    let onDragUp: (() -> Void)?
     /// The shift key — it has its own glass + symbol animation, so it opts out
     /// of the generic press-warp bloom (which would double up and look janky).
     let isShift: Bool
@@ -709,12 +723,14 @@ struct KeySpec: Identifiable {
 
     init(kind: Kind, label: Label, weight: Double, highlighted: Bool = false,
          isDestructive: Bool = false, isSpace: Bool = false, isRepeatable: Bool = false,
-         isShift: Bool = false, onCursorMove: ((Int) -> Void)? = nil, fontSize: CGFloat? = nil,
+         isShift: Bool = false, onCursorMove: ((Int) -> Void)? = nil,
+         onDragUp: (() -> Void)? = nil, fontSize: CGFloat? = nil,
          action: @escaping () -> Void) {
         self.kind = kind; self.label = label; self.weight = weight
         self.highlighted = highlighted; self.isDestructive = isDestructive
         self.isSpace = isSpace; self.isRepeatable = isRepeatable; self.isShift = isShift
-        self.onCursorMove = onCursorMove; self.fontSize = fontSize; self.action = action
+        self.onCursorMove = onCursorMove; self.onDragUp = onDragUp
+        self.fontSize = fontSize; self.action = action
     }
 }
 

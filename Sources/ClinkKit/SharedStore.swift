@@ -60,6 +60,12 @@ public final class SharedStore: @unchecked Sendable {
     /// reflect the real Full Access state (which only the extension can read).
     /// May be stale until the keyboard has run at least once.
     public func reportFullAccess(_ granted: Bool) {
+        // Only write when the value actually changes. Without Full Access the
+        // keyboard can't write the app group at all (the sandbox denies it), so an
+        // unconditional `set` on every appearance spammed a `fault` per layout
+        // pass. In the common no-access case the stored value is already `false`,
+        // so this guard skips the write entirely — no fault.
+        guard lastKnownFullAccess != granted else { return }
         defaults?.set(granted, forKey: fullAccessKey)
     }
 

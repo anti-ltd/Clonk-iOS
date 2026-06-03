@@ -32,7 +32,12 @@ enum AppStage {
                 themeID: "synthwave", matchSystemAppearance: false, showNumberRow: true)
         case "themes":
             return KeyboardSettings(themeID: "mechanical", matchSystemAppearance: false)
-        default: // hero / glass
+        case "glass":
+            // The hero shot: Liquid Glass, dark. Key popups OFF — the held key
+            // just reads as depressed; the magnified balloon looked off here.
+            return KeyboardSettings(
+                themeID: "liquid-dark", matchSystemAppearance: false, keyPopupEnabled: false)
+        default: // hero
             return KeyboardSettings(themeID: "liquid-dark", matchSystemAppearance: false)
         }
     }
@@ -45,6 +50,7 @@ struct StagedRoot: View {
 
     var body: some View {
         switch slug {
+        case "glass":  StagedHeroView()   // the WOW shot: glass keyboard mid-type
         case "themes": NavigationStack { ThemeEditorView() }
         case "layout": NavigationStack { LayoutPickerView() }
         case "sound":  NavigationStack { SoundPickerView() }

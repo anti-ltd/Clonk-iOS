@@ -143,8 +143,25 @@ public final class KeyTouchRouter {
         }
     }
 
-    fileprivate func touchMoved(id: String, translationX: CGFloat) {
-        guard let spec = resolveSpec(id), spec.isSpace else { return }
+    fileprivate func touchMoved(id: String, translationX: CGFloat, translationY: CGFloat) {
+        guard let spec = resolveSpec(id) else { return }
+
+        // Drag-up keys (the 123→emoji gesture): once the finger has travelled far
+        // enough upward, fire once and mark the touch consumed so `touchUp` skips
+        // the normal tap action. Mirrors the space-bar trackpad's tap-vs-drag split.
+        if spec.onDragUp != nil, !dragUpFired.contains(id),
+           translationY < -Self.dragUpThreshold {
+            dragUpFired.insert(id)
+            // The canvas swaps out from under this touch, so it never gets a
+            // touchUp/cancel — clear the key's press now or it sticks "pressed"
+            // (the 123 key stayed blue after returning to letters).
+            clearPress(id)
+            dragHaptic.impactOccurred()
+            spec.onDragUp?()
+            return
+        }
+
+        guard spec.isSpace else { return }
         // Past a small threshold the space touch becomes a cursor trackpad; a
         // plain tap (no real movement) still types a space on release.
         if abs(translationX) > Self.cursorStride { spaceCursorActive = true }
@@ -160,6 +177,10 @@ public final class KeyTouchRouter {
     fileprivate func touchUp(id: String) {
         releaseHold(id)
         guard let spec = resolveSpec(id) else { return }
+
+        // A drag-up gesture already fired and consumed this touch — don't also run
+        // the key's tap action (e.g. don't switch to numbers after opening emoji).
+        if dragUpFired.remove(id) != nil { return }
 
         switch spec.kind {
         case .character:
@@ -181,6 +202,7 @@ public final class KeyTouchRouter {
 
     fileprivate func touchCancelled(id: String) {
         releaseHold(id)
+        dragUpFired.remove(id)
         guard let spec = resolveSpec(id) else { return }
         if spec.isRepeatable { stopRepeating() }
         if spec.isSpace {
@@ -217,6 +239,20 @@ public final class KeyTouchRouter {
         if next != pressed { pressed = next }
     }
 
+    /// Immediately drop a key's pressed state (no linger) — used when a gesture
+    /// (123→emoji drag) swaps the canvas out from under the touch, so the key
+    /// can't receive its normal release.
+    private func clearPress(_ id: String) {
+        heldCounts[id] = nil
+        cancelLinger(id)
+        recomputePressed()
+    }
+
+    /// Light tap played when the 123→emoji drag fires — the gesture's feedback,
+    /// the haptic cousin of the shift/caps-lock morph. Only actually buzzes with
+    /// Full Access granted; a silent no-op otherwise (never crashes).
+    private let dragHaptic = UIImpactFeedbackGenerator(style: .rigid)
+
     /// Keep a just-released key visually pressed for `lingerDuration`, then clear
     /// it — so a quick tap blooms fully before springing back.
     private func startLinger(_ id: String) {
@@ -244,6 +280,11 @@ public final class KeyTouchRouter {
     private var repeatTask: Task<Void, Never>?
     private var spaceSteps = 0
     private static let cursorStride: CGFloat = 10
+    /// Upward travel (pt) before a drag-up key (123→emoji) fires.
+    private static let dragUpThreshold: CGFloat = 24
+    /// Keys whose `onDragUp` has fired for the current touch, so `touchUp` skips
+    /// their tap action. Cleared on up/cancel.
+    private var dragUpFired: Set<String> = []
 
     private func startRepeating(_ spec: KeySpec) {
         stopRepeating()
@@ -315,7 +356,8 @@ final class KeyGridTouchView: UIView {
         for t in touches {
             guard let b = bindings[ObjectIdentifier(t)] else { continue }
             let p = t.location(in: self)
-            router.touchMoved(id: b.id, translationX: p.x - b.start.x)
+            router.touchMoved(id: b.id, translationX: p.x - b.start.x,
+                              translationY: p.y - b.start.y)
         }
     }
 

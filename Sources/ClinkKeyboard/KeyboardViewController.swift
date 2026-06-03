@@ -14,6 +14,10 @@ final class KeyboardViewController: UIInputViewController {
     private let store = SharedStore.shared
     private let sound = SoundPlayer()
     private let live = KeyboardLiveState()
+    /// Shared transient UI state (plane/shift/emoji-mode). Held by the controller
+    /// so letters ⇄ emoji is an internal SwiftUI swap — no system keyboard
+    /// transition, so switching is instant with none of the appearance resize.
+    private let keyboard = KeyboardController()
     /// Offline autocomplete + auto-correct. `UITextChecker` is comparatively
     /// slow, so rather than run it on every keystroke (which made fast typing
     /// stutter) we debounce: a burst of keys only triggers ONE compute, once
@@ -50,7 +54,23 @@ final class KeyboardViewController: UIInputViewController {
     private var settings = KeyboardSettings.default
     private var hosting: UIHostingController<AnyView>?
     private var heightConstraint: NSLayoutConstraint?
+    /// Fixed height of the SwiftUI content, anchored to the *bottom* of our view.
+    /// The system animates our view's frame from full-screen down to `target` on
+    /// every appearance/switch; pinning the content to all edges made it track
+    /// that animation (the visible jump). Anchoring it bottom-aligned at a fixed
+    /// height keeps the keys in their final position from the first frame — only
+    /// the transparent overhang above collapses, which is invisible.
+    private var hostContentHeight: NSLayoutConstraint?
     private var changeToken: AnyObject?
+    /// True from creation until the appearance frame first settles to `target`.
+    /// The system inflates our view to ~full-screen and animates it down to the
+    /// target on every appearance/switch; the height trace proved no sizing API
+    /// (intrinsicContentSize, constraints, taming) stops that. So we hide the
+    /// content for the descent and reveal it the instant the frame settles — the
+    /// keyboard appears at its final size, never mid-resize. A fresh VC is created
+    /// per appearance, so the `true` default re-arms it each time. Once cleared, it
+    /// stays clear, so intentional later resizes are never masked.
+    private var isSettling = true
 
     /// Sendable weak handle so the @Sendable Darwin-notification closure can
     /// hop back to this (non-Sendable, MainActor) controller.
@@ -63,7 +83,16 @@ final class KeyboardViewController: UIInputViewController {
     // system click plays even WITHOUT Full Access).
 
     override func loadView() {
-        view = ClinkInputView(frame: .zero, inputViewStyle: .keyboard)
+        let v = ClinkInputView(frame: .zero, inputViewStyle: .keyboard)
+        // Seed the intrinsic height HERE — before the system's first measurement —
+        // not in `reloadSettings` (which runs in viewDidLoad, too late). The trace
+        // proved the system measures `intrinsicContentSize` on the very first frame:
+        // with targetHeight still 0 it read the full-screen default (844) and
+        // animated down to our 268 — the visible jump. Setting it now means the
+        // first measurement already sees our target, so the keyboard opens at the
+        // right height with nothing to animate.
+        v.targetHeight = KeyboardCanvas.preferredHeight(for: store.load())
+        view = v
     }
 
     // MARK: - Lifecycle
@@ -78,6 +107,10 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
         updateReturnKey()
 
+        // Hide content until the appearance frame settles (see `isSettling`). A
+        // layout pass can fire before viewWillAppear, so arm the mask here.
+        hosting?.view.isHidden = true
+
         // Reload instantly if the app saves new settings while we're alive.
         let box = WeakBox(self)
         // Held by `changeToken`; releasing it (on deinit) auto-unregisters.
@@ -88,6 +121,9 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // Re-arm the appearance mask in case this VC is reused across appearances.
+        isSettling = true
+        hosting?.view.isHidden = true
         // Pick up any theme/layout/sound changes the user made in the app
         // while we weren't on screen.
         store.reportFullAccess(hasFullAccess)
@@ -98,6 +134,37 @@ final class KeyboardViewController: UIInputViewController {
         invalidateMirror()
         updateSuggestions()
         updateReturnKey()
+        // On a keyboard *switch* iOS creates us fresh and animates us in at its own
+        // inflated default height (target + ~228pt) before re-measuring to our real
+        // height. Because the keyboard is bottom-docked, "too tall" pushes our
+        // (transparent) top edge up over the host app — which then shows through for
+        // the length of that animation. Tame the constraint now and force a layout
+        // so the appearance animation starts from our real height, not the balloon.
+        tameSystemHeightConstraint()
+        view.layoutIfNeeded()
+        logHeightState("viewWillAppear")
+    }
+
+    /// `viewWillAppear` is often too early on a keyboard *switch*: iOS hasn't yet
+    /// installed its `UIView-Encapsulated-Layout-Height` balloon, so taming it
+    /// there finds nothing. `viewIsAppearing` fires once the view is in the
+    /// hierarchy with settled geometry and that constraint present — but still
+    /// before the frame paints. Tame + relayout here so the appearance animation
+    /// starts from our real height even on the first switch-in.
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        tameSystemHeightConstraint()
+        view.layoutIfNeeded()
+        logHeightState("viewIsAppearing")
+    }
+
+    /// Hide our content the instant we start leaving (e.g. a globe switch). The
+    /// outgoing keyboard's view lingers while the incoming one animates in, so its
+    /// stale, wrong-height content would otherwise show *underneath* the arriving
+    /// keyboard — the "stacking" glitch. Blank it immediately; we're on our way out.
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        hosting?.view.isHidden = true
     }
 
     /// Pull in the user's supplementary lexicon — Contacts names plus the text
@@ -192,17 +259,23 @@ final class KeyboardViewController: UIInputViewController {
             addChild(host)
             host.view.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(host.view)
-            // Pin all four edges so the SwiftUI content FILLS the input view.
-            // iOS enforces a minimum keyboard height; rather than fight it with
-            // a fixed-size (which then got centered, leaving a gap above the
-            // suggestion bar), we let the canvas fill — bar at the top, keys
-            // expanding to fill the rest.
+            // Anchor the content to the BOTTOM at a fixed height — NOT all four
+            // edges. The system animates our view's frame from full-screen down to
+            // `target` on every appearance; an all-edges pin made the content track
+            // that animation, which is the visible jump. Bottom-anchored at a fixed
+            // height, the keys sit in their final place from frame one and only the
+            // transparent overhang above them shrinks (invisible — it just shows the
+            // host app, like any keyboard sliding in). The height constraint is
+            // updated alongside `heightConstraint` whenever the target changes.
+            let hostHeight = host.view.heightAnchor.constraint(
+                equalToConstant: KeyboardCanvas.preferredHeight(for: new))
             NSLayoutConstraint.activate([
                 host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-                host.view.topAnchor.constraint(equalTo: view.topAnchor),
                 host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                hostHeight,
             ])
+            hostContentHeight = hostHeight
             host.didMove(toParent: self)
             hosting = host
 
@@ -215,7 +288,10 @@ final class KeyboardViewController: UIInputViewController {
             h.isActive = true
             heightConstraint = h
         }
-        heightConstraint?.constant = KeyboardCanvas.preferredHeight(for: new)
+        let target = KeyboardCanvas.preferredHeight(for: new)
+        heightConstraint?.constant = target
+        hostContentHeight?.constant = target
+        (view as? ClinkInputView)?.targetHeight = target
 
         // When matching the system, let the host's appearance flow through so
         // `KeyboardCanvas` flips its light/dark theme live. With a fixed theme,
@@ -248,20 +324,57 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
-    /// The system tray/dock views aren't in our hierarchy until the keyboard is
-    /// laid out, so re-apply here (cheap; just sets background colours).
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        // Stop iOS's required-priority height constraint from inflating the
-        // keyboard mid-transition (the "huge then snaps" flash on switch).
+    // Tame the inflated height constraint at every hook that fires before a frame
+    // can paint — iOS adds it mid-layout on a fresh keyboard, so the more places we
+    // catch it, the fewer (ideally zero) inflated frames reach the screen.
+    override func updateViewConstraints() {
         tameSystemHeightConstraint()
-        clearKeyboardBackground()
+        super.updateViewConstraints()
     }
 
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        tameSystemHeightConstraint()
+    }
+
+    /// The system tray/dock views aren't in our hierarchy until the keyboard is
+    /// laid out, so re-apply `clearKeyboardBackground` here (cheap; just colours).
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        tameSystemHeightConstraint()
+        clearKeyboardBackground()
+        revealContentWhenSettled()
+        logHeightState("viewDidLayoutSubviews")
+    }
+
+    /// While the appearance frame is descending from full-screen, keep the content
+    /// hidden; reveal it the moment the frame reaches `target`. See `isSettling`.
+    private func revealContentWhenSettled() {
+        guard isSettling else { return }
+        let target = (view as? ClinkInputView)?.targetHeight ?? 0
+        if target > 0, view.bounds.height <= target + 12 {
+            isSettling = false
+            hosting?.view.isHidden = false
+        } else {
+            hosting?.view.isHidden = true
+        }
+    }
+
+    /// The keyboard surface: letter keyboard or emoji keyboard, chosen by
+    /// `keyboard.showEmoji`. Because both observe the same `KeyboardController`,
+    /// flipping that flag (drag the 123 key up, or tap ABC in emoji) swaps them
+    /// instantly as a pure SwiftUI state change — no appear/disappear, no resize.
     private func makeCanvas(for settings: KeyboardSettings) -> some View {
+        KeyboardModeView(controller: keyboard,
+                         letters: letterCanvas(for: settings),
+                         emoji: emojiCanvas(for: settings))
+    }
+
+    private func letterCanvas(for settings: KeyboardSettings) -> some View {
         KeyboardCanvas(
             settings: settings,
             live: live,
+            controller: keyboard,
             onInsert: { [weak self] text in
                 guard let self else { return }
                 self.isApplyingEdit = true
@@ -323,6 +436,63 @@ final class KeyboardViewController: UIInputViewController {
         // Fill the host (which fills the input view) so the bar pins to the top
         // and the keys expand — no centred gap.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// The emoji keyboard, as an internal mode of this same extension. Insert /
+    /// backspace go through the same document-mirror path as letters; the ABC tile
+    /// flips back to letters; skin-tone picks persist; search mode resizes us.
+    private func emojiCanvas(for settings: KeyboardSettings) -> some View {
+        EmojiCanvas(
+            settings: settings,
+            controller: keyboard,
+            onInsert: { [weak self] emoji in
+                guard let self else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(emoji)
+                self.isApplyingEdit = false
+                self.scheduleSuggestionUpdate()
+            },
+            onBackspace: { [weak self] in
+                guard let self else { return }
+                self.isApplyingEdit = true
+                self.deleteBackwardMirrored(1)
+                self.isApplyingEdit = false
+                self.scheduleSuggestionUpdate()
+            },
+            onAnyTap: { [weak self] in
+                guard let self else { return }
+                self.sound.play(settings: self.settings, hasFullAccess: self.hasFullAccess)
+            },
+            onNextKeyboard: needsInputModeSwitchKey
+                ? { [weak self] in self?.advanceToNextInputMode() }
+                : nil,
+            onRequestHeight: { [weak self] height in self?.setKeyboardHeight(height) },
+            onSetSkinTone: { [weak self] base, tone in self?.saveSkinTone(tone, for: base) },
+            onReturnToLetters: { [weak self] in
+                withAnimation(.snappy(duration: 0.22)) { self?.keyboard.showEmoji = false }
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Animate the keyboard to a new height (emoji search grows taller). Updates
+    /// both our view's height constraint and the bottom-anchored content height,
+    /// plus the input view's intrinsic target, so the resize is clean.
+    private func setKeyboardHeight(_ height: CGFloat) {
+        guard let heightConstraint, heightConstraint.constant != height else { return }
+        heightConstraint.constant = height
+        hostContentHeight?.constant = height
+        (view as? ClinkInputView)?.targetHeight = height
+        UIView.animate(withDuration: 0.28) { self.view.layoutIfNeeded() }
+    }
+
+    /// Persist a per-emoji skin-tone choice into the shared store, re-loading first
+    /// so a concurrent app-side edit isn't clobbered.
+    private func saveSkinTone(_ tone: SkinTone, for base: String) {
+        var current = store.load()
+        current.setSkinTone(tone, for: base)
+        store.save(current)
+        settings = current
     }
 
     // MARK: - Offline autocomplete (UITextChecker — on-device, no network)
@@ -490,8 +660,50 @@ final class KeyboardViewController: UIInputViewController {
 }
 
 
+/// Switches between the letter and emoji canvases off the shared controller's
+/// `showEmoji` flag. Reading that `@Observable` property inside `body` makes the
+/// swap reactive — flipping it (drag 123 up, or tap ABC) re-renders this view and
+/// mounts the other canvas, with no UIKit appear/disappear in between.
+private struct KeyboardModeView<Letters: View, Emoji: View>: View {
+    let controller: KeyboardController
+    let letters: Letters
+    let emoji: Emoji
+    var body: some View {
+        ZStack {
+            if controller.showEmoji {
+                emoji.transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .bottom)))
+            } else {
+                letters.transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .bottom)))
+            }
+        }
+    }
+}
+
 /// Conforming the input view to `UIInputViewAudioFeedback` is what lets
 /// `UIDevice.playInputClick()` actually click without Full Access.
 private final class ClinkInputView: UIInputView, UIInputViewAudioFeedback {
     var enableInputClicksWhenVisible: Bool { true }
+
+    /// The keyboard's real height, fed by the controller. Exposed as the view's
+    /// intrinsic content size so iOS's `systemLayoutSizeFitting` measures *this*
+    /// when it presents us — rather than its own inflated default (target + ~228pt)
+    /// that becomes the `UIView-Encapsulated-Layout-Height` balloon. Killing the
+    /// balloon at the measurement source is more decisive than taming the
+    /// constraint after it's already been installed.
+    var targetHeight: CGFloat = 0 {
+        didSet { if targetHeight != oldValue { invalidateIntrinsicContentSize() } }
+    }
+
+    override var intrinsicContentSize: CGSize {
+        targetHeight > 0
+            ? CGSize(width: UIView.noIntrinsicMetric, height: targetHeight)
+            : super.intrinsicContentSize
+    }
+
+    /// Earliest layout hook — defuse the balloon before this pass commits, ahead of
+    /// the controller's own `viewWillLayoutSubviews`.
+    override func layoutSubviews() {
+        tameEncapsulatedHeightConstraint()
+        super.layoutSubviews()
+    }
 }

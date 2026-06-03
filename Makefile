@@ -27,9 +27,20 @@ SIM_DEST       := "platform=iOS Simulator,name=$(SIM_NAME)"
 DEVICE         ?=
 DEVICE_NAME    ?=
 
+# App Store Connect distribution. Same API key clonk uses for notarytool; the
+# .p8 lives outside the repo. memory: KZ765P9ZHP / issuer 66eec4bc-...
+ASC_KEY_ID     ?= KZ765P9ZHP
+ASC_ISSUER     ?= 66eec4bc-6987-480b-9af2-c26ea01d2ed2
+ASC_KEY        ?= $(HOME)/.appstoreconnect/private_keys/AuthKey_$(ASC_KEY_ID).p8
+ARCHIVE        := $(BUILD_DIR)/$(APP_NAME).xcarchive
+EXPORT_DIR     := $(BUILD_DIR)/export
+IPA            := $(EXPORT_DIR)/$(APP_NAME).ipa
+EXPORT_OPTIONS := ExportOptions.plist
+
 .PHONY: all project icon emoji build run sim install clean stop help test \
         device device-install device-launch build-device \
-        device-showcase build-device-showcase
+        device-showcase build-device-showcase \
+        archive package validate-asc upload-asc
 
 # Extra Swift compilation conditions for the showcase build. SHOWCASE flips the
 # app's root to the typing-simulator screen (Sources/Clink/UI/ShowcaseView.swift);
@@ -226,3 +237,51 @@ device-showcase: build-device-showcase
 	xcrun devicectl device install app --device "$(DEVICE_UDID)" "$$APP"; \
 	echo "Launching $(BUNDLE_ID) on $(DEVICE_UDID)..."; \
 	xcrun devicectl device process launch --device "$(DEVICE_UDID)" "$(BUNDLE_ID)" || true
+
+# ============================================================
+# App Store Connect distribution. Mirrors clonk's MAS path, but iOS uses the
+# xcodebuild archive → export → altool pipeline (no hand-assembled bundle).
+# Signing is automatic: -allowProvisioningUpdates + the ASC API key let
+# xcodebuild mint the Apple Distribution cert and App Store profiles headlessly.
+#
+#   make archive      — Release archive of the app + both keyboard extensions
+#   make package      — export a distribution-signed .ipa from the archive
+#   make validate-asc — dry-run the upload (catches most rejections, uploads nothing)
+#   make upload-asc    — archive + package + validate + upload to App Store Connect
+# ============================================================
+archive: project
+	@mkdir -p $(BUILD_DIR)
+	rm -rf $(ARCHIVE)
+	xcodebuild \
+		-project $(PROJECT) \
+		-scheme $(SCHEME) \
+		-configuration Release \
+		-destination 'generic/platform=iOS' \
+		-archivePath $(ARCHIVE) \
+		-allowProvisioningUpdates \
+		-authenticationKeyPath $(ASC_KEY) \
+		-authenticationKeyID $(ASC_KEY_ID) \
+		-authenticationKeyIssuerID $(ASC_ISSUER) \
+		archive
+
+package: $(EXPORT_OPTIONS)
+	rm -rf $(EXPORT_DIR)
+	# No -authenticationKey* here: the export's distribution signing is managed by
+	# the Apple ID signed into Xcode (full signing rights). Passing the notary key
+	# instead forces cloud signing through an under-scoped key and fails.
+	xcodebuild \
+		-exportArchive \
+		-archivePath $(ARCHIVE) \
+		-exportOptionsPlist $(EXPORT_OPTIONS) \
+		-exportPath $(EXPORT_DIR) \
+		-allowProvisioningUpdates
+	@echo "Built $(IPA)"
+
+validate-asc:
+	xcrun altool --validate-app -f $(IPA) --type ios \
+		--apiKey $(ASC_KEY_ID) --apiIssuer $(ASC_ISSUER)
+
+upload-asc: archive package validate-asc
+	xcrun altool --upload-app -f $(IPA) --type ios \
+		--apiKey $(ASC_KEY_ID) --apiIssuer $(ASC_ISSUER)
+	@echo "Uploaded $(APP_NAME) to App Store Connect."

@@ -25,6 +25,9 @@ public struct EmojiCanvas: View {
     /// Persist a per-emoji skin-tone choice (base emoji → tone). The host writes
     /// it to the shared settings; we also keep `localTones` for instant feedback.
     private let onSetSkinTone: (String, SkinTone) -> Void
+    /// Return to the letter keyboard (the ABC tile). When the emoji keyboard is an
+    /// internal mode of the merged keyboard, this just flips `showEmoji` back.
+    private let onReturnToLetters: (() -> Void)?
 
     @State private var controller: KeyboardController
     @State private var searching = false
@@ -85,7 +88,8 @@ public struct EmojiCanvas: View {
         onAnyTap: @escaping () -> Void = {},
         onNextKeyboard: (() -> Void)? = nil,
         onRequestHeight: @escaping (CGFloat) -> Void = { _ in },
-        onSetSkinTone: @escaping (String, SkinTone) -> Void = { _, _ in }
+        onSetSkinTone: @escaping (String, SkinTone) -> Void = { _, _ in },
+        onReturnToLetters: (() -> Void)? = nil
     ) {
         self.settings = settings
         _controller = State(initialValue: controller ?? KeyboardController())
@@ -95,6 +99,7 @@ public struct EmojiCanvas: View {
         self.onNextKeyboard = onNextKeyboard
         self.onRequestHeight = onRequestHeight
         self.onSetSkinTone = onSetSkinTone
+        self.onReturnToLetters = onReturnToLetters
     }
 
     private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark) }
@@ -264,6 +269,17 @@ public struct EmojiCanvas: View {
             // Freeze scrolling while picking so sliding moves the selection, not
             // the grid.
             .scrollDisabled(picking != nil)
+            // Soft gutters top and bottom so rows fade in/out rather than hard-
+            // cutting against the search field and the tab bar — the vertical
+            // twin of the category strip's side fade.
+            .mask(
+                LinearGradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+            )
             .background(GeometryReader { g in
                 Color.clear.preference(key: EmojiGridFrameKey.self, value: g.frame(in: .global))
             })
@@ -492,7 +508,13 @@ public struct EmojiCanvas: View {
     // SwiftUI button taps are silently dropped in the keyboard extension.
 
     private var tabBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
+            // ABC — return to the letter keyboard (merged-keyboard mode). Shown
+            // only when the host wires it; falls back to the globe otherwise. The
+            // "abc" glyph reads large at the icon default, so size it down a touch.
+            if onReturnToLetters != nil {
+                fixedTile(systemName: "abc", width: 44, fontSize: 13) { onAnyTap(); onReturnToLetters?() }
+            }
             if onNextKeyboard != nil {
                 fixedTile(systemName: "globe", width: 38) { onAnyTap(); onNextKeyboard?() }
             }
@@ -542,6 +564,16 @@ public struct EmojiCanvas: View {
                     }
             }
             .frame(maxWidth: .infinity)
+            // Fade the scroll edges instead of letting tabs hard-cut against the
+            // ABC tile and the delete key — a soft gutter on both sides.
+            .mask(
+                LinearGradient(stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black, location: 0.05),
+                    .init(color: .black, location: 0.95),
+                    .init(color: .clear, location: 1),
+                ], startPoint: .leading, endPoint: .trailing)
+            )
             // Keep the active tab in view as it changes — whether tapped here or
             // driven externally (e.g. the showcase simulator).
             .onChange(of: category) { _, c in
@@ -620,12 +652,15 @@ public struct EmojiCanvas: View {
         }
     }
 
-    /// A fixed (non-scrolling) bar control — the globe. `width` sets the aspect
-    /// against the 38pt height. Taps route through a UIKit surface for reliability.
-    private func fixedTile(systemName: String, width: CGFloat, action: @escaping () -> Void) -> some View {
+    /// A fixed (non-scrolling) bar control — the globe / ABC. `width` sets the
+    /// aspect against the 38pt height; `fontSize` sizes its glyph (ABC reads big at
+    /// the icon default, so it passes a smaller size). Taps route through a UIKit
+    /// surface for reliability.
+    private func fixedTile(systemName: String, width: CGFloat, fontSize: CGFloat = 17,
+                           action: @escaping () -> Void) -> some View {
         let shape = Capsule(style: .continuous)
         let label = Image(systemName: systemName)
-            .font(.system(size: 17, weight: .medium))
+            .font(.system(size: fontSize, weight: .medium))
             .foregroundStyle(theme.specialKeyText.color)
             .frame(width: width, height: 38)
         return Group {

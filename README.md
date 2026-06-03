@@ -37,9 +37,9 @@
 
 <div align="center">
 
-| Your keyboard | Themes & Liquid Glass | Layouts & keys |
-|:---:|:---:|:---:|
-| <img src="Resources/screenshots/hero.png" width="220" alt="Live in-app keyboard preview"> | <img src="Resources/screenshots/themes.png" width="220" alt="Theme gallery"> | <img src="Resources/screenshots/layout.png" width="220" alt="Layout & keys"> |
+| Liquid Glass | Make it yours | Themes | Layouts |
+|:---:|:---:|:---:|:---:|
+| <img src="Resources/screenshots/glass.png" width="200" alt="Liquid Glass keyboard, mid-type"> | <img src="Resources/screenshots/hero.png" width="200" alt="Live in-app keyboard preview"> | <img src="Resources/screenshots/themes.png" width="200" alt="Theme gallery"> | <img src="Resources/screenshots/layout.png" width="200" alt="Layout & keys"> |
 
 </div>
 
@@ -66,7 +66,7 @@ Clink (container app)  ──embeds──▶  ClinkKeyboard.appex (the keyboard)
 ```
 
 - **`Clink`** — the App Store product. Onboarding / enable flow plus the
-  theme, layout and sound customization UI, with a live, interactive preview.
+  theme, layout and sound & haptics settings, with a live, interactive preview.
 - **`ClinkKeyboard`** — a `UIInputViewController` extension; the keyboard that
   runs inside other apps.
 - **`Sources/ClinkKit`** — shared, UI-and-model code compiled into *both*
@@ -84,7 +84,7 @@ Sources/
 │   ├── SharedStore.swift        App Group store + Darwin change-notify
 │   ├── Theme.swift              color themes + presets
 │   ├── KeyboardLayout.swift     QWERTY / AZERTY / QWERTZ / Dvorak
-│   ├── SoundPack.swift          clink sound-pack definitions
+│   ├── SoundPack.swift          sound-pack definitions (system click)
 │   ├── RGBA.swift               Codable color
 │   └── KeyboardCanvas.swift     ⭐ the keyboard view (app + extension)
 ├── Clink/                    container app
@@ -92,7 +92,7 @@ Sources/
 │   └── UI/  RootView · ThemeEditor · LayoutPicker · SoundPicker · EnableFlow · KeyboardPreview
 └── ClinkKeyboard/            extension
     ├── KeyboardViewController.swift   hosts KeyboardCanvas, wires the document proxy
-    └── SoundPlayer.swift              clink samples (Full Access) + system-click fallback
+    └── SoundPlayer.swift              system-click playback + per-keypress haptics
 ```
 
 ## Privacy & Full Access
@@ -100,9 +100,8 @@ Sources/
 iOS custom keyboards can request **Full Access**, which shows a scary system
 warning. Clink is **privacy-first**: it works completely without it (you get
 the standard system click), and never transmits anything. Full Access is an
-**optional, sounds-only opt-in** — it's the only way iOS lets an extension play
-custom audio and haptics, so the custom **clink** packs and haptics ask for it,
-and nothing else does.
+**optional opt-in** — iOS only lets a keyboard extension fire **haptics** when
+it's granted, so the per-keypress haptic asks for it. Nothing else does.
 
 ## Build
 
@@ -138,22 +137,20 @@ A custom keyboard can't be used until the user enables it once:
 
 1. **Settings → General → Keyboard → Keyboards → Add New Keyboard… → Clink**
 2. Switch to it from any app by holding the 🌐 globe key.
-3. *(Optional)* tap **Clink → Allow Full Access** for custom sounds & haptics.
+3. *(Optional)* tap **Clink → Allow Full Access** for per-keypress haptics.
 
 The in-app **Setup** screen walks through this and deep-links to Settings.
 
-## Sound packs
+## Sound & haptics
 
-Curated clink samples live in `Resources/Sounds/` — see the README there. v0.1
-ships the full playback pipeline; packs without bundled samples fall back to the
-system click, so the keyboard always feels live.
+Every keypress plays the standard iOS click — adjustable volume, no Full Access
+required — with an optional per-keypress haptic (which iOS only permits with
+Full Access). Tune both from the in-app **Sound & Feel** screen.
 
 ## Roadmap
 
-- **v0.1** (this) — working keyboard + themes + layouts + clink sound pipeline.
-- **v0.2** — curated sample packs, user-authored themes, key-popup polish,
-  emoji plane, one-handed mode.
-- **Later** — the clonk macOS keyboard-sound-simulator feature, brought over.
+- **v0.1** (this) — working keyboard + themes + layouts + system click & haptics.
+- **v0.2** — user-authored themes, key-popup polish, emoji plane, one-handed mode.
 
 ## License
 

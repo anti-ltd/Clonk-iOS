@@ -84,6 +84,7 @@
 		F71831CD4C2CA4D7726129AD /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		F722F207AB108110ABD7E63C /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */; };
 		F793343AA3AF97B58517BC6F /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550DB37AF0E30A5A41C1A9AC /* EmojiData.swift */; };
+		F8F7ED0153158B632C2232AD /* StagedHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C04D6AA199C403FCC06DCF8 /* StagedHeroView.swift */; };
 		FAB3053C826EFF1325A39E0B /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9993AF7E588543B2754CAB3E /* SoundPack.swift */; };
 /* End PBXBuildFile section */
 
@@ -139,6 +140,7 @@
 		5181D0B09674CE8789540CEA /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		5462C6538A73BD8117516CB5 /* TypingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingView.swift; sourceTree = "<group>"; };
 		550DB37AF0E30A5A41C1A9AC /* EmojiData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.swift; sourceTree = "<group>"; };
+		5C04D6AA199C403FCC06DCF8 /* StagedHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedHeroView.swift; sourceTree = "<group>"; };
 		64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCanvas.swift; sourceTree = "<group>"; };
 		6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLiveState.swift; sourceTree = "<group>"; };
 		6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
@@ -327,6 +329,7 @@
 				5181D0B09674CE8789540CEA /* RootView.swift */,
 				E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */,
 				7949529FFC551E295B024531 /* SoundPickerView.swift */,
+				5C04D6AA199C403FCC06DCF8 /* StagedHeroView.swift */,
 				473E6FADCC90F3A24F2711AC /* ThemeBuilderView.swift */,
 				D07CE5F41986DBEC496E6369 /* ThemeEditorView.swift */,
 				5462C6538A73BD8117516CB5 /* TypingView.swift */,
@@ -514,6 +517,7 @@
 				A02430FCE33EDD5CEDFD516C /* SoundPack.swift in Sources */,
 				25674E38D35421FBD754EEB9 /* SoundPickerView.swift in Sources */,
 				4BE2AF2874E1B00158143714 /* SoundPlayer.swift in Sources */,
+				F8F7ED0153158B632C2232AD /* StagedHeroView.swift in Sources */,
 				CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */,
 				F2727DE1FAB6DFC5786B8A0E /* Theme.swift in Sources */,
 				C0F38A72B69F1619B74EC5A0 /* ThemeBuilderView.swift in Sources */,
