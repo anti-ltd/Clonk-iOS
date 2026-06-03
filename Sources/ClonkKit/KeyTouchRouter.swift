@@ -37,6 +37,21 @@ public final class KeyTouchRouter {
     /// Bumped on every backspace auto-repeat so the delete glyph bounces.
     public private(set) var deleteTick = 0
 
+    /// Per-key counter bumped on *every* touch-down. Drives the additive "tap
+    /// pulse" each `KeyView` plays to confirm a press.
+    ///
+    /// `pressed` can't do this job: the press bloom is sprung on `pressed`
+    /// changing, but pressing the same key twice in quick succession (the second
+    /// `l` in "tell") re-fires inside the linger window, so the key never leaves
+    /// `pressed` and the bloom never re-animates — the second tap reads as
+    /// dropped even though the character *was* inserted. This tick changes on
+    /// every landing, so the pulse fires every time regardless of press state.
+    public private(set) var tapTicks: [String: Int] = [:]
+
+    /// The current tap count for a key (0 if never pressed). Read by `KeyView` as
+    /// its pulse trigger.
+    public func tapTick(_ id: String) -> Int { tapTicks[id] ?? 0 }
+
     public init() {}
 
     // MARK: - Registry (pushed in from the layout each pass)
@@ -104,6 +119,7 @@ public final class KeyTouchRouter {
         heldCounts[id, default: 0] += 1
         cancelLinger(id)            // pressed again → stop any pending fade-out
         recomputePressed()
+        tapTicks[id, default: 0] &+= 1   // fire the per-press tap pulse
         onPressDown()
 
         switch spec.kind {

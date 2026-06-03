@@ -203,7 +203,7 @@ public struct EmojiCanvas: View {
                 LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(emoji, id: \.self) { e in
                         EmojiCell(
-                            glyph: glyph(for: e),
+                            glyph: displayGlyph(for: e),
                             simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
                             action: { onAnyTap(); onInsert(glyph(for: e)) }
                         )
@@ -256,6 +256,15 @@ public struct EmojiCanvas: View {
     private func glyph(for base: String) -> String {
         guard EmojiSkinTone.supportsSkinTone(base) else { return base }
         return EmojiSkinTone.applied(resolvedTone(base), to: base)
+    }
+
+    /// Like `glyph(for:)`, but while holding an emoji its cell live-previews the
+    /// tone currently under the finger — so the grid shows what a release commits.
+    private func displayGlyph(for base: String) -> String {
+        if let pick = picking, pick.base == base {
+            return EmojiSkinTone.applied(pick.tone, to: base)
+        }
+        return glyph(for: base)
     }
 
     // MARK: Hold-to-pick gesture
@@ -587,19 +596,19 @@ private struct SkinTonePicker: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let swatchShape = RoundedRectangle(cornerRadius: 11, style: .continuous)
         HStack(spacing: 0) {
             ForEach(SkinTone.allCases) { tone in
                 let on = tone == highlighted
                 Text(EmojiSkinTone.applied(tone, to: base))
                     .font(.system(size: 28))
-                    .scaleEffect(on ? 1.25 : 1)
                     .frame(width: Self.swatch, height: 44)
-                    .background(
-                        Circle()
-                            .fill(theme.accent.color.opacity(on ? 0.35 : 0))
-                            .padding(2)
-                    )
-                    .offset(y: on ? -2 : 0)
+                    .background {
+                        swatchShape
+                            .fill(theme.accent.color.opacity(on ? 0.28 : 0))
+                            .overlay(swatchShape.strokeBorder(on ? theme.accent.color : .clear, lineWidth: 2.5))
+                            .padding(3)
+                    }
                     .animation(.snappy(duration: 0.14), value: on)
             }
         }

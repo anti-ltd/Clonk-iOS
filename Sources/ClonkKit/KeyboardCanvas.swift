@@ -687,6 +687,42 @@ struct KeySpec: Identifiable {
 
 /// Renders one key and detects key-*down* (via a zero-distance drag) so the
 /// host clonks the instant the finger lands, then fires the action on release.
+/// A one-shot, additive "tap registered" flash, replayed on every press.
+///
+/// Keyed to `KeyTouchRouter`'s per-key tap tick (which bumps on every
+/// touch-down), so it fires even when the same key is re-pressed while it's
+/// still in the pressed/linger state — the case where the bloom, sprung on
+/// `isPressed`, can't re-animate. It briefly brightens the key over its own
+/// shape and fades out; it changes no geometry, so it layers on top of the
+/// bloom/popup without overriding either. Gated on the same `keyPressWarp`
+/// switch as the bloom, so turning press visuals off silences it too.
+private struct TapPulse: ViewModifier {
+    let trigger: Int
+    let shape: RoundedRectangle
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.keyframeAnimator(initialValue: 0.0, trigger: trigger) { view, flash in
+                view.overlay {
+                    shape.fill(.white)
+                        .opacity(flash)
+                        .blendMode(.plusLighter)
+                        .allowsHitTesting(false)
+                }
+            } keyframes: { _ in
+                KeyframeTrack {
+                    CubicKeyframe(0.0, duration: 0.001)
+                    CubicKeyframe(0.34, duration: 0.05)   // snap bright
+                    CubicKeyframe(0.0, duration: 0.20)    // ease back out
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
 private struct KeyView: View {
     let spec: KeySpec
     let theme: Theme
@@ -785,6 +821,15 @@ private struct KeyView: View {
             .animation(pressWarp && !spec.isShift
                        ? .interactiveSpring(response: 0.26, dampingFraction: 0.6) : nil,
                        value: isPressed)
+            // Additive "tap registered" flash. The bloom above is sprung on
+            // `isPressed`, which never re-toggles when the SAME key is tapped
+            // twice inside the linger window (the second `l` in "tell") — so the
+            // re-press reads as dropped though the character did insert. This
+            // pulse is keyed to the router's per-press tick, which bumps on every
+            // landing, so each tap gets its own confirmation. It only flashes a
+            // brief highlight over the key — it never touches the bloom geometry,
+            // so it adds to the press effect rather than overriding it.
+            .modifier(TapPulse(trigger: router.tapTick(keyID), shape: shape, enabled: pressWarp))
             // Publish the glyph for the on-top layer — except shift, which draws
             // its own so it can morph with its interactive glass.
             .anchorPreference(key: KeyGlyphKey.self, value: .bounds) { anchor in
