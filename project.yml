@@ -1,21 +1,21 @@
-# XcodeGen manifest. `make project` regenerates Clonk.xcodeproj from this.
+# XcodeGen manifest. `make project` regenerates Clink.xcodeproj from this.
 # Keep the manifest as the source of truth — never edit the generated .xcodeproj
 # by hand or the next `make project` will clobber it.
 #
-# Clonk is a custom iOS keyboard. It ships as two targets plus shared code:
+# Clink is a custom iOS keyboard. It ships as two targets plus shared code:
 #
-#   Clonk          — the container app (App Store product). Hosts the
+#   Clink          — the container app (App Store product). Hosts the
 #                    enable flow + theme / layout / sound customization UI.
-#   ClonkKeyboard  — the keyboard extension (UIInputViewController). The
+#   ClinkKeyboard  — the keyboard extension (UIInputViewController). The
 #                    actual keyboard that runs inside other apps.
-#   Sources/ClonkKit — shared model + App Group storage code, compiled
+#   Sources/ClinkKit — shared model + App Group storage code, compiled
 #                    into BOTH targets (no dynamic framework, so no
 #                    extension rpath/embedding pitfalls).
 #
 # The two processes are isolated; they share state only through the
-# App Group `group.ltd.anti.clonk`.
+# App Group `group.ltd.anti.clink`.
 
-name: Clonk
+name: Clink
 options:
   bundleIdPrefix: ltd.anti
   deploymentTarget:
@@ -44,22 +44,22 @@ targets:
   # ----------------------------------------------------------------
   # Container app — the App Store product.
   # ----------------------------------------------------------------
-  Clonk:
+  Clink:
     type: application
     platform: iOS
     sources:
-      - Sources/Clonk
+      - Sources/Clink
       # Shared code compiled directly into the app.
-      - Sources/ClonkKit
+      - Sources/ClinkKit
       # Asset catalog must be a source (not a plain resource) so Xcode
       # runs actool over it and produces Assets.car in the bundle. As
       # a plain resource it would be copied verbatim and iOS wouldn't
       # find the app icon.
       - Resources/Assets.xcassets
     info:
-      path: Resources/Clonk-Info.plist
+      path: Resources/Clink-Info.plist
       properties:
-        CFBundleDisplayName: Clonk
+        CFBundleDisplayName: Clink
         UILaunchScreen:
           UIColorName: ""
         UIApplicationSceneManifest:
@@ -75,36 +75,36 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
     entitlements:
-      path: Resources/Clonk.entitlements
+      path: Resources/Clink.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.ltd.anti.clonk
+          - group.ltd.anti.clink
     dependencies:
       - package: iUX-ios
         product: iUXiOS
       # Embeds the keyboard extensions into the app bundle's PlugIns dir.
-      - target: ClonkKeyboard
-      - target: ClonkEmoji
+      - target: ClinkKeyboard
+      - target: ClinkEmoji
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clonk
+        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   # ----------------------------------------------------------------
   # Keyboard extension — the actual keyboard.
   # ----------------------------------------------------------------
-  ClonkKeyboard:
+  ClinkKeyboard:
     type: app-extension
     platform: iOS
     sources:
-      - Sources/ClonkKeyboard
+      - Sources/ClinkKeyboard
       # Same shared code, compiled into the extension too.
-      - Sources/ClonkKit
+      - Sources/ClinkKit
     info:
-      path: Resources/ClonkKeyboard-Info.plist
+      path: Resources/ClinkKeyboard-Info.plist
       properties:
-        CFBundleDisplayName: Clonk
+        CFBundleDisplayName: Clink
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           # The principal class is marked @objc(KeyboardViewController)
@@ -114,38 +114,38 @@ targets:
             IsASCIICapable: false
             PrefersRightToLeftLayout: false
             PrimaryLanguage: en-US
-            # Full Access is *requestable* so users can opt into custom clonk
+            # Full Access is *requestable* so users can opt into custom clink
             # sounds + haptics (both need it). It stays OFF until the user
             # flips the toggle in Settings — the keyboard works fully (system
             # click, no haptics) without it, so this is opt-in, not required.
             RequestsOpenAccess: true
     entitlements:
-      path: Resources/ClonkKeyboard.entitlements
+      path: Resources/ClinkKeyboard.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.ltd.anti.clonk
+          - group.ltd.anti.clink
     dependencies:
       - package: iUX-ios
         product: iUXiOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clonk.keyboard
+        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink.keyboard
         TARGETED_DEVICE_FAMILY: "1,2"
 
   # ----------------------------------------------------------------
   # Emoji keyboard extension — second keyboard, same shared config.
   # ----------------------------------------------------------------
-  ClonkEmoji:
+  ClinkEmoji:
     type: app-extension
     platform: iOS
     sources:
-      - Sources/ClonkEmoji
+      - Sources/ClinkEmoji
       # Same shared code (settings, theme, emoji canvas) as the others.
-      - Sources/ClonkKit
+      - Sources/ClinkKit
     info:
-      path: Resources/ClonkEmoji-Info.plist
+      path: Resources/ClinkEmoji-Info.plist
       properties:
-        CFBundleDisplayName: Clonk Emoji
+        CFBundleDisplayName: Clink Emoji
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           NSExtensionPrincipalClass: EmojiKeyboardViewController
@@ -156,14 +156,14 @@ targets:
             # Emoji needs no network/clipboard, so no Full Access prompt.
             RequestsOpenAccess: false
     entitlements:
-      path: Resources/ClonkEmoji.entitlements
+      path: Resources/ClinkEmoji.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.ltd.anti.clonk
+          - group.ltd.anti.clink
     dependencies:
       - package: iUX-ios
         product: iUXiOS
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clonk.emoji
+        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink.emoji
         TARGETED_DEVICE_FAMILY: "1,2"

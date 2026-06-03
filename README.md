@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Resources/banner.png" alt="Clonk">
+<img src="Resources/banner.png" alt="Clink">
 
 <br>
 
@@ -8,7 +8,7 @@
 
 <br><br>
 
-# Clonk
+# Clink
 
 **A fully customizable iOS keyboard.**
 
@@ -27,29 +27,29 @@
 ---
 
 > A custom iOS keyboard you can make your own — themes, layouts, and mechanical
-> **clonk** key sounds. Private by default: it works fully without Full Access,
+> **clink** key sounds. Private by default: it works fully without Full Access,
 > and never phones home. The iOS sibling of clonk-macos.
 
 ---
 
 ## Architecture
 
-Clonk is a custom keyboard, so it ships as **two targets plus shared code** —
+Clink is a custom keyboard, so it ships as **two targets plus shared code** —
 not a single app:
 
 ```
-Clonk (container app)  ──embeds──▶  ClonkKeyboard.appex (the keyboard)
+Clink (container app)  ──embeds──▶  ClinkKeyboard.appex (the keyboard)
         │                                   │
         └──────── App Group ────────────────┘
-              group.ltd.anti.clonk
+              group.ltd.anti.clink
         (settings written by the app, read by the keyboard)
 ```
 
-- **`Clonk`** — the App Store product. Onboarding / enable flow plus the
+- **`Clink`** — the App Store product. Onboarding / enable flow plus the
   theme, layout and sound customization UI, with a live, interactive preview.
-- **`ClonkKeyboard`** — a `UIInputViewController` extension; the keyboard that
+- **`ClinkKeyboard`** — a `UIInputViewController` extension; the keyboard that
   runs inside other apps.
-- **`Sources/ClonkKit`** — shared, UI-and-model code compiled into *both*
+- **`Sources/ClinkKit`** — shared, UI-and-model code compiled into *both*
   targets (no dynamic framework, so no extension embedding/rpath pitfalls).
   Crucially this includes **`KeyboardCanvas`**, the SwiftUI keyboard itself —
   so the in-app preview is the *exact same view* the extension renders.
@@ -59,29 +59,29 @@ The two processes are isolated; they share state only through the App Group's
 
 ```
 Sources/
-├── ClonkKit/                 shared (compiled into both targets)
+├── ClinkKit/                 shared (compiled into both targets)
 │   ├── KeyboardSettings.swift   the Codable config that crosses processes
 │   ├── SharedStore.swift        App Group store + Darwin change-notify
 │   ├── Theme.swift              color themes + presets
 │   ├── KeyboardLayout.swift     QWERTY / AZERTY / QWERTZ / Dvorak
-│   ├── SoundPack.swift          clonk sound-pack definitions
+│   ├── SoundPack.swift          clink sound-pack definitions
 │   ├── RGBA.swift               Codable color
 │   └── KeyboardCanvas.swift     ⭐ the keyboard view (app + extension)
-├── Clonk/                    container app
-│   ├── ClonkApp.swift  AppModel.swift
+├── Clink/                    container app
+│   ├── ClinkApp.swift  AppModel.swift
 │   └── UI/  RootView · ThemeEditor · LayoutPicker · SoundPicker · EnableFlow · KeyboardPreview
-└── ClonkKeyboard/            extension
+└── ClinkKeyboard/            extension
     ├── KeyboardViewController.swift   hosts KeyboardCanvas, wires the document proxy
-    └── SoundPlayer.swift              clonk samples (Full Access) + system-click fallback
+    └── SoundPlayer.swift              clink samples (Full Access) + system-click fallback
 ```
 
 ## Privacy & Full Access
 
 iOS custom keyboards can request **Full Access**, which shows a scary system
-warning. Clonk is **privacy-first**: it works completely without it (you get
+warning. Clink is **privacy-first**: it works completely without it (you get
 the standard system click), and never transmits anything. Full Access is an
 **optional, sounds-only opt-in** — it's the only way iOS lets an extension play
-custom audio and haptics, so the custom **clonk** packs and haptics ask for it,
+custom audio and haptics, so the custom **clink** packs and haptics ask for it,
 and nothing else does.
 
 ## Build
@@ -100,11 +100,11 @@ Projects/
 
 ```bash
 make icon      # render the app icon from Tools/RenderAppIcon.swift
-make project   # regenerate Clonk.xcodeproj from project.yml (needs xcodegen)
+make project   # regenerate Clink.xcodeproj from project.yml (needs xcodegen)
 make build     # xcodebuild for the iOS Simulator
 make run       # boot the sim, install, launch
 make device    # build, sign, install on the paired iPhone
-make clean     # remove build/ and Clonk.xcodeproj
+make clean     # remove build/ and Clink.xcodeproj
 make help      # list every target
 ```
 
@@ -116,28 +116,28 @@ the generated `.xcodeproj` by hand.**
 
 A custom keyboard can't be used until the user enables it once:
 
-1. **Settings → General → Keyboard → Keyboards → Add New Keyboard… → Clonk**
+1. **Settings → General → Keyboard → Keyboards → Add New Keyboard… → Clink**
 2. Switch to it from any app by holding the 🌐 globe key.
-3. *(Optional)* tap **Clonk → Allow Full Access** for custom sounds & haptics.
+3. *(Optional)* tap **Clink → Allow Full Access** for custom sounds & haptics.
 
 The in-app **Setup** screen walks through this and deep-links to Settings.
 
 ## Sound packs
 
-Curated clonk samples live in `Resources/Sounds/` — see the README there. v0.1
+Curated clink samples live in `Resources/Sounds/` — see the README there. v0.1
 ships the full playback pipeline; packs without bundled samples fall back to the
 system click, so the keyboard always feels live.
 
 ## Roadmap
 
-- **v0.1** (this) — working keyboard + themes + layouts + clonk sound pipeline.
+- **v0.1** (this) — working keyboard + themes + layouts + clink sound pipeline.
 - **v0.2** — curated sample packs, user-authored themes, key-popup polish,
   emoji plane, one-handed mode.
 - **Later** — the clonk macOS keyboard-sound-simulator feature, brought over.
 
 ## License
 
-Clonk is source-available under the **Counter-Limitation License (CLL) v1.2** —
+Clink is source-available under the **Counter-Limitation License (CLL) v1.2** —
 see [LICENSE.md](LICENSE.md).
 
 © 2026 Anti Limited.

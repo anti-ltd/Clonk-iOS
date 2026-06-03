@@ -1,10 +1,13 @@
 #!/usr/bin/env swift
 //
-// RenderAppIcon.swift — renders the Clonk iOS app icon into the asset catalog.
+// RenderAppIcon.swift — renders the Clink iOS app icon into the asset catalog.
 //
-// Run via `make icon`. This is the iOS port of clonk-macos's AppIconRenderer:
-// the same indigo-charcoal keycap with a rounded "C" and concentric "clonk"
-// ripples. Differences from the macOS version, both required for iOS:
+// Run via `make icon`. Clink's mark is a single **liquid-glass keycap**: a
+// translucent slab floating on a luminous indigo gradient, with a refracted
+// glow pulled through its body, a broad specular sheen, bright edge caustics,
+// and a frosted "C" lensed inside the glass.
+//
+// iOS specifics, both required:
 //   • the background is drawn full-bleed and fully opaque (no squircle clip,
 //     no rim stroke) — iOS applies its own icon mask, and App Store icons must
 //     not have an alpha channel.
@@ -39,153 +42,146 @@ func draw(in cg: CGContext, size: CGFloat) {
 
     let rect = CGRect(x: 0, y: 0, width: size, height: size)
 
-    // ── Background (full-bleed, opaque — iOS supplies the corner mask) ──────
+    // The scene behind the glass: a richer violet → blue → navy gradient (a
+    // spread of hues for the glass to bend), a warm magenta bloom lower-right,
+    // and a bright luminous core. Drawn once full-bleed, then again *inside*
+    // the keycap so light genuinely reads through the translucent slab.
+    let bgGrad = CGGradient(colorsSpace: space, colors: [
+        rgb(0.42, 0.32, 0.72),
+        rgb(0.20, 0.24, 0.58),
+        rgb(0.06, 0.07, 0.18),
+    ] as CFArray, locations: [0, 0.50, 1])!
+    let warm = CGGradient(colorsSpace: space, colors: [
+        rgb(0.85, 0.35, 0.78, 0.45),
+        rgb(0.85, 0.35, 0.78, 0.00),
+    ] as CFArray, locations: [0, 1])!
+    let warmC = CGPoint(x: rect.maxX - size * 0.12, y: rect.minY + size * 0.16)
+    let core = CGGradient(colorsSpace: space, colors: [
+        rgb(0.72, 0.90, 1.00, 1.00),
+        rgb(0.48, 0.70, 1.00, 0.55),
+        rgb(0.44, 0.60, 0.98, 0.00),
+    ] as CFArray, locations: [0, 0.40, 1])!
+    let glowC = CGPoint(x: rect.midX, y: rect.midY + size * 0.03)
+
+    func paintBackground() {
+        cg.drawLinearGradient(bgGrad,
+                              start: CGPoint(x: rect.minX, y: rect.maxY),
+                              end: CGPoint(x: rect.maxX, y: rect.minY),
+                              options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+        cg.drawRadialGradient(warm, startCenter: warmC, startRadius: 0,
+                              endCenter: warmC, endRadius: size * 0.55, options: [])
+        cg.drawRadialGradient(core, startCenter: glowC, startRadius: 0,
+                              endCenter: glowC, endRadius: size * 0.52, options: [])
+    }
+
+    // ── Background (full-bleed, opaque — iOS supplies the corner mask) ───────
     cg.saveGState()
     cg.addRect(rect)
     cg.clip()
-
-    // Deep diagonal gradient — indigo-charcoal, light from top-left.
-    let bgGrad = CGGradient(colorsSpace: space, colors: [
-        rgb(0.26, 0.27, 0.38),
-        rgb(0.13, 0.13, 0.20),
-        rgb(0.05, 0.05, 0.09),
-    ] as CFArray, locations: [0, 0.55, 1])!
-    cg.drawLinearGradient(bgGrad,
-                          start: CGPoint(x: rect.minX, y: rect.maxY),
-                          end: CGPoint(x: rect.maxX, y: rect.minY),
-                          options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-
-    // Soft radial glow behind the keycap for depth.
-    let glow = CGGradient(colorsSpace: space, colors: [
-        rgb(0.42, 0.46, 0.72, 0.55),
-        rgb(0.42, 0.46, 0.72, 0.0),
-    ] as CFArray, locations: [0, 1])!
-    cg.drawRadialGradient(glow,
-                          startCenter: CGPoint(x: rect.midX, y: rect.midY + size * 0.04),
-                          startRadius: 0,
-                          endCenter: CGPoint(x: rect.midX, y: rect.midY + size * 0.04),
-                          endRadius: rect.width * 0.62, options: [])
+    paintBackground()
     cg.restoreGState()
 
-    // ── Keycap geometry ─────────────────────────────────────────────────────
-    let capSide = size * 0.46
+    // ── Keycap geometry ──────────────────────────────────────────────────────
+    let capSide = size * 0.52
     let capX = (size - capSide) / 2
-    let capY = (size - capSide) / 2 + size * 0.012
-    let depth = size * 0.062            // visible height of the cap "wall"
-    let radius = capSide * 0.235
+    let capY = (size - capSide) / 2 + size * 0.006
+    let radius = capSide * 0.30                  // soft squircle
+    let capRect = CGRect(x: capX, y: capY, width: capSide, height: capSide)
+    let capPath = CGPath(roundedRect: capRect, cornerWidth: radius,
+                         cornerHeight: radius, transform: nil)
 
-    // ── Ripple — concentric superellipse rings echoing the keycap ───────────
-    let cx = capX + capSide / 2
-    let cy = capY + (capSide - depth) / 2
-    let halfW = capSide / 2
-    let halfH = (capSide + depth) / 2
-    let sqExp = 4.2
-
-    func rippleRing(_ e: CGFloat) -> CGPath {
-        let hw = Double(halfW + e), hh = Double(halfH + e)
-        let path = CGMutablePath()
-        let steps = 1024
-        for i in 0...steps {
-            let t = Double(i) / Double(steps) * 2 * .pi
-            let ct = cos(t), st = sin(t)
-            let x = Double(cx) + hw * copysign(pow(abs(ct), 2 / sqExp), ct)
-            let y = Double(cy) + hh * copysign(pow(abs(st), 2 / sqExp), st)
-            let pt = CGPoint(x: x, y: y)
-            if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
-        }
-        path.closeSubpath()
-        return path
-    }
-
+    // ── Cast shadow — the glass floats above the surface ──────────────────────
     cg.saveGState()
-    cg.setLineJoin(.round)
-    let ripple: [(inset: Double, r: Double, g: Double, b: Double, alpha: Double, width: Double)] = [
-        (0.028, 0.66, 0.91, 1.00, 0.50, 0.018),
-        (0.052, 0.56, 0.83, 0.97, 0.28, 0.015),
-        (0.076, 0.49, 0.71, 0.91, 0.14, 0.012),
-        (0.100, 0.44, 0.60, 0.85, 0.05, 0.010),
-    ]
-    for ring in ripple {
-        cg.addPath(rippleRing(size * ring.inset))
-        cg.setStrokeColor(rgb(ring.r, ring.g, ring.b, ring.alpha))
-        cg.setLineWidth(size * ring.width)
-        cg.setShadow(offset: .zero, blur: size * 0.011,
-                     color: rgb(0.42, 0.80, 0.97, ring.alpha * 0.5))
-        cg.strokePath()
-    }
-    cg.restoreGState()
-
-    // Contact shadow cast on the background.
-    cg.saveGState()
-    let shadowRect = CGRect(x: capX, y: capY - depth - size * 0.018,
-                            width: capSide, height: capSide)
-    cg.addPath(CGPath(roundedRect: shadowRect, cornerWidth: radius,
-                      cornerHeight: radius, transform: nil))
-    cg.setShadow(offset: CGSize(width: 0, height: -size * 0.022),
-                 blur: size * 0.06,
-                 color: rgb(0, 0, 0, 0.55))
-    cg.setFillColor(rgb(0, 0, 0, 0.9))
+    cg.addPath(capPath)
+    cg.setShadow(offset: CGSize(width: 0, height: -size * 0.028),
+                 blur: size * 0.075, color: rgb(0, 0, 0, 0.50))
+    cg.setFillColor(rgb(0.02, 0.03, 0.08, 1))
     cg.fillPath()
     cg.restoreGState()
 
-    // Cap wall (the side) — darker, vertical gradient.
-    let sideRect = CGRect(x: capX, y: capY - depth, width: capSide, height: capSide)
+    // ════════════════════════════════════════════════════════════════════════
+    //  GLASS BODY — everything below is clipped to the keycap.
+    // ════════════════════════════════════════════════════════════════════════
     cg.saveGState()
-    cg.addPath(CGPath(roundedRect: sideRect, cornerWidth: radius,
-                      cornerHeight: radius, transform: nil))
+    cg.addPath(capPath)
     cg.clip()
-    let wallGrad = CGGradient(colorsSpace: space, colors: [
-        rgb(0.62, 0.64, 0.74),
-        rgb(0.28, 0.29, 0.38),
-    ] as CFArray, locations: [0, 1])!
-    cg.drawLinearGradient(wallGrad, start: CGPoint(x: 0, y: sideRect.maxY),
-                          end: CGPoint(x: 0, y: sideRect.minY), options: [])
-    cg.restoreGState()
 
-    // Cap top face — bright, with a diagonal sheen and a dished centre.
-    let topRect = CGRect(x: capX, y: capY, width: capSide, height: capSide)
-    let topPath = CGPath(roundedRect: topRect, cornerWidth: radius,
-                         cornerHeight: radius, transform: nil)
-    cg.saveGState()
-    cg.addPath(topPath)
-    cg.clip()
-    let topGrad = CGGradient(colorsSpace: space, colors: [
-        rgb(1.00, 1.00, 1.00),
-        rgb(0.93, 0.94, 0.97),
-        rgb(0.80, 0.82, 0.89),
+    // 0. Repaint the lit scene inside the slab — this is what makes the glass
+    //    translucent: the same background, seen *through* the keycap (and it
+    //    overwrites the opaque fill the cast-shadow pass left behind).
+    paintBackground()
+
+    // 1. Base tint — clearer glass: low-alpha so the lit background reads
+    //    *through* the slab; only a gentle deepening toward the bottom.
+    let tint = CGGradient(colorsSpace: space, colors: [
+        rgb(0.82, 0.90, 1.00, 0.22),
+        rgb(0.50, 0.62, 0.92, 0.09),
+        rgb(0.10, 0.14, 0.34, 0.32),
     ] as CFArray, locations: [0, 0.5, 1])!
-    cg.drawLinearGradient(topGrad, start: CGPoint(x: topRect.minX, y: topRect.maxY),
-                          end: CGPoint(x: topRect.maxX, y: topRect.minY),
-                          options: [])
-    let dish = CGGradient(colorsSpace: space, colors: [
-        rgb(0, 0, 0, 0.0),
-        rgb(0.20, 0.22, 0.32, 0.18),
-    ] as CFArray, locations: [0.62, 1])!
-    cg.drawRadialGradient(dish,
-                          startCenter: CGPoint(x: topRect.midX, y: topRect.midY),
-                          startRadius: 0,
-                          endCenter: CGPoint(x: topRect.midX, y: topRect.midY),
-                          endRadius: capSide * 0.62, options: [])
-    cg.restoreGState()
+    cg.drawLinearGradient(tint, start: CGPoint(x: 0, y: capRect.maxY),
+                          end: CGPoint(x: 0, y: capRect.minY), options: [])
 
-    // Soft inner highlight along the top edge of the cap.
-    cg.saveGState()
-    cg.addPath(topPath)
-    cg.clip()
-    cg.addPath(topPath)
-    cg.setLineWidth(size * 0.018)
-    cg.replacePathWithStrokedPath()
-    cg.clip()
-    let rimGrad = CGGradient(colorsSpace: space, colors: [
-        rgb(1, 1, 1, 0.75),
-        rgb(1, 1, 1, 0.0),
+    // 2. Refraction — the luminous core, magnified (larger than its source)
+    //    and pulled toward the lower half the way a real lens bends light.
+    let refr = CGGradient(colorsSpace: space, colors: [
+        rgb(0.78, 0.93, 1.00, 0.85),
+        rgb(0.52, 0.74, 1.00, 0.34),
+        rgb(0.48, 0.66, 1.00, 0.00),
+    ] as CFArray, locations: [0, 0.5, 1])!
+    let refrC = CGPoint(x: capRect.midX, y: capRect.minY + capSide * 0.32)
+    cg.drawRadialGradient(refr, startCenter: refrC, startRadius: 0,
+                          endCenter: refrC, endRadius: capSide * 0.72, options: [])
+
+    // 2b. Lens hotspot — a small intense focus of light low in the slab.
+    let hot = CGGradient(colorsSpace: space, colors: [
+        rgb(1, 1, 1, 0.55),
+        rgb(0.80, 0.92, 1.00, 0.0),
     ] as CFArray, locations: [0, 1])!
-    cg.drawLinearGradient(rimGrad, start: CGPoint(x: 0, y: topRect.maxY),
-                          end: CGPoint(x: 0, y: topRect.midY), options: [])
+    let hotC = CGPoint(x: capRect.midX, y: capRect.minY + capSide * 0.26)
+    cg.drawRadialGradient(hot, startCenter: hotC, startRadius: 0,
+                          endCenter: hotC, endRadius: capSide * 0.26, options: [])
+
+    // 3. Specular sheen — a broad, soft glossy reflection across the top,
+    //    squashed into an ellipse and biased to the upper-left.
+    cg.saveGState()
+    cg.translateBy(x: capRect.midX - capSide * 0.06, y: capRect.maxY - capSide * 0.24)
+    cg.scaleBy(x: 1.0, y: 0.52)
+    let sheen = CGGradient(colorsSpace: space, colors: [
+        rgb(1, 1, 1, 0.60),
+        rgb(1, 1, 1, 0.10),
+        rgb(1, 1, 1, 0.00),
+    ] as CFArray, locations: [0, 0.6, 1])!
+    cg.drawRadialGradient(sheen, startCenter: .zero, startRadius: 0,
+                          endCenter: .zero, endRadius: capSide * 0.5, options: [])
     cg.restoreGState()
 
-    // ── Letterform ──────────────────────────────────────────────────────────
-    let glyphSize = capSide * 0.7
+    // 3b. Specular glint — a small, crisp hotspot near the top-left edge where
+    //     a hard reflection would land. Tight falloff so it reads as wet glass,
+    //     and a short streak trailing along the top edge.
+    cg.saveGState()
+    let glintC = CGPoint(x: capRect.minX + capSide * 0.27,
+                         y: capRect.maxY - capSide * 0.16)
+    let glint = CGGradient(colorsSpace: space, colors: [
+        rgb(1, 1, 1, 0.95),
+        rgb(1, 1, 1, 0.55),
+        rgb(1, 1, 1, 0.00),
+    ] as CFArray, locations: [0, 0.4, 1])!
+    cg.drawRadialGradient(glint, startCenter: glintC, startRadius: 0,
+                          endCenter: glintC, endRadius: capSide * 0.11, options: [])
+    // Thin streak trailing toward the top-right, hugging the edge.
+    cg.translateBy(x: glintC.x + capSide * 0.16, y: glintC.y + capSide * 0.015)
+    cg.scaleBy(x: 2.6, y: 0.42)
+    let streak = CGGradient(colorsSpace: space, colors: [
+        rgb(1, 1, 1, 0.55),
+        rgb(1, 1, 1, 0.00),
+    ] as CFArray, locations: [0, 1])!
+    cg.drawRadialGradient(streak, startCenter: .zero, startRadius: 0,
+                          endCenter: .zero, endRadius: capSide * 0.09, options: [])
+    cg.restoreGState()
+
+    // 4. Frosted "C" — lensed into the glass: a soft shadow gives it depth
+    //    below the surface, the light fill reads as etched frost.
+    let glyphSize = capSide * 0.66
     let font: NSFont = {
         let base = NSFont.systemFont(ofSize: glyphSize, weight: .black)
         if let d = base.fontDescriptor.withDesign(.rounded) {
@@ -193,32 +189,82 @@ func draw(in cg: CGContext, size: CGFloat) {
         }
         return base
     }()
-    func drawGlyph(color: NSColor, dx: CGFloat, dy: CGFloat) {
+    func drawGlyph(_ color: NSColor, dx: CGFloat, dy: CGFloat) {
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
         let glyph = NSAttributedString(string: "C", attributes: attrs)
         let gSize = glyph.size()
-        glyph.draw(at: CGPoint(x: topRect.midX - gSize.width / 2 + dx,
-                               y: topRect.midY - gSize.height / 2 + dy))
+        glyph.draw(at: CGPoint(x: capRect.midX - gSize.width / 2 + dx,
+                               y: capRect.midY - gSize.height / 2 + dy))
     }
+    // Depth shadow beneath the letter.
     cg.saveGState()
-    cg.addPath(topPath)
+    cg.setShadow(offset: CGSize(width: 0, height: -size * 0.006),
+                 blur: size * 0.016, color: rgb(0.03, 0.05, 0.16, 0.55))
+    drawGlyph(NSColor(white: 1, alpha: 0.92), dx: 0, dy: 0)
+    cg.restoreGState()
+    // Top highlight edge of the letter — frost catching the light.
+    drawGlyph(NSColor(white: 1, alpha: 0.30), dx: 0, dy: size * 0.006)
+
+    cg.restoreGState()  // end glass-body clip
+
+    // ── Edge caustics — light pooling at the rims of the glass slab ───────────
+    // Chromatic dispersion: the rim splits into cool/warm fringes, offset in
+    // opposite diagonals the way glass disperses light into a spectrum.
+    let fringe = size * 0.0055
+    cg.saveGState()
+    cg.translateBy(x: -fringe, y: fringe)
+    cg.addPath(capPath)
+    cg.setLineWidth(size * 0.007)
+    cg.setStrokeColor(rgb(0.40, 0.85, 1.00, 0.55))   // cyan
+    cg.strokePath()
+    cg.restoreGState()
+
+    cg.saveGState()
+    cg.translateBy(x: fringe, y: -fringe)
+    cg.addPath(capPath)
+    cg.setLineWidth(size * 0.007)
+    cg.setStrokeColor(rgb(1.00, 0.45, 0.85, 0.50))   // magenta
+    cg.strokePath()
+    cg.restoreGState()
+
+    // Crisp bright rim centred between the fringes.
+    cg.saveGState()
+    cg.addPath(capPath)
+    cg.setLineWidth(size * 0.006)
+    cg.setStrokeColor(rgb(0.92, 0.97, 1.00, 0.75))
+    cg.strokePath()
+    cg.restoreGState()
+
+    // Bright top-edge highlight, fading downward (a thick inner band).
+    cg.saveGState()
+    cg.addPath(capPath)
     cg.clip()
-    drawGlyph(color: NSColor(white: 1, alpha: 0.7), dx: 0, dy: -size * 0.007)
-    let glyphImg = NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
-        drawGlyph(color: .black, dx: 0, dy: 0)
-        return true
-    }
-    if let cgImg = glyphImg.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-        cg.saveGState()
-        cg.clip(to: CGRect(x: 0, y: 0, width: size, height: size), mask: cgImg)
-        let gGrad = CGGradient(colorsSpace: space, colors: [
-            rgb(0.30, 0.33, 0.48),
-            rgb(0.12, 0.13, 0.22),
-        ] as CFArray, locations: [0, 1])!
-        cg.drawLinearGradient(gGrad, start: CGPoint(x: 0, y: topRect.maxY),
-                              end: CGPoint(x: 0, y: topRect.minY), options: [])
-        cg.restoreGState()
-    }
+    cg.addPath(capPath)
+    cg.setLineWidth(size * 0.022)
+    cg.replacePathWithStrokedPath()
+    cg.clip()
+    let topRim = CGGradient(colorsSpace: space, colors: [
+        rgb(1, 1, 1, 0.85),
+        rgb(1, 1, 1, 0.0),
+    ] as CFArray, locations: [0, 1])!
+    cg.drawLinearGradient(topRim, start: CGPoint(x: 0, y: capRect.maxY),
+                          end: CGPoint(x: 0, y: capRect.midY), options: [])
+    cg.restoreGState()
+
+    // Cyan caustic pooling along the bottom inner edge.
+    cg.saveGState()
+    cg.addPath(capPath)
+    cg.clip()
+    cg.addPath(capPath)
+    cg.setLineWidth(size * 0.030)
+    cg.replacePathWithStrokedPath()
+    cg.clip()
+    let botRim = CGGradient(colorsSpace: space, colors: [
+        rgb(0.55, 0.82, 1.0, 0.70),
+        rgb(0.55, 0.82, 1.0, 0.0),
+    ] as CFArray, locations: [0, 1])!
+    cg.drawLinearGradient(botRim, start: CGPoint(x: 0, y: capRect.minY),
+                          end: CGPoint(x: 0, y: capRect.midY), options: [])
     cg.restoreGState()
 }
 

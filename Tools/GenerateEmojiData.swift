@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
 import Foundation
 
-// Generates Sources/ClonkKit/EmojiData.generated.swift — the complete, ordered,
+// Generates Sources/ClinkKit/EmojiData.generated.swift — the complete, ordered,
 // categorized base-emoji set — from the vendored Unicode `emoji-test.txt`.
 //
 //   swift Tools/GenerateEmojiData.swift   (or `make emoji`)
@@ -31,7 +31,7 @@ let scriptURL = URL(fileURLWithPath: #filePath)
 let toolsDir = scriptURL.deletingLastPathComponent()
 let repoRoot = toolsDir.deletingLastPathComponent()
 let inputURL = toolsDir.appendingPathComponent("emoji-test.txt")
-let outputURL = repoRoot.appendingPathComponent("Sources/ClonkKit/EmojiData.generated.swift")
+let outputURL = repoRoot.appendingPathComponent("Sources/ClinkKit/EmojiData.generated.swift")
 
 guard let text = try? String(contentsOf: inputURL, encoding: .utf8) else {
     FileHandle.standardError.write(Data("error: cannot read \(inputURL.path)\n".utf8))

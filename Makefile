@@ -1,18 +1,18 @@
-# Clonk — build/run wrapper around xcodebuild. Mirrors sidekick-ios so the
+# Clink — build/run wrapper around xcodebuild. Mirrors sidekick-ios so the
 # muscle memory carries across our apps.
 #
 #   make run     — build + launch in the simulator
 #   make device  — build + install + launch on a paired iPhone
 #
-# Clonk is a custom keyboard: the `Clonk` scheme builds the container app AND
-# embeds the `ClonkKeyboard` extension. To actually type with it you must enable
+# Clink is a custom keyboard: the `Clink` scheme builds the container app AND
+# embeds the `ClinkKeyboard` extension. To actually type with it you must enable
 # it once in Settings → General → Keyboard → Keyboards → Add New Keyboard.
 #
-APP_NAME       := Clonk
-SCHEME         := Clonk
-BUNDLE_ID      := ltd.anti.clonk
+APP_NAME       := Clink
+SCHEME         := Clink
+BUNDLE_ID      := ltd.anti.clink
 
-PROJECT        := Clonk.xcodeproj
+PROJECT        := Clink.xcodeproj
 BUILD_DIR      := build
 DERIVED        := $(BUILD_DIR)/DerivedData
 CONFIG         ?= Debug
@@ -32,7 +32,7 @@ DEVICE_NAME    ?=
         device-showcase build-device-showcase
 
 # Extra Swift compilation conditions for the showcase build. SHOWCASE flips the
-# app's root to the typing-simulator screen (Sources/Clonk/UI/ShowcaseView.swift);
+# app's root to the typing-simulator screen (Sources/Clink/UI/ShowcaseView.swift);
 # DEBUG is kept so the rest of the debug-only scaffolding still compiles.
 SHOWCASE_CONDITIONS := DEBUG SHOWCASE
 
@@ -43,13 +43,13 @@ help:
 	@echo "  make project — regenerate $(PROJECT) from project.yml (needs xcodegen)"
 	@echo "  make icon    — render the app icon PNGs into Assets.xcassets"
 	@echo "  make build   — xcodebuild for the iOS simulator"
-	@echo "  make run     — boot the sim, install, launch Clonk"
+	@echo "  make run     — boot the sim, install, launch Clink"
 	@echo "  make stop    — terminate the running sim instance"
 	@echo "  make test    — run unit tests on the simulator"
 	@echo "  make clean   — remove $(BUILD_DIR) and $(PROJECT)"
 	@echo ""
 	@echo "Device targets (requires a paired, unlocked iPhone):"
-	@echo "  make device         — build + install + launch Clonk on the paired iPhone"
+	@echo "  make device         — build + install + launch Clink on the paired iPhone"
 	@echo "  make device-install — build + install (no launch)"
 	@echo "  make device-launch  — just relaunch the installed app"
 	@echo ""
@@ -67,7 +67,7 @@ help:
 icon:
 	swift Tools/RenderAppIcon.swift
 
-# Regenerate Sources/ClonkKit/EmojiData.generated.swift (the full emoji set)
+# Regenerate Sources/ClinkKit/EmojiData.generated.swift (the full emoji set)
 # from Tools/emoji-test.txt. Re-run after vendoring a newer emoji-test.txt.
 emoji:
 	swift Tools/GenerateEmojiData.swift
