@@ -32,9 +32,26 @@ public struct EmojiCanvas: View {
     /// Skin-tone choices made this session, shown immediately while the host's
     /// persisted write propagates back. Overlaid on `settings.emojiSkinTones`.
     @State private var localTones: [String: SkinTone] = [:]
-    /// The base emoji whose skin-tone picker is currently open, if any.
-    @State private var tonePickerEmoji: String?
+    /// The in-progress hold-to-pick interaction, if a tone-capable emoji is
+    /// being held. Nil when idle.
+    @State private var picking: TonePicking?
+    /// Visible emoji cell frames in `.global` space, kept current so the hold
+    /// gesture (which reports window coordinates) can map a touch to a cell.
+    @State private var cellFrames: [String: CGRect] = [:]
+    /// The grid viewport's frame in `.global` space — used to clamp the popup
+    /// on-screen and to map a finger position to a swatch.
+    @State private var gridFrame: CGRect = .zero
     @Environment(\.colorScheme) private var colorScheme
+
+    /// A live "hold an emoji and slide to a skin tone" gesture. `centerX` is the
+    /// bar's fixed on-screen centre (anchored at press so the current tone sits
+    /// under the finger, then held steady while sliding); `tone` is the swatch
+    /// currently under the finger.
+    private struct TonePicking: Equatable {
+        var base: String
+        var centerX: CGFloat
+        var tone: SkinTone
+    }
 
     /// Selected category — proxied onto the controller so an external simulator
     /// can switch tabs. `nonmutating set` works because `controller` is a class.
@@ -176,8 +193,9 @@ public struct EmojiCanvas: View {
 
     /// A scrollable grid of emoji. `scrollTarget` keeps the showcase simulator's
     /// pressed emoji centred; a hidden top anchor lets a category switch snap back
-    /// to the top. Cells render with the resolved skin tone; a long-press on a
-    /// tone-capable emoji opens the swatch picker (overlaid via cell anchors).
+    /// to the top. Cells render with the resolved skin tone; holding a tone-capable
+    /// emoji raises the swatch bar, sliding moves the selection, and releasing
+    /// commits it (the native press-slide-release flow, driven by `EmojiHoldGesture`).
     private func grid(_ emoji: [String], scrollTarget: String?) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -186,17 +204,33 @@ public struct EmojiCanvas: View {
                     ForEach(emoji, id: \.self) { e in
                         EmojiCell(
                             glyph: glyph(for: e),
-                            simulatedPressed: controller.pressedEmoji == e,
-                            action: { onAnyTap(); onInsert(glyph(for: e)) },
-                            onLongPress: { openTonePicker(for: e) }
+                            simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
+                            action: { onAnyTap(); onInsert(glyph(for: e)) }
                         )
                         .id(e)
-                        .anchorPreference(key: EmojiCellAnchorKey.self, value: .bounds) { [e: $0] }
+                        // Publish each visible cell's on-screen frame so the hold
+                        // gesture can resolve which emoji a touch landed on.
+                        .background(GeometryReader { g in
+                            Color.clear.preference(key: EmojiCellFramesKey.self,
+                                                   value: [e: g.frame(in: .global)])
+                        })
                     }
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 6)
+                // The hold recogniser (scoped to the grid container). A quick tap
+                // never reaches the hold threshold, so it falls through to the
+                // cell Button; a hold raises the swatch bar.
+                .background(EmojiHoldGesture(onBegan: holdBegan,
+                                             onChanged: holdMoved,
+                                             onEnded: holdEnded))
             }
+            // Freeze scrolling while picking so sliding moves the selection, not
+            // the grid.
+            .scrollDisabled(picking != nil)
+            .background(GeometryReader { g in
+                Color.clear.preference(key: EmojiGridFrameKey.self, value: g.frame(in: .global))
+            })
             .onChange(of: scrollTarget) { _, e in
                 guard let e else { return }
                 withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(e, anchor: .center) }
@@ -205,9 +239,9 @@ public struct EmojiCanvas: View {
                 withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("top", anchor: .top) }
             }
         }
-        .overlayPreferenceValue(EmojiCellAnchorKey.self) { anchors in
-            tonePickerOverlay(anchors)
-        }
+        .onPreferenceChange(EmojiCellFramesKey.self) { cellFrames = $0 }
+        .onPreferenceChange(EmojiGridFrameKey.self) { gridFrame = $0 }
+        .overlay { tonePickerOverlay() }
     }
 
     // MARK: - Skin tones
@@ -224,48 +258,78 @@ public struct EmojiCanvas: View {
         return EmojiSkinTone.applied(resolvedTone(base), to: base)
     }
 
-    /// Long-press handler: only tone-capable emoji open the picker.
-    private func openTonePicker(for base: String) {
-        guard EmojiSkinTone.supportsSkinTone(base) else { return }
-        onAnyTap()
-        withAnimation(.snappy(duration: 0.18)) { tonePickerEmoji = base }
+    // MARK: Hold-to-pick gesture
+
+    /// Convert a gesture point (host-container local space) into SwiftUI `.global`
+    /// space by offsetting by the grid's global origin — matches `cellFrames` and
+    /// `gridFrame`, which are both captured in `.global`.
+    private func toGlobal(_ p: CGPoint) -> CGPoint {
+        CGPoint(x: p.x + gridFrame.minX, y: p.y + gridFrame.minY)
     }
 
-    /// Pick a tone for `base`: remember it (session + persisted), insert the
-    /// toned glyph, and close the picker.
-    private func selectTone(_ tone: SkinTone, for base: String) {
+    /// The base emoji whose visible frame contains the global point `p`.
+    private func emoji(at p: CGPoint) -> String? {
+        cellFrames.first { $0.value.contains(p) }?.key
+    }
+
+    /// The swatch the finger at global x `px` sits over, given the bar centred at
+    /// `centerX`. Clamped to the swatch range.
+    private func tone(forFingerX px: CGFloat, centerX: CGFloat) -> SkinTone {
+        let left = centerX - SkinTonePicker.width / 2 + SkinTonePicker.hPadding
+        let idx = Int((px - left) / SkinTonePicker.swatch)
+        return SkinTone.allCases[max(0, min(SkinTone.allCases.count - 1, idx))]
+    }
+
+    /// Hold recognised: if it landed on a tone-capable emoji, raise the bar with
+    /// its current tone under the finger.
+    private func holdBegan(_ raw: CGPoint) {
+        let p = toGlobal(raw)
+        guard let base = emoji(at: p), EmojiSkinTone.supportsSkinTone(base),
+              let cell = cellFrames[base] else { return }
+        onAnyTap()
+        let current = resolvedTone(base)
+        let anchorIndex = SkinTone.allCases.firstIndex(of: current) ?? 0
+        let centerX = SkinTonePicker.center(cellMidX: cell.midX, anchorIndex: anchorIndex, in: gridFrame)
+        withAnimation(.snappy(duration: 0.16)) {
+            picking = TonePicking(base: base, centerX: centerX, tone: current)
+        }
+    }
+
+    /// Finger slid while holding: move the highlighted swatch to follow it.
+    private func holdMoved(_ raw: CGPoint) {
+        guard var pick = picking else { return }
+        let t = tone(forFingerX: toGlobal(raw).x, centerX: pick.centerX)
+        if t != pick.tone { onAnyTap() }
+        pick.tone = t
+        picking = pick
+    }
+
+    /// Released: commit the highlighted swatch — remember it, persist it, insert
+    /// the toned glyph — and lower the bar.
+    private func holdEnded(_ p: CGPoint) {
+        guard let pick = picking else { return }
+        let base = pick.base, tone = pick.tone
         localTones[base] = tone
         onSetSkinTone(base, tone)
-        onAnyTap()
         onInsert(EmojiSkinTone.applied(tone, to: base))
-        withAnimation(.snappy(duration: 0.18)) { tonePickerEmoji = nil }
+        withAnimation(.snappy(duration: 0.16)) { picking = nil }
     }
 
-    /// The swatch popover, anchored above the long-pressed cell. A transparent
-    /// backdrop dismisses on an outside tap.
-    @ViewBuilder private func tonePickerOverlay(_ anchors: [String: Anchor<CGRect>]) -> some View {
-        GeometryReader { proxy in
-            if let base = tonePickerEmoji, let anchor = anchors[base] {
-                let cell = proxy[anchor]
-                let pickerWidth = SkinTonePicker.width
-                let pickerHeight = SkinTonePicker.height
-                let x = min(max(cell.midX, pickerWidth / 2 + 4),
-                            proxy.size.width - pickerWidth / 2 - 4)
-                let y = max(cell.minY - pickerHeight / 2 - 6, pickerHeight / 2 + 2)
-
-                Color.black.opacity(0.001)
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .contentShape(Rectangle())
-                    .onTapGesture { withAnimation(.snappy(duration: 0.18)) { tonePickerEmoji = nil } }
-
-                SkinTonePicker(base: base, current: resolvedTone(base), theme: theme) { tone in
-                    selectTone(tone, for: base)
-                }
-                .frame(width: pickerWidth, height: pickerHeight)
-                .position(x: x, y: y)
-                .transition(.scale(scale: 0.85, anchor: .bottom).combined(with: .opacity))
+    /// The swatch bar, floating above the held cell and following the finger's
+    /// selection. Purely visual — the hold gesture drives all interaction.
+    @ViewBuilder private func tonePickerOverlay() -> some View {
+        GeometryReader { geo in
+            if let pick = picking, let cell = cellFrames[pick.base] {
+                let origin = geo.frame(in: .global).origin
+                let y = cell.minY - SkinTonePicker.height / 2 - 10
+                SkinTonePicker(base: pick.base, highlighted: pick.tone, theme: theme)
+                    .frame(width: SkinTonePicker.width, height: SkinTonePicker.height)
+                    // Global → overlay-local.
+                    .position(x: pick.centerX - origin.x, y: y - origin.y)
+                    .transition(.scale(scale: 0.85, anchor: .bottom).combined(with: .opacity))
             }
         }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Search mode
@@ -479,7 +543,6 @@ private struct EmojiCell: View {
     let glyph: String
     var simulatedPressed: Bool = false
     let action: () -> Void
-    var onLongPress: () -> Void = {}
 
     var body: some View {
         Button(action: action) {
@@ -491,46 +554,56 @@ private struct EmojiCell: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(EmojiBloomStyle())
-        // A long press opens the skin-tone picker. `maximumDistance` lets a
-        // drag past the cell cancel it so the grid still scrolls, and the
-        // simultaneous attachment leaves the Button's tap untouched.
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.35, maximumDistance: 12)
-                .onEnded { _ in onLongPress() }
-        )
+        // Hold-to-pick is handled at the grid level by `EmojiHoldGesture`, which
+        // suppresses this Button's tap once a hold is recognised — so a quick tap
+        // inserts, a hold raises the swatch bar.
     }
 }
 
-/// The skin-tone swatch row shown on long-press: the same emoji in neutral + the
-/// five Fitzpatrick tones. Styled like the key popups (glass on glass themes).
+/// The skin-tone swatch bar raised while holding an emoji: that emoji in neutral
+/// + the five Fitzpatrick tones, with the `highlighted` swatch lifted to show the
+/// current selection. Purely presentational — `EmojiHoldGesture` drives the
+/// selection and commit. Styled like the key popups (glass on glass themes).
 private struct SkinTonePicker: View {
     let base: String
-    let current: SkinTone
+    let highlighted: SkinTone
     let theme: Theme
-    let onPick: (SkinTone) -> Void
 
-    static let swatch: CGFloat = 40
-    static let width: CGFloat = swatch * CGFloat(SkinTone.allCases.count) + 16
-    static let height: CGFloat = 52
+    static let swatch: CGFloat = 44
+    static let hPadding: CGFloat = 8
+    static let width: CGFloat = swatch * CGFloat(SkinTone.allCases.count) + hPadding * 2
+    static let height: CGFloat = 56
+
+    /// The bar's centre x (in `.global`), placed so the swatch at `anchorIndex`
+    /// (the emoji's current tone) sits directly above the held cell, then clamped
+    /// so the whole bar stays on-screen.
+    static func center(cellMidX: CGFloat, anchorIndex: Int, in grid: CGRect) -> CGFloat {
+        // Offset of the anchor swatch's centre from the bar's left edge.
+        let anchorOffset = hPadding + swatch * (CGFloat(anchorIndex) + 0.5)
+        let desired = cellMidX - anchorOffset + width / 2
+        guard grid.width > width else { return grid.midX }
+        return min(max(desired, grid.minX + width / 2 + 6), grid.maxX - width / 2 - 6)
+    }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         HStack(spacing: 0) {
             ForEach(SkinTone.allCases) { tone in
-                Button { onPick(tone) } label: {
-                    Text(EmojiSkinTone.applied(tone, to: base))
-                        .font(.system(size: 26))
-                        .frame(width: Self.swatch, height: 40)
-                        .background(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .fill(tone == current ? theme.accent.color.opacity(0.35) : .clear)
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                let on = tone == highlighted
+                Text(EmojiSkinTone.applied(tone, to: base))
+                    .font(.system(size: 28))
+                    .scaleEffect(on ? 1.25 : 1)
+                    .frame(width: Self.swatch, height: 44)
+                    .background(
+                        Circle()
+                            .fill(theme.accent.color.opacity(on ? 0.35 : 0))
+                            .padding(2)
+                    )
+                    .offset(y: on ? -2 : 0)
+                    .animation(.snappy(duration: 0.14), value: on)
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, Self.hPadding)
         .frame(height: Self.height)
         .background {
             if theme.material == .liquidGlass, #available(iOS 26.0, *) {
@@ -540,17 +613,133 @@ private struct SkinTonePicker: View {
             }
         }
         .overlay(shape.strokeBorder(theme.specialKeyText.color.opacity(0.12)))
-        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+        .shadow(color: .black.opacity(0.28), radius: 10, y: 5)
     }
 }
 
-/// Publishes each rendered emoji cell's bounds (keyed by base emoji) so the
-/// tone-picker overlay can anchor itself above the long-pressed cell. Mirrors
-/// `EmojiBarFrameKey` for the tab bar.
-struct EmojiCellAnchorKey: PreferenceKey {
-    static let defaultValue: [String: Anchor<CGRect>] = [:]
-    static func reduce(value: inout [String: Anchor<CGRect>], nextValue: () -> [String: Anchor<CGRect>]) {
+/// Publishes each visible emoji cell's on-screen (`.global`) frame, keyed by base
+/// emoji, so the hold gesture can map a window-space touch back to an emoji and
+/// the swatch bar can anchor above it.
+struct EmojiCellFramesKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
         value.merge(nextValue()) { _, new in new }
+    }
+}
+
+/// Publishes the grid viewport's `.global` frame — used to clamp the swatch bar
+/// on-screen and to map a finger position to a swatch.
+struct EmojiGridFrameKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
+    }
+}
+
+// MARK: - Hold-to-pick gesture bridge
+//
+// The skin-tone interaction is "press an emoji, the swatch bar rises, slide to a
+// tone, release to commit" — one continuous touch. A `UILongPressGestureRecognizer`
+// is the exact primitive: it fires `.began` after a short still hold, streams
+// `.changed` as the finger slides, and `.ended` on release. SwiftUI's own
+// gestures are unreliable inside a keyboard extension (the same reason the letter
+// keyboard and emoji tab bar route touches through bare UIViews), so we bridge to
+// UIKit here.
+//
+// The recogniser is attached to the scroll view's container (an ancestor of the
+// cell Buttons) so it sees every touch without blocking taps: a quick tap never
+// reaches the hold threshold and flows to the Button, while `cancelsTouchesInView`
+// cancels that Button once a hold is recognised — so committing a tone never also
+// fires a plain insert. Touch points are read in window space to match SwiftUI's
+// `.global` cell frames.
+
+private struct EmojiHoldGesture: UIViewRepresentable {
+    var onBegan: (CGPoint) -> Void
+    var onChanged: (CGPoint) -> Void
+    var onEnded: (CGPoint) -> Void
+
+    func makeUIView(context: Context) -> HoldHostView {
+        let v = HoldHostView()
+        v.coordinator = context.coordinator
+        return v
+    }
+
+    func updateUIView(_ uiView: HoldHostView, context: Context) {
+        context.coordinator.onBegan = onBegan
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+    }
+
+    static func dismantleUIView(_ uiView: HoldHostView, coordinator: Coordinator) {
+        if let lp = coordinator.recognizer { lp.view?.removeGestureRecognizer(lp) }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    /// A zero-size, non-interactive handle that attaches the hold recogniser once
+    /// it lands in a window — to the scroll container (an ancestor of the cell
+    /// Buttons) so the gesture spans the grid without blocking taps or scrolling
+    /// the rest of the app.
+    @MainActor
+    final class HoldHostView: UIView {
+        weak var coordinator: Coordinator?
+
+        init() {
+            super.init(frame: .zero)
+            backgroundColor = .clear
+            isUserInteractionEnabled = false
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil, let coordinator, coordinator.recognizer == nil else { return }
+            var scrollView: UIScrollView?
+            var node: UIView? = self
+            while let n = node {
+                if let s = n as? UIScrollView { scrollView = s; break }
+                node = n.superview
+            }
+            guard let host = scrollView?.superview ?? window else { return }
+            let lp = UILongPressGestureRecognizer(target: coordinator,
+                                                  action: #selector(Coordinator.handle(_:)))
+            lp.minimumPressDuration = 0.28
+            lp.cancelsTouchesInView = true
+            lp.delegate = coordinator
+            host.addGestureRecognizer(lp)
+            coordinator.recognizer = lp
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        weak var recognizer: UILongPressGestureRecognizer?
+        var onBegan: (CGPoint) -> Void = { _ in }
+        var onChanged: (CGPoint) -> Void = { _ in }
+        var onEnded: (CGPoint) -> Void = { _ in }
+
+        @objc func handle(_ g: UILongPressGestureRecognizer) {
+            // Report in the host (grid-container) local space. The SwiftUI side
+            // adds the grid's `.global` origin to land in `.global` exactly —
+            // independent of any window / safe-area offset.
+            let p = g.location(in: g.view)
+            switch g.state {
+            case .began:                    onBegan(p)
+            case .changed:                  onChanged(p)
+            case .ended, .cancelled, .failed: onEnded(p)
+            default:                        break
+            }
+        }
+
+        // Coexist with the scroll view's pan: the hold only recognises after a
+        // still ~0.28s, by which point a real scroll would already have moved and
+        // failed it. Scrolling is frozen by the view once a pick is in progress.
+        func gestureRecognizer(_ g: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            true
+        }
     }
 }
 

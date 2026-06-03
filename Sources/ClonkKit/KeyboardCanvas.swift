@@ -242,19 +242,21 @@ public struct KeyboardCanvas: View {
     /// bulb is bottom-anchored to the key (so it always lines up) and rises above
     /// — clamped so the top row's bulb doesn't poke past the keyboard's top edge.
     private func balloonPopup(_ glyph: String, keyRect: CGRect, bounds: CGSize) -> some View {
-        // Round head ~1.45× the key, pinched neck ~0.62× the key.
-        let headWidth = max(keyRect.width * 1.45, 50)
-        let domeR = headWidth / 2
-        let bulbRise = domeR + 26                         // head + a neck above the key
+        // Wide rounded-rect head (~1.4× the key) on a short neck above the key.
+        let headWidth = max(keyRect.width * 1.4, 48)
+        let headHeight: CGFloat = 40
+        let neck: CGFloat = 16
+        let bulbRise = headHeight + neck                 // head + neck above the key top
         let top = max(2, keyRect.minY - bulbRise)
         let bottom = keyRect.maxY
         let totalHeight = bottom - top
         let shoulderY = keyRect.minY - top               // key's top edge within the frame
         let keyCorner = CGFloat(settings.keyCornerRadius)
-        let shape = BalloonPopupShape(keyWidth: keyRect.width, neckWidth: keyRect.width * 0.62,
-                                      shoulderY: shoulderY, bottomCorner: keyCorner)
-        // Magnified glyph centred in the round head (whose centre is at domeR).
-        let glyphOffset = domeR - totalHeight / 2
+        let shape = BalloonPopupShape(keyWidth: keyRect.width, headHeight: headHeight,
+                                      shoulderY: shoulderY, topCorner: max(popupCorner, 14),
+                                      bottomCorner: keyCorner)
+        // Magnified glyph centred in the head.
+        let glyphOffset = headHeight * 0.5 - totalHeight / 2
         // Full accent — the balloon covers the key, so it reads as the active key.
         let tint = theme.accent.color
         return BalloonPopup(glyph: glyph, bulbWidth: headWidth, totalHeight: totalHeight,
@@ -554,71 +556,59 @@ private struct PopupChrome<S: Shape>: ViewModifier {
     }
 }
 
-/// A water-droplet outline drawn as ONE continuous shape spanning the whole
-/// pressed key: a round bulb up top that pinches in to a narrow waist, then
-/// flares back out to the key's width and runs straight down to a rounded foot.
-/// Because the balloon *is* the key (it covers it exactly, same width / corners
-/// / tint), there's no seam — the round head reads as a droplet drawn up out of
-/// the key, joined by a teardrop neck.
+/// A key-popup outline drawn as ONE continuous shape spanning the whole pressed
+/// key: a wide, flat-topped rounded-rectangle head (like the system keyboard's
+/// magnifier) that eases down through a short concave neck to the key's width,
+/// then runs straight to a rounded foot. Because the balloon *is* the key (it
+/// covers it exactly, same width / corners / tint) there's no seam — the head
+/// reads as the key broadening upward.
 private struct BalloonPopupShape: Shape {
     let keyWidth: CGFloat
-    /// Width at the narrowest point of the neck — the droplet's pinch.
-    let neckWidth: CGFloat
+    /// Height of the rounded-rectangle head, before the neck begins.
+    let headHeight: CGFloat
     /// Y of the key's top edge within the frame; below it the sides run straight
-    /// down to the foot, above it is the droplet head + neck.
+    /// down to the foot, above it is the head + neck.
     let shoulderY: CGFloat
+    /// Roundness of the head's top corners.
+    let topCorner: CGFloat
     /// Roundness of the foot's corners — the key's own corner radius.
     let bottomCorner: CGFloat
-
-    /// Circle → cubic-Bézier control-arm length (quarter-circle approximation).
-    private let kappa: CGFloat = 0.5523
 
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height
         let cx = w / 2
+        let rt = min(topCorner, w / 2)
         let kHalf = min(keyWidth, w) / 2
-        let nHalf = min(neckWidth, keyWidth) / 2
+        let leftK = cx - kHalf, rightK = cx + kHalf
         let br = min(bottomCorner, kHalf)
-        // Round head: a full circle of radius w/2, its apex at the frame top.
-        let domeR = w / 2
-        let domeCy = domeR
-        // Key top, kept clear of the head so there's always a neck between them.
-        let shoulder = min(max(shoulderY, domeCy + 10), h - br - 1)
-        // The pinch sits between the head and the key, biased toward the key.
-        let waistY = domeCy + (shoulder - domeCy) * 0.6
+        let shoulder = min(max(shoulderY, rt + 8), h - br - 1)
+        // Head's straight sides end a little above the shoulder, leaving a short
+        // neck to ease in to the key width.
+        let headB = min(headHeight, shoulder - 8)
 
         var p = Path()
-        // Head — left quarter up to the apex, then right quarter down to the
-        // head's right edge (a clean circular dome).
-        p.move(to: CGPoint(x: cx - domeR, y: domeCy))
-        p.addCurve(to: CGPoint(x: cx, y: 0),
-                   control1: CGPoint(x: cx - domeR, y: domeCy - domeR * kappa),
-                   control2: CGPoint(x: cx - domeR * kappa, y: 0))
-        p.addCurve(to: CGPoint(x: cx + domeR, y: domeCy),
-                   control1: CGPoint(x: cx + domeR * kappa, y: 0),
-                   control2: CGPoint(x: cx + domeR, y: domeCy - domeR * kappa))
-        // Right neck — head edge pinches in to the waist (vertical tangents both
-        // ends, so the curve is a smooth concave nip).
-        p.addCurve(to: CGPoint(x: cx + nHalf, y: waistY),
-                   control1: CGPoint(x: cx + domeR, y: domeCy + (waistY - domeCy) * 0.55),
-                   control2: CGPoint(x: cx + nHalf, y: waistY - (waistY - domeCy) * 0.55))
-        // …then flares back out to the key's right edge.
-        p.addCurve(to: CGPoint(x: cx + kHalf, y: shoulder),
-                   control1: CGPoint(x: cx + nHalf, y: waistY + (shoulder - waistY) * 0.55),
-                   control2: CGPoint(x: cx + kHalf, y: shoulder - (shoulder - waistY) * 0.55))
+        // Head — wide rounded-rectangle top.
+        p.move(to: CGPoint(x: rt, y: 0))
+        p.addLine(to: CGPoint(x: w - rt, y: 0))
+        p.addQuadCurve(to: CGPoint(x: w, y: rt), control: CGPoint(x: w, y: 0))
+        p.addLine(to: CGPoint(x: w, y: headB))
+        // Short right neck — concave ease to the key's right edge (vertical
+        // tangents at both ends so head and key sides flow in smoothly).
+        p.addCurve(to: CGPoint(x: rightK, y: shoulder),
+                   control1: CGPoint(x: w, y: shoulder),
+                   control2: CGPoint(x: rightK, y: headB))
         // Straight down the key's right side to the foot.
-        p.addLine(to: CGPoint(x: cx + kHalf, y: h - br))
-        p.addQuadCurve(to: CGPoint(x: cx + kHalf - br, y: h), control: CGPoint(x: cx + kHalf, y: h))
-        p.addLine(to: CGPoint(x: cx - kHalf + br, y: h))
-        p.addQuadCurve(to: CGPoint(x: cx - kHalf, y: h - br), control: CGPoint(x: cx - kHalf, y: h))
+        p.addLine(to: CGPoint(x: rightK, y: h - br))
+        p.addQuadCurve(to: CGPoint(x: rightK - br, y: h), control: CGPoint(x: rightK, y: h))
+        p.addLine(to: CGPoint(x: leftK + br, y: h))
+        p.addQuadCurve(to: CGPoint(x: leftK, y: h - br), control: CGPoint(x: leftK, y: h))
         // Up the key's left side, then the mirrored neck back to the head.
-        p.addLine(to: CGPoint(x: cx - kHalf, y: shoulder))
-        p.addCurve(to: CGPoint(x: cx - nHalf, y: waistY),
-                   control1: CGPoint(x: cx - kHalf, y: shoulder - (shoulder - waistY) * 0.55),
-                   control2: CGPoint(x: cx - nHalf, y: waistY + (shoulder - waistY) * 0.55))
-        p.addCurve(to: CGPoint(x: cx - domeR, y: domeCy),
-                   control1: CGPoint(x: cx - nHalf, y: waistY - (waistY - domeCy) * 0.55),
-                   control2: CGPoint(x: cx - domeR, y: domeCy + (waistY - domeCy) * 0.55))
+        p.addLine(to: CGPoint(x: leftK, y: shoulder))
+        p.addCurve(to: CGPoint(x: 0, y: headB),
+                   control1: CGPoint(x: leftK, y: headB),
+                   control2: CGPoint(x: 0, y: shoulder))
+        p.addLine(to: CGPoint(x: 0, y: rt))
+        p.addQuadCurve(to: CGPoint(x: rt, y: 0), control: CGPoint(x: 0, y: 0))
         p.closeSubpath()
         return p
     }
