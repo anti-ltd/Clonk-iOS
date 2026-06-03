@@ -985,10 +985,17 @@ private struct EmojiGlassFlashView: View {
     /// Animated state: the droplet's scale (the morph) and its opacity (in/out).
     private struct Flash { var scale: CGFloat = 0.55; var opacity: Double = 0 }
 
+    /// `keyframeAnimator` only fires when its trigger *changes while mounted*. This
+    /// view is freshly mounted per flash (the overlay unmounts at rest), so the
+    /// external `trigger` never changes within one lifetime — the morph would never
+    /// play. Bumping a local tick on appear gives the animator the change it needs;
+    /// also bumping on `trigger` re-morphs a repeat tap that lands before unmount.
+    @State private var tick = 0
+
     var body: some View {
         let shape = Capsule(style: .continuous)
         ZStack {
-            Color.clear.keyframeAnimator(initialValue: Flash(), trigger: trigger) { _, f in
+            Color.clear.keyframeAnimator(initialValue: Flash(), trigger: tick) { _, f in
                 Color.clear
                     .glassEffect(.regular.tint(tint), in: shape)
                     .scaleEffect(f.scale)
@@ -1009,6 +1016,8 @@ private struct EmojiGlassFlashView: View {
             Text(glyph).font(.system(size: 30))
         }
         .allowsHitTesting(false)
+        .onAppear { tick &+= 1 }
+        .onChange(of: trigger) { _, _ in tick &+= 1 }
     }
 }
 
@@ -1045,16 +1054,24 @@ private struct SkinTonePicker: View {
         let hlCenterX = Self.hPadding + Self.swatch * (CGFloat(hlIndex) + 0.5)
         let box = Self.swatch - 6
 
-        // Swatches: a dead-simple static row of fixed-size emoji. Nothing here
-        // animates, scales, or is conditional, so every swatch is exactly the same
-        // size no matter how fast the finger slides.
+        // Swatches: a fixed-size row whose only variable is which one is picked.
+        // Apple's emoji font renders the Fitzpatrick-modified glyphs with slightly
+        // different metrics than the neutral base, so an unscaled row *looks* like a
+        // jumble of sizes. To cut through that, the currently-picked swatch blows up
+        // to one consistent large size — and stays there for the whole hold. It only
+        // shrinks back when the finger lifts (the bar dismisses), never mid-slide, so
+        // there's no flicker or shrink-as-you-go between tones.
         return HStack(spacing: 0) {
             ForEach(SkinTone.allCases) { tone in
+                let isPicked = tone == highlighted
                 Text(EmojiSkinTone.applied(tone, to: base))
                     .font(.system(size: 28))
+                    .scaleEffect(isPicked ? 1.5 : 1, anchor: .center)
+                    .zIndex(isPicked ? 1 : 0)
                     .frame(width: Self.swatch, height: Self.swatch)
             }
         }
+        .animation(.snappy(duration: 0.16), value: highlighted)
         .padding(.horizontal, Self.hPadding)
         .frame(height: Self.height)
         // The selection highlight sits *behind* the swatches — positioned by exact

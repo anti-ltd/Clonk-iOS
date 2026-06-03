@@ -10,6 +10,7 @@
 		019582295070CFC2147CCDD1 /* KeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49DB80C42BDBBFBA3D7876A5 /* KeyboardController.swift */; };
 		027C1D4DCADBCB5274565116 /* KeyboardController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49DB80C42BDBBFBA3D7876A5 /* KeyboardController.swift */; };
 		0BE1681946743EF8EE51BFF8 /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */; };
+		0BFA467574BE7B9D7C2F9A41 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6E9C7A15D827D03AE993837E /* PrivacyInfo.xcprivacy */; };
 		0DF15917C08B02E1B79741BD /* RGBA.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA82BC99C7A359DF18B9CDDD /* RGBA.swift */; };
 		1007569A1A30A8C62D13AC9A /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247100C266670E093E13EFC1 /* SmartPunctuation.swift */; };
 		10935AB8F974E859D7B8D4F3 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D63AD698C2C479C032206407 /* iUXiOS */; };
@@ -33,6 +34,7 @@
 		4FA0ACF728879EB2C62B3287 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8927D850C4365DFDC1FD2FDA /* Theme.swift */; };
 		526C76DC55ADCFC1CC1DA852 /* EmojiSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FDB6FF761A1B9983D99D51 /* EmojiSettingsView.swift */; };
 		528F2D31362D9EE6A8B84E04 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148AA47AC2638AB397929AF1 /* EmojiData.generated.swift */; };
+		52E9CB688315587DFC732459 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F19B57DD172B90333A562C77 /* PrivacyInfo.xcprivacy */; };
 		53E0FCF30A3FEE59055C4A14 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148AA47AC2638AB397929AF1 /* EmojiData.generated.swift */; };
 		54AD91BF93B5363C3C7D9373 /* ClinkKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A06533C1C5E7C51A9D0B3454 /* ClinkKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		556A45C2449169ACA72D6B1F /* AppStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E887A5C7AFA3E881307455F8 /* AppStage.swift */; };
@@ -44,6 +46,7 @@
 		600121C7DD44E82B1EC68DCD /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF59E26E52134F6C6A4604F2 /* SharedStore.swift */; };
 		617021EF084EA3192ABE5872 /* EnableFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07CA903F575F647CCA010CD1 /* EnableFlowView.swift */; };
 		6458D8B669F1B46F9599AC7B /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247100C266670E093E13EFC1 /* SmartPunctuation.swift */; };
+		68627A6C8F349503A1764BC9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */; };
 		6A8DFD98B768C4B591019692 /* LayoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */; };
 		6BCACE64387F0B4208941CF6 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		7700D18C30068362D47F3DDF /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42B98FFA8432716147A36F0E /* AppModel.swift */; };
@@ -139,6 +142,7 @@
 		64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCanvas.swift; sourceTree = "<group>"; };
 		6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLiveState.swift; sourceTree = "<group>"; };
 		6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
+		6E9C7A15D827D03AE993837E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		78C0215B80D960284B6C1263 /* ClinkEmoji.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClinkEmoji.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7949529FFC551E295B024531 /* SoundPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPickerView.swift; sourceTree = "<group>"; };
 		8927D850C4365DFDC1FD2FDA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -150,10 +154,12 @@
 		A06533C1C5E7C51A9D0B3454 /* ClinkKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClinkKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B558BC9C666527C188E5041E /* ClinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClinkApp.swift; sourceTree = "<group>"; };
 		BA82BC99C7A359DF18B9CDDD /* RGBA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBA.swift; sourceTree = "<group>"; };
+		CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D07CE5F41986DBEC496E6369 /* ThemeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEditorView.swift; sourceTree = "<group>"; };
 		E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
 		E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseView.swift; sourceTree = "<group>"; };
 		E887A5C7AFA3E881307455F8 /* AppStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStage.swift; sourceTree = "<group>"; };
+		F19B57DD172B90333A562C77 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FF59E26E52134F6C6A4604F2 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -269,8 +275,25 @@
 			isa = PBXGroup;
 			children = (
 				2F7F467DA96CBD7A7FA140AE /* Assets.xcassets */,
+				A114E3B0246BA8A6078112AC /* Privacy */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		36D1514537C53528DA392160 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				6E9C7A15D827D03AE993837E /* PrivacyInfo.xcprivacy */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		873745E5542657A6D41F35A5 /* Emoji */ = {
+			isa = PBXGroup;
+			children = (
+				F19B57DD172B90333A562C77 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Emoji;
 			sourceTree = "<group>";
 		};
 		9D3F266B0A016DDD8C29D2BE /* Clink */ = {
@@ -282,6 +305,16 @@
 				C68EFFB03B2BF4A5F7331ACE /* UI */,
 			);
 			path = Clink;
+			sourceTree = "<group>";
+		};
+		A114E3B0246BA8A6078112AC /* Privacy */ = {
+			isa = PBXGroup;
+			children = (
+				36D1514537C53528DA392160 /* App */,
+				873745E5542657A6D41F35A5 /* Emoji */,
+				F5730D221540CF3840AA2100 /* Keyboard */,
+			);
+			path = Privacy;
 			sourceTree = "<group>";
 		};
 		C68EFFB03B2BF4A5F7331ACE /* UI */ = {
@@ -301,6 +334,14 @@
 			path = UI;
 			sourceTree = "<group>";
 		};
+		F5730D221540CF3840AA2100 /* Keyboard */ = {
+			isa = PBXGroup;
+			children = (
+				CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */,
+			);
+			path = Keyboard;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -309,6 +350,7 @@
 			buildConfigurationList = 1E85D0156633A7DDA2264410 /* Build configuration list for PBXNativeTarget "ClinkKeyboard" */;
 			buildPhases = (
 				A5DD0214227BD55B5F43E5A0 /* Sources */,
+				9EE6CB2400F4925885052269 /* Resources */,
 				D3E72D407DD9E78E3C9C4A53 /* Frameworks */,
 			);
 			buildRules = (
@@ -351,6 +393,7 @@
 			buildConfigurationList = 8DC06DB8BD261224657F978B /* Build configuration list for PBXNativeTarget "ClinkEmoji" */;
 			buildPhases = (
 				8C97A39FEC41D5BAC16CED28 /* Sources */,
+				FBC673F7C34DE06298AE59E9 /* Resources */,
 				54A60A34805AC6B60BB4D047 /* Frameworks */,
 			);
 			buildRules = (
@@ -418,6 +461,23 @@
 			buildActionMask = 2147483647;
 			files = (
 				819662BE3E7814C19F18A12E /* Assets.xcassets in Resources */,
+				0BFA467574BE7B9D7C2F9A41 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9EE6CB2400F4925885052269 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				68627A6C8F349503A1764BC9 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FBC673F7C34DE06298AE59E9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52E9CB688315587DFC732459 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

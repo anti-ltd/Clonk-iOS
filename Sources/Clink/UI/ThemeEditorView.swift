@@ -1,5 +1,13 @@
 import SwiftUI
 import iUXiOS
+import UniformTypeIdentifiers
+
+/// The document type for an exported theme — a JSON `Theme` carried in a `.clink`
+/// file. Derived from the extension (not registered in Info.plist), which is
+/// enough to both name exports and filter the import picker.
+extension UTType {
+    static var clinkTheme: UTType { UTType(filenameExtension: "clink", conformingTo: .json) ?? .json }
+}
 
 struct ThemeEditorView: View {
     @Environment(AppModel.self) private var model
@@ -7,6 +15,11 @@ struct ThemeEditorView: View {
     /// Non-nil while the create/edit sheet is up. Set to a fresh draft to
     /// create, or to an existing custom theme to edit.
     @State private var builderTheme: Theme?
+
+    /// The custom theme being exported — drives the share sheet.
+    @State private var exportingTheme: Theme?
+    /// Whether the `.clink` import file picker is up.
+    @State private var importing = false
 
     /// Which appearance's themes are shown while "Match system appearance" is on —
     /// the two modes live behind a segmented tab rather than stacked sections.
@@ -43,10 +56,20 @@ struct ThemeEditorView: View {
                          selectedID: model.settings.themeID) { model.settings.themeID = $0 }
                 }
 
-                createButton
+                bottomBar
         }
         .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
+        .fileImporter(isPresented: $importing,
+                      allowedContentTypes: [.clinkTheme, .json],
+                      allowsMultipleSelection: false) { handleImport($0) }
+        .sheet(item: $exportingTheme) { theme in
+            if let url = exportURL(for: theme) {
+                ShareSheet(items: [url])
+            } else {
+                Text("Couldn’t prepare this theme for export.").padding()
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -65,17 +88,27 @@ struct ThemeEditorView: View {
         }
     }
 
-    private var createButton: some View {
-        Button {
-            // Seed the new theme's appearance from whatever's active now.
-            builderTheme = Theme.newCustom(
-                id: "custom-\(UUID().uuidString.prefix(8))",
-                dark: model.settings.theme.isDark)
-        } label: {
+    /// Two equal-width actions: make a fresh theme, or pull one in from a `.clink`
+    /// file someone shared.
+    private var bottomBar: some View {
+        HStack(spacing: UX.cardSpacing) {
+            actionButton("Create", systemImage: "plus.circle.fill") {
+                // Seed the new theme's appearance from whatever's active now.
+                builderTheme = Theme.newCustom(
+                    id: "custom-\(UUID().uuidString.prefix(8))",
+                    dark: model.settings.theme.isDark)
+            }
+            actionButton("Import", systemImage: "square.and.arrow.down") {
+                importing = true
+            }
+        }
+    }
+
+    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                Text("Create a theme")
-                Spacer()
+                Image(systemName: systemImage)
+                Text(title)
             }
             .font(.body.weight(.medium))
             .padding(14)
@@ -83,6 +116,39 @@ struct ThemeEditorView: View {
             .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Export / import
+
+    /// Write `theme` to a `<name>.clink` file in the temp dir and hand back its URL
+    /// for the share sheet. A `.clink` is just the theme's JSON.
+    private func exportURL(for theme: Theme) -> URL? {
+        guard let data = try? JSONEncoder().encode(theme) else { return nil }
+        let trimmed = theme.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safe = (trimmed.isEmpty ? "Theme" : trimmed)
+            .components(separatedBy: CharacterSet(charactersIn: "/\\:")).joined(separator: "-")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(safe).clink")
+        do { try data.write(to: url, options: .atomic); return url } catch { return nil }
+    }
+
+    /// Decode the picked `.clink` file into a fresh custom theme, save it, and
+    /// select it. A new id is minted so importing never clobbers an existing theme
+    /// (and re-importing yields a distinct copy rather than a silent overwrite).
+    private func handleImport(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result, let url = urls.first else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url),
+              var theme = try? JSONDecoder().decode(Theme.self, from: data) else { return }
+        theme.id = "custom-\(UUID().uuidString.prefix(8))"
+        model.saveCustomTheme(theme)
+        if model.settings.matchSystemAppearance {
+            if theme.isDark { model.settings.darkThemeID = theme.id }
+            else { model.settings.lightThemeID = theme.id }
+            appearanceTab = theme.isDark ? .dark : .light
+        } else {
+            model.settings.themeID = theme.id
+        }
     }
 
     @ViewBuilder
@@ -102,6 +168,7 @@ struct ThemeEditorView: View {
                     if custom {
                         swatch.contextMenu {
                             Button { builderTheme = theme } label: { Label("Edit", systemImage: "pencil") }
+                            Button { exportingTheme = theme } label: { Label("Export…", systemImage: "square.and.arrow.up") }
                             Button(role: .destructive) {
                                 model.deleteCustomTheme(id: theme.id)
                             } label: { Label("Delete", systemImage: "trash") }
@@ -113,6 +180,16 @@ struct ThemeEditorView: View {
             }
         }
     }
+}
+
+/// A thin wrapper over `UIActivityViewController` so a custom theme can be shared
+/// as a `.clink` file (AirDrop, Files, Messages…).
+private struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
 private struct ThemeSwatch: View {

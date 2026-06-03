@@ -145,12 +145,14 @@ final class EmojiKeyboardViewController: UIInputViewController {
         UIView.animate(withDuration: 0.28) { self.view.layoutIfNeeded() }
     }
 
-    /// Delete a whole emoji — one grapheme cluster can be several UTF-16 units
-    /// (ZWJ sequences, flags), so a single `deleteBackward` would leave shards.
+    /// Delete a whole emoji. `deleteBackward()` already removes one grapheme cluster
+    /// at a time — the same primitive the system keyboard's delete key uses, so it
+    /// handles multi-scalar emoji (ZWJ sequences, flags, skin tones) correctly. A
+    /// single call is exactly one emoji; looping over the UTF-16 unit count deleted
+    /// one emoji *per code unit*, so astral-plane glyphs (👍 is a surrogate pair)
+    /// vanished two at a time.
     private func deleteEmoji() {
-        let before = textDocumentProxy.documentContextBeforeInput ?? ""
-        guard let last = before.last else { textDocumentProxy.deleteBackward(); return }
-        for _ in 0..<String(last).utf16.count { textDocumentProxy.deleteBackward() }
+        textDocumentProxy.deleteBackward()
     }
 }
 

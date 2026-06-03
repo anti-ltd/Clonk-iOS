@@ -110,6 +110,166 @@ public extension Theme {
             accent: RGBA(hex: 0x55D98C),
             isDark: true
         ),
+        Theme(
+            id: "midnight", name: "Midnight",
+            background: RGBA(hex: 0x0B1026),
+            keyFill: RGBA(hex: 0x1B2347),
+            keyText: RGBA(hex: 0xE6ECFF),
+            specialKeyFill: RGBA(hex: 0x141A38),
+            specialKeyText: RGBA(hex: 0xB9C4E6),
+            accent: RGBA(hex: 0x5B8CFF),
+            isDark: true
+        ),
+        Theme(
+            id: "carbon", name: "Carbon",
+            background: RGBA(hex: 0x000000),
+            keyFill: RGBA(hex: 0x141414),
+            keyText: RGBA(hex: 0xFFFFFF),
+            specialKeyFill: RGBA(hex: 0x0A0A0A),
+            specialKeyText: RGBA(hex: 0xBFBFBF),
+            accent: RGBA(hex: 0xFF453A),
+            isDark: true
+        ),
+        Theme(
+            id: "dracula", name: "Dracula",
+            background: RGBA(hex: 0x282A36),
+            keyFill: RGBA(hex: 0x44475A),
+            keyText: RGBA(hex: 0xF8F8F2),
+            specialKeyFill: RGBA(hex: 0x21222C),
+            specialKeyText: RGBA(hex: 0xBD93F9),
+            accent: RGBA(hex: 0xFF79C6),
+            isDark: true
+        ),
+        Theme(
+            id: "nord", name: "Nord",
+            background: RGBA(hex: 0x2E3440),
+            keyFill: RGBA(hex: 0x3B4252),
+            keyText: RGBA(hex: 0xECEFF4),
+            specialKeyFill: RGBA(hex: 0x272C36),
+            specialKeyText: RGBA(hex: 0xD8DEE9),
+            accent: RGBA(hex: 0x88C0D0),
+            isDark: true
+        ),
+        Theme(
+            id: "solarized-dark", name: "Solarized Dark",
+            background: RGBA(hex: 0x002B36),
+            keyFill: RGBA(hex: 0x073642),
+            keyText: RGBA(hex: 0xD3CBB7),
+            specialKeyFill: RGBA(hex: 0x00252E),
+            specialKeyText: RGBA(hex: 0x93A1A1),
+            accent: RGBA(hex: 0x2AA198),
+            isDark: true
+        ),
+        Theme(
+            id: "ocean", name: "Ocean",
+            background: RGBA(hex: 0x0A1F2B),
+            keyFill: RGBA(hex: 0x123C4A),
+            keyText: RGBA(hex: 0xE0F7FA),
+            specialKeyFill: RGBA(hex: 0x0C2D38),
+            specialKeyText: RGBA(hex: 0xA7DDE6),
+            accent: RGBA(hex: 0x21D4C6),
+            isDark: true
+        ),
+        Theme(
+            id: "ember", name: "Ember",
+            background: RGBA(hex: 0x2A1410),
+            keyFill: RGBA(hex: 0x4A211A),
+            keyText: RGBA(hex: 0xFFE9DF),
+            specialKeyFill: RGBA(hex: 0x381812),
+            specialKeyText: RGBA(hex: 0xF3B9A3),
+            accent: RGBA(hex: 0xFF6B35),
+            isDark: true
+        ),
+        Theme(
+            id: "crimson", name: "Crimson",
+            background: RGBA(hex: 0x1F0A0D),
+            keyFill: RGBA(hex: 0x3D161B),
+            keyText: RGBA(hex: 0xFFE8EC),
+            specialKeyFill: RGBA(hex: 0x2C0F13),
+            specialKeyText: RGBA(hex: 0xE9A8B2),
+            accent: RGBA(hex: 0xFF2D55),
+            isDark: true
+        ),
+        Theme(
+            id: "matrix", name: "Matrix",
+            background: RGBA(hex: 0x000A00),
+            keyFill: RGBA(hex: 0x062E06),
+            keyText: RGBA(hex: 0x4DFF4D),
+            specialKeyFill: RGBA(hex: 0x031B03),
+            specialKeyText: RGBA(hex: 0x2ECC40),
+            accent: RGBA(hex: 0x00FF41),
+            isDark: true
+        ),
+        Theme(
+            id: "royal", name: "Royal",
+            background: RGBA(hex: 0x12100A),
+            keyFill: RGBA(hex: 0x252013),
+            keyText: RGBA(hex: 0xF7EFD8),
+            specialKeyFill: RGBA(hex: 0x1A1610),
+            specialKeyText: RGBA(hex: 0xD9C58C),
+            accent: RGBA(hex: 0xE8B923),
+            isDark: true
+        ),
+        Theme(
+            id: "sakura", name: "Sakura",
+            background: RGBA(hex: 0xF6DCE3),
+            keyFill: RGBA(hex: 0xFFF2F5),
+            keyText: RGBA(hex: 0x4A2E36),
+            specialKeyFill: RGBA(hex: 0xE8B6C4),
+            specialKeyText: RGBA(hex: 0x4A2E36),
+            accent: RGBA(hex: 0xE8567E),
+            isDark: false
+        ),
+        Theme(
+            id: "mint", name: "Mint",
+            background: RGBA(hex: 0xD6EFE2),
+            keyFill: RGBA(hex: 0xF4FBF7),
+            keyText: RGBA(hex: 0x1E3A2C),
+            specialKeyFill: RGBA(hex: 0xB2DCC6),
+            specialKeyText: RGBA(hex: 0x1E3A2C),
+            accent: RGBA(hex: 0x12B886),
+            isDark: false
+        ),
+        Theme(
+            id: "lavender", name: "Lavender",
+            background: RGBA(hex: 0xE5DFF5),
+            keyFill: RGBA(hex: 0xF8F5FF),
+            keyText: RGBA(hex: 0x352A4A),
+            specialKeyFill: RGBA(hex: 0xC9BCE6),
+            specialKeyText: RGBA(hex: 0x352A4A),
+            accent: RGBA(hex: 0x7C5CFF),
+            isDark: false
+        ),
+        Theme(
+            id: "solarized-light", name: "Solarized Light",
+            background: RGBA(hex: 0xEEE8D5),
+            keyFill: RGBA(hex: 0xFDF6E3),
+            keyText: RGBA(hex: 0x586E75),
+            specialKeyFill: RGBA(hex: 0xDDD6C1),
+            specialKeyText: RGBA(hex: 0x657B83),
+            accent: RGBA(hex: 0xCB4B16),
+            isDark: false
+        ),
+        Theme(
+            id: "bubblegum", name: "Bubblegum",
+            background: RGBA(hex: 0xFCE1F0),
+            keyFill: RGBA(hex: 0xFFFFFF),
+            keyText: RGBA(hex: 0x5A2A47),
+            specialKeyFill: RGBA(hex: 0xF6BFE0),
+            specialKeyText: RGBA(hex: 0x5A2A47),
+            accent: RGBA(hex: 0xFF4FA3),
+            isDark: false
+        ),
+        Theme(
+            id: "latte", name: "Latte",
+            background: RGBA(hex: 0xE6D9C8),
+            keyFill: RGBA(hex: 0xFBF4EA),
+            keyText: RGBA(hex: 0x4A3B2A),
+            specialKeyFill: RGBA(hex: 0xCDB89E),
+            specialKeyText: RGBA(hex: 0x4A3B2A),
+            accent: RGBA(hex: 0xB5651D),
+            isDark: false
+        ),
         // Liquid Glass — colors act as tints; translucent backdrop so the keys
         // refract the system keyboard background.
         Theme(
@@ -131,6 +291,26 @@ public extension Theme {
             specialKeyText: RGBA(hex: 0x1C1C1E),
             accent: RGBA(hex: 0x007AFF),
             isDark: false, material: .liquidGlass
+        ),
+        Theme(
+            id: "liquid-mint", name: "Liquid Mint",
+            background: RGBA(hex: 0xD6EFE2, a: 0.20),
+            keyFill: RGBA(hex: 0xFFFFFF, a: 0.30),
+            keyText: RGBA(hex: 0x143324),
+            specialKeyFill: RGBA(hex: 0x000000, a: 0.05),
+            specialKeyText: RGBA(hex: 0x143324),
+            accent: RGBA(hex: 0x12B886),
+            isDark: false, material: .liquidGlass
+        ),
+        Theme(
+            id: "liquid-ember", name: "Liquid Ember",
+            background: RGBA(hex: 0x2A1410, a: 0.30),
+            keyFill: RGBA(hex: 0xFFFFFF, a: 0.10),
+            keyText: RGBA(hex: 0xFFF0E8),
+            specialKeyFill: RGBA(hex: 0xFFFFFF, a: 0.06),
+            specialKeyText: RGBA(hex: 0xFFD9C7),
+            accent: RGBA(hex: 0xFF6B35),
+            isDark: true, material: .liquidGlass
         ),
     ]
 

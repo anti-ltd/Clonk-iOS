@@ -104,11 +104,16 @@ public struct KeyboardCanvas: View {
     /// The exact content height for a given configuration, so the host can pin
     /// the keyboard to it instead of guessing and centering.
     public static func preferredHeight(for settings: KeyboardSettings) -> CGFloat {
+        let key = CGFloat(settings.keyHeight)
         var rows = settings.layout.rows.count + 1   // letter rows + bottom row
-        if settings.showNumberRow { rows += 1 }
-        var h = CGFloat(rows) * CGFloat(settings.keyHeight)
-            + CGFloat(rows - 1) * CGFloat(settings.rowSpacing)
-            + Metrics.vPadding * 2
+        // The number row carries its own (possibly reduced) height; every other
+        // row is a full key tall.
+        var h = CGFloat(rows) * key
+        if settings.showNumberRow {
+            rows += 1
+            h += key * CGFloat(settings.numberRowHeightScale)
+        }
+        h += CGFloat(rows - 1) * CGFloat(settings.rowSpacing) + Metrics.vPadding * 2
         if settings.suggestionsEnabled { h += Metrics.suggestionBarHeight }
         return h
     }
@@ -195,7 +200,7 @@ public struct KeyboardCanvas: View {
                     .animation(.snappy(duration: 0.25), value: g.glyph)
             } else {
                 Text(g.glyph)
-                    .font(.system(size: g.multiChar ? 16 : 22, weight: .regular))
+                    .font(.system(size: g.fontSize ?? (g.multiChar ? 16 : 22), weight: .regular))
             }
         }
         .foregroundStyle(g.color)
@@ -285,7 +290,9 @@ public struct KeyboardCanvas: View {
         let homeInset = usableWidth * CGFloat(settings.homeRowInsetAmount)
         let stack = VStack(spacing: CGFloat(settings.rowSpacing)) {
             if settings.showNumberRow, plane == .letters {
-                row(KeyboardLayout.numberRows[0].map { plainKey($0) }, rowID: "num")
+                row(KeyboardLayout.numberRows[0].map { plainKey($0, fontSize: CGFloat(settings.numberRowFontSize)) },
+                    rowID: "num",
+                    fixedHeight: CGFloat(settings.keyHeight) * CGFloat(settings.numberRowHeightScale))
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { idx, r in
                 // The middle letter row (index 1 of a 3-row letter layout) is
@@ -426,8 +433,8 @@ public struct KeyboardCanvas: View {
     }
 
     /// A symbol/number key with no shift behaviour.
-    private func plainKey(_ glyph: String) -> KeySpec {
-        KeySpec(kind: .character, label: .text(glyph), weight: 1) {
+    private func plainKey(_ glyph: String, fontSize: CGFloat? = nil) -> KeySpec {
+        KeySpec(kind: .character, label: .text(glyph), weight: 1, fontSize: fontSize) {
             insert(glyph)
             // Pop back to letters after sentence punctuation, so a quick
             // "123 → , → keep typing" doesn't strand you on the symbols page.
@@ -471,10 +478,11 @@ public struct KeyboardCanvas: View {
 
     // MARK: - Row renderer (proportional widths, à la EmbeddedKeyboard)
 
-    private func row(_ specs: [KeySpec], rowID: String) -> some View {
+    @ViewBuilder
+    private func row(_ specs: [KeySpec], rowID: String, fixedHeight: CGFloat? = nil) -> some View {
         let total = specs.map(\.weight).reduce(0, +)
         let spacing = CGFloat(settings.keySpacing)
-        return GeometryReader { geo in
+        let content = GeometryReader { geo in
             let gaps = spacing * CGFloat(max(specs.count - 1, 0))
             let unit = max((geo.size.width - gaps) / CGFloat(total), 0)
             HStack(spacing: spacing) {
@@ -488,9 +496,14 @@ public struct KeyboardCanvas: View {
                 }
             }
         }
-        // Rows divide the host's height evenly — no fixed per-row height, so
-        // there's never a top/bottom gap.
-        .frame(maxHeight: .infinity)
+        // A `fixedHeight` row (the number strip) takes exactly that; the rest leave
+        // height flexible and divide the host evenly, so there's never a top/bottom
+        // gap.
+        if let fixedHeight {
+            content.frame(height: fixedHeight)
+        } else {
+            content.frame(maxHeight: .infinity)
+        }
     }
 }
 
@@ -531,6 +544,8 @@ struct KeyGlyphInfo: Identifiable, Equatable {
     let hidden: Bool
     let deleteTick: Int
     let multiChar: Bool
+    /// Override glyph point size (number row); nil = default sizing.
+    var fontSize: CGFloat? = nil
 }
 
 struct KeyGlyphKey: PreferenceKey {
@@ -688,15 +703,18 @@ struct KeySpec: Identifiable {
     let isShift: Bool
     /// Called with a signed character delta while dragging the space bar.
     let onCursorMove: ((Int) -> Void)?
+    /// Override glyph point size (the number row uses this); nil = default sizing.
+    let fontSize: CGFloat?
     let action: () -> Void
 
     init(kind: Kind, label: Label, weight: Double, highlighted: Bool = false,
          isDestructive: Bool = false, isSpace: Bool = false, isRepeatable: Bool = false,
-         isShift: Bool = false, onCursorMove: ((Int) -> Void)? = nil, action: @escaping () -> Void) {
+         isShift: Bool = false, onCursorMove: ((Int) -> Void)? = nil, fontSize: CGFloat? = nil,
+         action: @escaping () -> Void) {
         self.kind = kind; self.label = label; self.weight = weight
         self.highlighted = highlighted; self.isDestructive = isDestructive
         self.isSpace = isSpace; self.isRepeatable = isRepeatable; self.isShift = isShift
-        self.onCursorMove = onCursorMove; self.action = action
+        self.onCursorMove = onCursorMove; self.fontSize = fontSize; self.action = action
     }
 }
 
@@ -882,7 +900,8 @@ private struct KeyView: View {
             // feeds 0 so a delete burst doesn't jiggle shift / globe / return.
             // The key keeps its own glyph even while popping — the popup sits
             // above it (à la the system keyboard), so the letter stays put.
-            hidden: false, deleteTick: spec.isRepeatable ? deleteTick : 0, multiChar: multiChar)
+            hidden: false, deleteTick: spec.isRepeatable ? deleteTick : 0, multiChar: multiChar,
+            fontSize: spec.fontSize)
     }
 
     /// The key's drawn surface: shift carries its own glyph (so its interactive

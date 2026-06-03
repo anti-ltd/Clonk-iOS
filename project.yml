@@ -56,6 +56,9 @@ targets:
       # a plain resource it would be copied verbatim and iOS wouldn't
       # find the app icon.
       - Resources/Assets.xcassets
+      # Privacy manifest (required by App Store since May 2024). Lives in a
+      # per-target folder so it lands at the bundle root as PrivacyInfo.xcprivacy.
+      - Resources/Privacy/App/PrivacyInfo.xcprivacy
     info:
       path: Resources/Clink-Info.plist
       properties:
@@ -101,6 +104,8 @@ targets:
       - Sources/ClinkKeyboard
       # Same shared code, compiled into the extension too.
       - Sources/ClinkKit
+      # Privacy manifest for the keyboard extension bundle.
+      - Resources/Privacy/Keyboard/PrivacyInfo.xcprivacy
     info:
       path: Resources/ClinkKeyboard-Info.plist
       properties:
@@ -142,6 +147,8 @@ targets:
       - Sources/ClinkEmoji
       # Same shared code (settings, theme, emoji canvas) as the others.
       - Sources/ClinkKit
+      # Privacy manifest for the emoji keyboard extension bundle.
+      - Resources/Privacy/Emoji/PrivacyInfo.xcprivacy
     info:
       path: Resources/ClinkEmoji-Info.plist
       properties:

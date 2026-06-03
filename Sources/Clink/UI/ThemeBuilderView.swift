@@ -36,66 +36,21 @@ struct ThemeBuilderView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    KeyboardPreview(settings: previewSettings)
-
-                    CardSection("Name") {
-                        TextFieldRow(prompt: "Theme name", text: $draft.name)
-                    }
-
-                    CardSection("Style") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Material").foregroundStyle(.secondary).font(.subheadline)
-                            Picker("Material", selection: $draft.material) {
-                                Text("Solid").tag(KeyMaterial.solid)
-                                Text("Liquid Glass").tag(KeyMaterial.liquidGlass)
-                            }
-                            .pickerStyle(.segmented)
-                        }
-                        .padding(.vertical, UX.rowVPadding)
-                        Divider()
-                        ToggleRow("Dark theme",
-                                  subtitle: "Tints the status bar to match and sets the Liquid Glass fallback.",
-                                  isOn: $draft.isDark)
-                    }
-
-                    CardSection("Colors") {
-                        colorRow("Key fill", \.keyFill)
-                        Divider()
-                        colorRow("Key text", \.keyText)
-                        Divider()
-                        colorRow("Function-key fill", \.specialKeyFill)
-                        Divider()
-                        colorRow("Function-key text", \.specialKeyText)
-                        Divider()
-                        colorRow("Accent / pressed", \.accent)
-                    }
-
-                    if draft.material == .liquidGlass {
-                        Text("Liquid Glass uses the fills as translucent tints — lower their opacity so the keys stay glassy.")
-                            .font(.caption).foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 4)
-                    }
-
-                    if isExisting {
-                        Button(role: .destructive) {
-                            model.deleteCustomTheme(id: draft.id)
-                            dismiss()
-                        } label: {
-                            Text("Delete Theme").frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.red)
-                        .padding(.top, 4)
-                    }
-                }
-                .padding(UX.screenPadding)
-            }
+            // Pinned preview + segmented tabs, just like the Layout/Keys editor:
+            // the keyboard stays put while the fields scroll under it.
+            TabbedPreviewLayout(settings: previewSettings, tabs: [
+                PreviewTab("Style") {
+                    nameCard
+                    styleCard
+                    if isExisting { deleteButton }
+                },
+                PreviewTab("Colors") {
+                    colorsCard
+                    if draft.material == .liquidGlass { glassHint }
+                },
+            ])
             .navigationTitle(isExisting ? "Edit Theme" : "New Theme")
             .navigationBarTitleDisplayMode(.inline)
-            .background(Color(.systemGroupedBackground))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -105,6 +60,63 @@ struct ThemeBuilderView: View {
                 }
             }
         }
+    }
+
+    private var nameCard: some View {
+        CardSection("Name") {
+            TextFieldRow(prompt: "Theme name", text: $draft.name)
+        }
+    }
+
+    private var styleCard: some View {
+        CardSection("Style") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Material").foregroundStyle(.secondary).font(.subheadline)
+                Picker("Material", selection: $draft.material) {
+                    Text("Solid").tag(KeyMaterial.solid)
+                    Text("Liquid Glass").tag(KeyMaterial.liquidGlass)
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.vertical, UX.rowVPadding)
+            Divider()
+            ToggleRow("Dark theme",
+                      subtitle: "Tints the status bar to match and sets the Liquid Glass fallback.",
+                      isOn: $draft.isDark)
+        }
+    }
+
+    private var colorsCard: some View {
+        CardSection("Colors") {
+            colorRow("Key fill", \.keyFill)
+            Divider()
+            colorRow("Key text", \.keyText)
+            Divider()
+            colorRow("Function-key fill", \.specialKeyFill)
+            Divider()
+            colorRow("Function-key text", \.specialKeyText)
+            Divider()
+            colorRow("Accent / pressed", \.accent)
+        }
+    }
+
+    private var glassHint: some View {
+        Text("Liquid Glass uses the fills as translucent tints — lower their opacity so the keys stay glassy.")
+            .font(.caption).foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+    }
+
+    private var deleteButton: some View {
+        Button(role: .destructive) {
+            model.deleteCustomTheme(id: draft.id)
+            dismiss()
+        } label: {
+            Text("Delete Theme").frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .tint(.red)
+        .padding(.top, 4)
     }
 
     private func colorRow(_ label: String, _ keyPath: WritableKeyPath<Theme, RGBA>) -> some View {

@@ -59,6 +59,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Height of a single key row, in points. Drives the keyboard's overall
     /// height; smaller = shorter keys.
     public var keyHeight: Double
+    /// Height of the number row, as a fraction of `keyHeight`. 1.0 = same as the
+    /// letter rows (the default); lower makes a compact number strip. Only applies
+    /// when `showNumberRow` is on.
+    public var numberRowHeightScale: Double
+    /// Glyph point size for the number-row digits. Defaults to 22 (the letter-key
+    /// size). Only applies when `showNumberRow` is on.
+    public var numberRowFontSize: Double
     /// Corner radius of each key, in points. Larger = rounder keys.
     public var keyCornerRadius: Double
     /// Fraction of the row's width the keys occupy; the remainder becomes
@@ -124,6 +131,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keyPressWarp: Bool = true,
         keyPressLinger: Double = 0.06,
         keyHeight: Double = 51,
+        numberRowHeightScale: Double = 1.0,
+        numberRowFontSize: Double = 22,
         keyCornerRadius: Double = 13,
         keyWidthFraction: Double = 1,
         spaceWidth: Double = 7,
@@ -158,6 +167,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.keyPressWarp = keyPressWarp
         self.keyPressLinger = keyPressLinger
         self.keyHeight = keyHeight
+        self.numberRowHeightScale = numberRowHeightScale
+        self.numberRowFontSize = numberRowFontSize
         self.keyCornerRadius = keyCornerRadius
         self.keyWidthFraction = keyWidthFraction
         self.spaceWidth = spaceWidth
@@ -201,6 +212,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keyPressWarp = try c.decodeIfPresent(Bool.self, forKey: .keyPressWarp) ?? true
         keyPressLinger = try c.decodeIfPresent(Double.self, forKey: .keyPressLinger) ?? 0.06
         keyHeight = try c.decodeIfPresent(Double.self, forKey: .keyHeight) ?? 46
+        numberRowHeightScale = try c.decodeIfPresent(Double.self, forKey: .numberRowHeightScale) ?? 1.0
+        numberRowFontSize = try c.decodeIfPresent(Double.self, forKey: .numberRowFontSize) ?? 22
         keyCornerRadius = try c.decodeIfPresent(Double.self, forKey: .keyCornerRadius) ?? 12
         keyWidthFraction = try c.decodeIfPresent(Double.self, forKey: .keyWidthFraction) ?? 1
         spaceWidth = try c.decodeIfPresent(Double.self, forKey: .spaceWidth) ?? 5
