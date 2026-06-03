@@ -17,6 +17,10 @@ public struct KeyboardCanvas: View {
     private let onAnyTap: () -> Void
     private let onNextKeyboard: (() -> Void)?
     private let onSuggestion: (String) -> Void
+    /// Fired when the user taps an emoji chip in the bar — inserts that emoji
+    /// (replacing the word being typed). Distinct from `onSuggestion` so it never
+    /// gets the word+space treatment.
+    private let onEmojiSuggestion: (String) -> Void
     /// Fired when the user taps their literal word to reject the pending
     /// auto-correction (the quoted "keep what I typed" chip).
     private let onCancelAutocorrect: () -> Void
@@ -38,6 +42,7 @@ public struct KeyboardCanvas: View {
         onAnyTap: @escaping () -> Void = {},
         onNextKeyboard: (() -> Void)? = nil,
         onSuggestion: @escaping (String) -> Void = { _ in },
+        onEmojiSuggestion: @escaping (String) -> Void = { _ in },
         onCancelAutocorrect: @escaping () -> Void = {},
         onCursorMove: @escaping (Int) -> Void = { _ in }
     ) {
@@ -51,6 +56,7 @@ public struct KeyboardCanvas: View {
         self.onAnyTap = onAnyTap
         self.onNextKeyboard = onNextKeyboard
         self.onSuggestion = onSuggestion
+        self.onEmojiSuggestion = onEmojiSuggestion
         self.onCancelAutocorrect = onCancelAutocorrect
         self.onCursorMove = onCursorMove
     }
@@ -61,6 +67,11 @@ public struct KeyboardCanvas: View {
     /// Transient keyboard state (plane / shift / simulated press). Held as a
     /// reference type so it can be shared with an external typing simulator.
     @State private var controller: KeyboardController
+
+    /// Routes raw multitouch from a single UIKit surface to the keys, so fast
+    /// overlapping presses register independently (see `KeyTouchRouter`). Each
+    /// `KeyView` reads its pressed / warp state back out of this.
+    @State private var touch = KeyTouchRouter()
 
     // Proxy the canvas's existing `plane` / `shift` reads & writes onto the
     // controller, so the rest of the view is untouched. `nonmutating set` works
@@ -106,13 +117,31 @@ public struct KeyboardCanvas: View {
         VStack(spacing: 0) {
             if settings.suggestionsEnabled {
                 SuggestionBar(suggestions: live.suggestions, autocorrection: live.autocorrection,
-                              theme: theme, onTap: onSuggestion, onKeepTyped: onCancelAutocorrect)
+                              emoji: live.emojiSuggestions, theme: theme,
+                              onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
+                              onEmoji: onEmojiSuggestion)
                     .frame(height: Metrics.suggestionBarHeight)
             }
             keys
                 .padding(.vertical, Metrics.vPadding)
                 // Fill the remaining height so rows divide it evenly — no gap.
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // A single multitouch surface over the whole key region. It owns
+                // every touch (so simultaneous presses register independently),
+                // hit-tests each to the nearest key from the published frames, and
+                // drives `touch`. Sits only over the keys — the suggestion bar's
+                // buttons keep their own taps. The glyph/popup overlays above are
+                // hit-test-transparent, so touches fall straight through to here.
+                .overlayPreferenceValue(KeyFrameKey.self) { anchors in
+                    GeometryReader { proxy in
+                        MultiTouchSurface(
+                            router: touch,
+                            frames: anchors.mapValues { proxy[$0] },
+                            resolveSpec: { currentKeySpecs()[$0] },
+                            onPressDown: onAnyTap,
+                            lingerDuration: settings.keyPressLinger)
+                    }
+                }
         }
         // Transparent backdrop: the keyboard blends with whatever sits behind it
         // — iOS's own keyboard surface in the extension, the preview's backdrop
@@ -152,11 +181,18 @@ public struct KeyboardCanvas: View {
             if g.isSystem {
                 Image(systemName: g.glyph)
                     .font(.system(size: 18, weight: .medium))
-                    // Animate symbol swaps both ways — e.g. shift ⇄ caps-lock.
+                    // Animate symbol swaps both ways — e.g. the return glyph
+                    // tracking the host field (return ⇄ go ⇄ send …).
                     .contentTransition(.symbolEffect(.replace))
-                    .animation(.snappy(duration: 0.25), value: g.glyph)
                     // Bounce on each held-delete repeat (no-op elsewhere).
                     .symbolEffect(.bounce, value: g.deleteTick)
+                    // Pin identity to the symbol name. A press re-renders the
+                    // same identity (name unchanged) → the replace transition
+                    // has nothing to cross-fade, so it can't mis-fire and drop
+                    // the glyph (the intermittent delete-icon vanish). A real
+                    // name swap changes identity and still animates below.
+                    .id(g.glyph)
+                    .animation(.snappy(duration: 0.25), value: g.glyph)
             } else {
                 Text(g.glyph)
                     .font(.system(size: g.multiChar ? 16 : 22, weight: .regular))
@@ -303,6 +339,10 @@ public struct KeyboardCanvas: View {
     // MARK: - Bottom function row
 
     private var bottomRow: some View {
+        row(bottomRowSpecs, rowID: "bottom")
+    }
+
+    private var bottomRowSpecs: [KeySpec] {
         var specs: [KeySpec] = []
         // 123 / ABC plane toggle.
         if plane == .letters {
@@ -318,7 +358,7 @@ public struct KeyboardCanvas: View {
         }
         // Blank space bar, like the system keyboard — no "space" caption. Taps
         // type a space; press-and-drag slides the cursor (trackpad mode).
-        specs.append(.init(kind: .character, label: .text(""), weight: 5,
+        specs.append(.init(kind: .character, label: .text(""), weight: settings.spaceWidth,
                            isSpace: true, onCursorMove: onCursorMove) {
             insert(" ")
         })
@@ -331,7 +371,24 @@ public struct KeyboardCanvas: View {
                            weight: 1.8, highlighted: live.returnKeyProminent) {
             onInsert("\n")
         })
-        return row(specs, rowID: "bottom")
+        return specs
+    }
+
+    /// Every on-screen key, keyed by the same `"\(rowID)-\(index)"` ID the rows
+    /// render with — so the multitouch router can resolve a hit-tested key back to
+    /// its current spec (action + behaviour). Rebuilt on demand at touch time, so
+    /// it always reflects the live plane / shift. Mirrors `rowStack` exactly.
+    private func currentKeySpecs() -> [String: KeySpec] {
+        var map: [String: KeySpec] = [:]
+        func add(_ specs: [KeySpec], _ rowID: String) {
+            for (i, s) in specs.enumerated() { map["\(rowID)-\(i)"] = s }
+        }
+        if settings.showNumberRow, plane == .letters {
+            add(KeyboardLayout.numberRows[0].map { plainKey($0) }, "num")
+        }
+        for (idx, r) in currentRows.enumerated() { add(r, "r\(idx)") }
+        add(bottomRowSpecs, "bottom")
+        return map
     }
 
     // MARK: - Key specs
@@ -366,8 +423,26 @@ public struct KeyboardCanvas: View {
 
     /// A symbol/number key with no shift behaviour.
     private func plainKey(_ glyph: String) -> KeySpec {
-        KeySpec(kind: .character, label: .text(glyph), weight: 1) { insert(glyph) }
+        KeySpec(kind: .character, label: .text(glyph), weight: 1) {
+            insert(glyph)
+            // Pop back to letters after sentence punctuation, so a quick
+            // "123 → , → keep typing" doesn't strand you on the symbols page.
+            // Mirrors the one-shot-shift convention (act, then auto-revert).
+            if settings.autoReturnToLetters,
+               plane != .letters,
+               Self.autoReturnPunctuation.contains(glyph) {
+                plane = .letters
+            }
+        }
     }
+
+    /// Sentence/prose punctuation that returns the keyboard to letters when
+    /// `autoReturnToLetters` is on. Deliberately excludes digits, math, currency,
+    /// and brackets — there you usually keep entering symbols/numbers.
+    private static let autoReturnPunctuation: Set<String> = [
+        ".", ",", "?", "!", ";", ":",
+        "'", "\u{2019}", "\u{2018}", "\"", "\u{201C}", "\u{201D}",
+    ]
 
     private func planeKey(_ glyph: String, to target: Plane, weight: Double) -> KeySpec {
         KeySpec(kind: .function, label: .text(glyph), weight: weight) { plane = target }
@@ -389,7 +464,7 @@ public struct KeyboardCanvas: View {
                             popupEnabled: settings.keyPopupEnabled, pressWarp: settings.keyPressWarp,
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
-                            onPressDown: onAnyTap)
+                            router: touch)
                         .frame(width: unit * CGFloat(spec.weight))
                 }
             }
@@ -559,27 +634,23 @@ private struct KeyView: View {
     /// Driven by an external typing simulator (the device showcase) — shows the
     /// key as pressed even though no finger is on it.
     let simulatedPressed: Bool
-    let onPressDown: () -> Void
+    /// Shared multitouch state — this key's press / warp is read out of here,
+    /// written by the single UIKit touch surface (see `KeyTouchRouter`).
+    let router: KeyTouchRouter
 
-    @State private var pressed = false
-
-    /// Pressed for any reason: a real finger (`pressed`) or the simulator.
-    private var isPressed: Bool { pressed || simulatedPressed }
-    /// Space-bar trackpad drag state.
-    @State private var cursorActive = false
-    @State private var cursorSteps = 0
-    /// Live horizontal drag offset while sliding the cursor — drives the glass
-    /// "warp" of the space bar. Zero when not dragging (so it springs back).
-    @State private var dragX: CGFloat = 0
-    /// Held-key auto-repeat loop (the backspace key).
-    @State private var repeatTask: Task<Void, Never>?
+    /// Pressed for any reason: a real finger (the router) or the simulator.
+    private var isPressed: Bool { router.pressed.contains(keyID) || simulatedPressed }
+    /// Space-bar trackpad drag state (only the space key reads these).
+    private var cursorActive: Bool { router.spaceCursorActive }
+    private var dragX: CGFloat { router.spaceDragX }
     /// Bumped on every auto-repeat delete to bounce the glyph as feedback.
-    @State private var deleteTick = 0
+    private var deleteTick: Int { router.deleteTick }
 
     /// iOS-style destructive red for the pressed backspace key.
     private static let destructiveTint = Color(.sRGB, red: 0.91, green: 0.22, blue: 0.18)
-    /// Points of horizontal drag per one character of cursor movement.
-    private static let cursorStride: CGFloat = 10
+    /// How much the space bar shrinks while it's a cursor trackpad (held for the
+    /// whole drag, sprung back only on release).
+    private static let spaceDragScale: CGFloat = 0.9
 
     private var isCharacter: Bool { spec.kind == .character }
 
@@ -614,16 +685,22 @@ private struct KeyView: View {
     /// blooms a little on press. Both spring back on release.
     private var warp: (scaleX: CGFloat, scaleY: CGFloat, offset: CGFloat) {
         if spec.isSpace, cursorActive {
-            let s = min(abs(dragX) / 260, 0.16)            // 0…16% stretch
             let offset = max(min(dragX * 0.14, 28), -28)   // lean toward the finger
-            // Height stays squashed for the whole drag (not just off-centre), so
-            // it doesn't pop back to full height when you pass through the middle.
-            return (1 + s, 0.9, offset)
+            // While the space bar is acting as a cursor trackpad it SHRINKS (both
+            // width and height) and holds that smaller size for the whole drag —
+            // a fixed scale, not one tied to how far you've dragged. So passing
+            // back through the centre doesn't pop it to full size; it only springs
+            // back on release (when `cursorActive` clears). Width now matches what
+            // the height already did.
+            return (Self.spaceDragScale, Self.spaceDragScale, offset)
         }
         // Visible bloom on press for the generic keys. The shift key opts out —
         // it has its own interactive-glass morph (see `glass` / `surface`).
         if pressWarp, isPressed, !showsPopup, !spec.isShift {
-            return (1.12, 1.12, 0)
+            // The space bar is much wider than a letter key, so the same scale
+            // factor reads as a far bigger bloom. Tone it down for the space bar.
+            let bloom: CGFloat = spec.isSpace ? 1.04 : 1.12
+            return (bloom, bloom, 0)
         }
         return (1, 1, 0)
     }
@@ -656,8 +733,9 @@ private struct KeyView: View {
                       case let .text(g) = spec.label, g.count == 1 else { return nil }
                 return KeyPopup(glyph: g, anchor: anchor)
             }
-            .contentShape(Rectangle())
-            .gesture(activeGesture)
+            // Publish this key's frame so the multitouch surface can hit-test to
+            // it. Every key (including shift / space / function) is touchable.
+            .anchorPreference(key: KeyFrameKey.self, value: .bounds) { [keyID: $0] }
     }
 
     /// Describe this key's glyph for the canvas glyph layer.
@@ -674,87 +752,9 @@ private struct KeyView: View {
             id: keyID, anchor: anchor, isSystem: isSystem, glyph: glyph,
             color: isPressed ? .white : textColor,
             scaleX: warp.scaleX, scaleY: warp.scaleY, offsetX: warp.offset,
-            hidden: showsPopup, deleteTick: deleteTick, multiChar: multiChar)
-    }
-
-    private var activeGesture: AnyGesture<Void> {
-        if spec.isSpace { return AnyGesture(spaceGesture.map { _ in () }) }
-        if spec.isRepeatable { return AnyGesture(repeatGesture.map { _ in () }) }
-        return AnyGesture(keyGesture.map { _ in () })
-    }
-
-    /// A held key (backspace) that fires once on touch-down, then auto-repeats
-    /// with an initial delay and acceleration — hold to delete many characters.
-    private var repeatGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                if !pressed { pressed = true; startRepeating() }
-            }
-            .onEnded { _ in pressed = false; stopRepeating() }
-    }
-
-    private func startRepeating() {
-        stopRepeating()
-        repeatTask = Task { @MainActor in
-            onPressDown(); spec.action()                 // first delete, immediately
-            try? await Task.sleep(for: .milliseconds(450))   // hold delay before repeat
-            var interval = 110
-            while !Task.isCancelled {
-                onPressDown(); spec.action()
-                deleteTick &+= 1                          // bounce the glyph
-                interval = max(40, interval - 6)         // accelerate
-                try? await Task.sleep(for: .milliseconds(interval))
-            }
-        }
-    }
-
-    private func stopRepeating() {
-        repeatTask?.cancel()
-        repeatTask = nil
-    }
-
-    /// Standard keys: letters commit on touch-DOWN so fast typing registers
-    /// instantly; function keys wait for release so a graze can't fire them.
-    private var keyGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                if !pressed {
-                    pressed = true
-                    onPressDown()
-                    if isCharacter { spec.action() }
-                }
-            }
-            .onEnded { _ in
-                pressed = false
-                if !isCharacter { spec.action() }
-            }
-    }
-
-    /// Space bar: a quick tap inserts a space; press-and-drag horizontally turns
-    /// it into a trackpad that slides the cursor (à la the native keyboard).
-    private var spaceGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                if !pressed { pressed = true; onPressDown() }
-                // Past a small threshold the gesture becomes a cursor drag, so a
-                // plain tap (no real movement) still types a space.
-                if abs(value.translation.width) > Self.cursorStride { cursorActive = true }
-                if cursorActive {
-                    dragX = value.translation.width   // drives the glass warp
-                    let step = Int((value.translation.width / Self.cursorStride).rounded(.towardZero))
-                    if step != cursorSteps {
-                        spec.onCursorMove?(step - cursorSteps)
-                        cursorSteps = step
-                    }
-                }
-            }
-            .onEnded { _ in
-                pressed = false
-                if !cursorActive { spec.action() }   // tap → insert a space
-                cursorActive = false
-                cursorSteps = 0
-                dragX = 0                            // spring the warp back
-            }
+            // Only the backspace key bounces on auto-repeat; every other key
+            // feeds 0 so a delete burst doesn't jiggle shift / globe / return.
+            hidden: showsPopup, deleteTick: spec.isRepeatable ? deleteTick : 0, multiChar: multiChar)
     }
 
     /// The key's drawn surface: shift carries its own glyph (so its interactive
@@ -793,22 +793,32 @@ private struct KeyView: View {
         let content = shiftLabel
             .foregroundStyle(isPressed ? Color.white : textColor)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        switch theme.material {
-        case .liquidGlass:
-            if #available(iOS 26.0, *) {
-                content.glassEffect(glass, in: shape)
-            } else {
+        let surface = Group {
+            switch theme.material {
+            case .liquidGlass:
+                if #available(iOS 26.0, *) {
+                    content.glassEffect(glass, in: shape)
+                } else {
+                    content.background {
+                        shape.fill(.ultraThinMaterial).overlay(shape.fill(glassFallbackTint))
+                    }
+                }
+            case .solid:
                 content.background {
-                    shape.fill(.ultraThinMaterial).overlay(shape.fill(glassFallbackTint))
+                    shape
+                        .fill(isPressed ? pressedTint.opacity(0.85) : fill)
+                        .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.18), radius: 0, y: 1)
                 }
             }
-        case .solid:
-            content.background {
-                shape
-                    .fill(isPressed ? pressedTint.opacity(0.85) : fill)
-                    .shadow(color: .black.opacity(theme.isDark ? 0.4 : 0.18), radius: 0, y: 1)
-            }
         }
+        // Shift draws its own glyph, so it sits out the canvas's generic press
+        // bloom (which warps the bare surface only). Give it its own centred pop
+        // here instead — glass + glyph scale together — so the press feels as
+        // alive as every other key.
+        surface
+            .scaleEffect(pressWarp && isPressed ? 1.12 : 1)
+            .animation(pressWarp ? .interactiveSpring(response: 0.26, dampingFraction: 0.58) : nil,
+                       value: isPressed)
     }
 
     @ViewBuilder private var shiftLabel: some View {
@@ -816,6 +826,12 @@ private struct KeyView: View {
             Image(systemName: name)
                 .font(.system(size: 18, weight: .medium))
                 .contentTransition(.symbolEffect(.replace))
+                // The interactive glass lens re-renders this content on every
+                // touch; pinning identity to the name keeps those press
+                // re-renders from re-entering the replace transition and
+                // dropping the glyph. Only a real shift ⇄ caps-lock swap
+                // changes identity and cross-fades.
+                .id(name)
                 .animation(.snappy(duration: 0.25), value: name)
         }
     }
@@ -858,11 +874,15 @@ private struct KeyView: View {
 struct SuggestionBar: View {
     let suggestions: [String]
     let autocorrection: Autocorrection?
+    /// Emoji matching the word being typed — rendered as plain chips on the right
+    /// and inserted (replacing the word) only when tapped. Never space-applied.
+    let emoji: [String]
     let theme: Theme
     let onTap: (String) -> Void
     let onKeepTyped: () -> Void
+    let onEmoji: (String) -> Void
 
-    private enum Kind { case keep, primary, normal }
+    private enum Kind { case keep, primary, normal, emoji }
     private struct Candidate: Identifiable {
         let id = UUID()
         let text: String
@@ -870,19 +890,23 @@ struct SuggestionBar: View {
     }
 
     private var candidates: [Candidate] {
-        var out: [Candidate] = []
+        var words: [Candidate] = []
         if let c = autocorrection {
-            out.append(Candidate(text: c.from, kind: .keep))
-            out.append(Candidate(text: c.to, kind: .primary))
+            words.append(Candidate(text: c.from, kind: .keep))
+            words.append(Candidate(text: c.to, kind: .primary))
             for s in suggestions
             where s.caseInsensitiveCompare(c.to) != .orderedSame
                 && s.caseInsensitiveCompare(c.from) != .orderedSame {
-                out.append(Candidate(text: s, kind: .normal))
+                words.append(Candidate(text: s, kind: .normal))
             }
         } else {
-            for s in suggestions { out.append(Candidate(text: s, kind: .normal)) }
+            for s in suggestions { words.append(Candidate(text: s, kind: .normal)) }
         }
-        return Array(out.prefix(3))
+        // Reserve the right end for emoji chips when there are any, so they're
+        // never crowded out — always leaving at least one word slot.
+        let emojiCands = emoji.prefix(2).map { Candidate(text: $0, kind: .emoji) }
+        let wordSlots = max(1, 3 - emojiCands.count)
+        return Array(words.prefix(wordSlots)) + emojiCands
     }
 
     var body: some View {
@@ -898,7 +922,11 @@ struct SuggestionBar: View {
 
     @ViewBuilder private func chip(_ c: Candidate) -> some View {
         Button {
-            if c.kind == .keep { onKeepTyped() } else { onTap(c.text) }
+            switch c.kind {
+            case .keep:  onKeepTyped()
+            case .emoji: onEmoji(c.text)
+            default:     onTap(c.text)
+            }
         } label: {
             chipLabel(c)
                 .font(.system(size: 17))
@@ -932,6 +960,11 @@ struct SuggestionBar: View {
             }
         case .normal:
             Text(c.text).foregroundStyle(theme.keyText.color)
+        case .emoji:
+            // A plain (non-primary) emoji chip — slightly larger so the glyph
+            // reads, and tinted nothing so it never looks like the space-applied
+            // correction.
+            Text(c.text).font(.system(size: 24))
         }
     }
 

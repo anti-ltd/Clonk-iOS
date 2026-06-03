@@ -10,19 +10,46 @@ public final class SuggestionEngine {
     private let checker = UITextChecker()
     private let language = "en_US"
 
+    /// The user's supplementary lexicon (Contacts names + Settings → text
+    /// replacements), fetched by the keyboard via `requestSupplementaryLexicon`.
+    /// `exact` maps a lowercased shortcut → its expansion (for autocorrect-style
+    /// substitution: "omw" → "On my way!"); `entries` is the same set kept for
+    /// prefix completion (half-typed contact name → full name). The native
+    /// keyboard folds these straight into its bar — this is the one extra hook
+    /// Apple *does* hand a third-party keyboard, so we use it.
+    private var lexiconExact: [String: String] = [:]
+    private var lexiconEntries: [(prefix: String, text: String)] = []
+
     public init() {}
+
+    /// Feed in the user's supplementary lexicon (call after
+    /// `requestSupplementaryLexicon` resolves). Entries are (userInput → expansion).
+    public func setLexicon(_ entries: [(String, String)]) {
+        var exact: [String: String] = [:]
+        var list: [(prefix: String, text: String)] = []
+        for (input, text) in entries where !input.isEmpty && !text.isEmpty {
+            exact[input.lowercased()] = text
+            list.append((input.lowercased(), text))
+        }
+        lexiconExact = exact
+        lexiconEntries = list
+    }
 
     public struct Result {
         public var predictions: [String]
         public var correction: Autocorrection?
-        public init(predictions: [String], correction: Autocorrection?) {
+        /// Emoji matching the word being typed, shown as non-primary bar chips
+        /// (never applied by space — only a deliberate tap inserts them).
+        public var emoji: [String]
+        public init(predictions: [String], correction: Autocorrection?, emoji: [String] = []) {
             self.predictions = predictions
             self.correction = correction
+            self.emoji = emoji
         }
     }
 
     public func compute(partial: String, previousWord: String?, sentenceStart: Bool,
-                        autocorrect: Bool, rejected: String?) -> Result {
+                        autocorrect: Bool, autoPunctuation: Bool, rejected: String?) -> Result {
         // No partial yet → predict the next word so the bar is never blank.
         guard !partial.isEmpty else {
             return Result(predictions: nextWords(previousWord: previousWord, sentenceStart: sentenceStart),
@@ -43,6 +70,17 @@ public final class SuggestionEngine {
         // Bar candidates: common-ranked pool of completions + guesses, minus the
         // literal (the bar shows that itself).
         var pool = rank(completions + guesses).filter { $0.caseInsensitiveCompare(partial) != .orderedSame }
+
+        // Lexicon prefix matches (contact names, shortcuts) lead the bar so a
+        // half-typed name/shortcut completes — the dictionary can't know these.
+        if !lexiconEntries.isEmpty {
+            let lower = partial.lowercased()
+            let hits = lexiconEntries
+                .filter { $0.prefix.hasPrefix(lower) && $0.text.caseInsensitiveCompare(partial) != .orderedSame }
+                .map(\.text)
+            if !hits.isEmpty { pool = hits + pool }
+        }
+
         var seen = Set<String>()
         pool = pool.filter { seen.insert($0.lowercased()).inserted }
 
@@ -51,9 +89,50 @@ public final class SuggestionEngine {
         // completion (autocomplete) over a spelling guess (autocorrect). Skips
         // case-only changes and anything the user just rejected.
         var correction: Autocorrection?
-        if autocorrect, isMisspelled, partial.count >= 3, partial != rejected {
-            if let best = completions.first ?? guesses.first,
-               best.caseInsensitiveCompare(partial) != .orderedSame {
+
+        // Auto-punctuation: turn an apostrophe-less contraction into its real
+        // form (ive → I've, dont → don't). Takes precedence over the spelling
+        // path; no length floor, so 2-char "im" works.
+        if autoPunctuation, partial != rejected,
+           let fix = Self.contractions[partial.lowercased()],
+           fix.caseInsensitiveCompare(partial) != .orderedSame {
+            // Honour a typed leading capital; never downcase (I-forms keep their I).
+            let cased = partial.first?.isUppercase == true
+                ? fix.prefix(1).uppercased() + fix.dropFirst() : fix
+            // Curly apostrophe so it matches the smart-quotes a manually typed
+            // contraction would get (both ride the auto-punctuation switch).
+            let curly = cased.replacingOccurrences(of: "'", with: "\u{2019}")
+            correction = Autocorrection(from: partial, to: curly)
+        }
+
+        // A user lexicon shortcut that exactly matches what's typed expands like
+        // the native keyboard's text replacement ("omw" → "On my way!").
+        if correction == nil, autocorrect, partial != rejected,
+           let expansion = lexiconExact[partial.lowercased()],
+           expansion.caseInsensitiveCompare(partial) != .orderedSame {
+            correction = Autocorrection(from: partial, to: expansion)
+        }
+
+        // Highest-confidence spelling fix: a single adjacent-letter transposition
+        // that yields a real word ("teh" → "the", "adn" → "and"). This is the
+        // signature typo of fast typing, and a one-swap-to-valid match is
+        // unambiguous enough to apply with NO length floor (so 3-letter swaps and
+        // up correct even when a bare guess wouldn't be trusted).
+        if correction == nil, autocorrect, isMisspelled, partial != rejected,
+           let swap = transpositionFix(for: partial) {
+            correction = Autocorrection(from: partial, to: swap)
+        }
+
+        // General spelling correction — only when the candidate is *close* to what
+        // was typed. We gate on Damerau-Levenshtein distance so a far-flung guess
+        // still shows in the bar (the user can tap it) but is never silently
+        // committed on space. The ≥3 floor stays: 2-char fragments are too
+        // ambiguous for a generic guess (transpositions/contractions above handle
+        // the confident short cases).
+        if correction == nil, autocorrect, isMisspelled, partial.count >= 3, partial != rejected {
+            if let best = guesses.first ?? completions.first,
+               best.caseInsensitiveCompare(partial) != .orderedSame,
+               editDistance(partial, best) <= 2 {
                 correction = Autocorrection(from: partial, to: best)
             }
         }
@@ -63,7 +142,52 @@ public final class SuggestionEngine {
         // chip already, so leave it out of the alternatives.
         var predictions = pool
         if correction == nil { predictions.insert(partial, at: 0) }
-        return Result(predictions: Array(predictions.prefix(4)), correction: correction)
+        return Result(predictions: Array(predictions.prefix(4)), correction: correction,
+                      emoji: EmojiData.emojiSuggestions(for: partial))
+    }
+
+    /// If swapping a single pair of adjacent letters turns a misspelled word into
+    /// a correctly-spelled one, return that word — otherwise nil. Case rides along
+    /// naturally (we swap the original characters, so "Teh" → "The"). Checks each
+    /// neighbour pair left-to-right and returns the first valid result.
+    private func transpositionFix(for word: String) -> String? {
+        let chars = Array(word)
+        guard chars.count >= 2 else { return nil }
+        for i in 0..<(chars.count - 1) where chars[i] != chars[i + 1] {
+            var swapped = chars
+            swapped.swapAt(i, i + 1)
+            let candidate = String(swapped)
+            if candidate.caseInsensitiveCompare(word) == .orderedSame { continue }
+            let r = NSRange(location: 0, length: candidate.utf16.count)
+            let mis = checker.rangeOfMisspelledWord(
+                in: candidate, range: r, startingAt: 0, wrap: false, language: language).location
+            if mis == NSNotFound { return candidate }
+        }
+        return nil
+    }
+
+    /// Damerau-Levenshtein distance (substitution/insert/delete + adjacent
+    /// transposition), case-insensitive. Used to gate auto-correction so we only
+    /// silently commit a fix that's *near* what was typed. Runs once per word
+    /// (off the per-keystroke path), so the simple O(n·m) table is fine.
+    private func editDistance(_ a: String, _ b: String) -> Int {
+        let s = Array(a.lowercased()), t = Array(b.lowercased())
+        let n = s.count, m = t.count
+        if n == 0 { return m }
+        if m == 0 { return n }
+        var d = Array(repeating: Array(repeating: 0, count: m + 1), count: n + 1)
+        for i in 0...n { d[i][0] = i }
+        for j in 0...m { d[0][j] = j }
+        for i in 1...n {
+            for j in 1...m {
+                let cost = s[i - 1] == t[j - 1] ? 0 : 1
+                d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+                if i > 1, j > 1, s[i - 1] == t[j - 2], s[i - 2] == t[j - 1] {
+                    d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+                }
+            }
+        }
+        return d[n][m]
     }
 
     /// Stable sort putting common words first (so "almost" outranks "almond"),
@@ -95,6 +219,26 @@ public final class SuggestionEngine {
 
     /// High-frequency words shown when we have no specific follow-on.
     private static let commonFallback = ["the", "to", "and"]
+
+    /// Apostrophe-less → contraction, for auto-punctuation. Conservative: it
+    /// deliberately omits forms that are also common standalone words (its,
+    /// were, ill, well, wed, id, lets…), so we never rewrite a valid word.
+    /// Keys are lowercased; values carry canonical casing (I-forms stay capital).
+    private static let contractions: [String: String] = [
+        "im": "I'm", "ive": "I've",
+        "dont": "don't", "doesnt": "doesn't", "didnt": "didn't",
+        "isnt": "isn't", "wasnt": "wasn't", "arent": "aren't", "werent": "weren't",
+        "havent": "haven't", "hasnt": "hasn't", "hadnt": "hadn't",
+        "cant": "can't", "couldnt": "couldn't", "wont": "won't",
+        "wouldnt": "wouldn't", "shouldnt": "shouldn't", "mustnt": "mustn't",
+        "youre": "you're", "youve": "you've", "youll": "you'll", "youd": "you'd",
+        "theyre": "they're", "theyve": "they've", "theyll": "they'll", "theyd": "they'd",
+        "weve": "we've",
+        "hes": "he's", "shes": "she's",
+        "thats": "that's", "whats": "what's", "whos": "who's", "wheres": "where's",
+        "theres": "there's", "heres": "here's", "hows": "how's",
+        "couldve": "could've", "wouldve": "would've", "shouldve": "should've",
+    ]
 
     /// A set of common English words used to rank completions by likelihood —
     /// `UITextChecker` returns completions alphabetically, so without this "almo"

@@ -54,6 +54,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Bloom/warp every key on press (the liquid deformation the space bar does
     /// while dragging) — looks best on Liquid Glass themes.
     public var keyPressWarp: Bool
+    /// How long a key stays visually pressed after the finger lifts, in seconds.
+    /// A quick tap otherwise flips on→off too fast for the press bloom/colour to
+    /// reach full strength (it reads dim); lingering lets it bloom then fade. 0
+    /// disables the hold (instant release).
+    public var keyPressLinger: Double
     /// Height of a single key row, in points. Drives the keyboard's overall
     /// height; smaller = shorter keys.
     public var keyHeight: Double
@@ -62,6 +67,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Fraction of the row's width the keys occupy; the remainder becomes
     /// symmetric side margins. 1.0 = edge-to-edge, lower = narrower keys.
     public var keyWidthFraction: Double
+    /// Width of the space bar, as a weight relative to a letter key (which is 1).
+    /// The system space bar is ~5 letter-keys wide; lower makes it narrower and
+    /// gives the surrounding bottom-row keys more room.
+    public var spaceWidth: Double
     /// Horizontal gap between keys in a row, in points.
     public var keySpacing: Double
     /// Vertical gap between rows, in points.
@@ -70,6 +79,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var suggestionsEnabled: Bool
     /// Auto-correct the just-typed word when a space / punctuation is entered.
     public var autocorrectEnabled: Bool
+    /// Add apostrophes to apostrophe-less contractions (dont → don't, ive → I've)
+    /// when a space / punctuation is entered.
+    public var autoPunctuationEnabled: Bool
+    /// After typing sentence punctuation (. , ? ! ; : ' ") on the numbers/symbols
+    /// plane, automatically flip back to the letters plane — so a quick
+    /// "123 → , → keep typing" never strands you on the symbols page. Mirrors the
+    /// system keyboard's feel; off by preference for those who page-hop manually.
+    public var autoReturnToLetters: Bool
     // Clonk sound + feel
     public var soundPackID: String
     public var soundEnabled: Bool
@@ -91,13 +108,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         homeRowInset: Bool = true,
         homeRowInsetAmount: Double = 0.05,
         keyPressWarp: Bool = true,
+        keyPressLinger: Double = 0.06,
         keyHeight: Double = 46,
         keyCornerRadius: Double = 12,
         keyWidthFraction: Double = 1,
+        spaceWidth: Double = 5,
         keySpacing: Double = 5,
         rowSpacing: Double = 7,
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
+        autoPunctuationEnabled: Bool = true,
+        autoReturnToLetters: Bool = true,
         soundPackID: String = SoundPack.default.id,
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
@@ -117,13 +138,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.homeRowInset = homeRowInset
         self.homeRowInsetAmount = homeRowInsetAmount
         self.keyPressWarp = keyPressWarp
+        self.keyPressLinger = keyPressLinger
         self.keyHeight = keyHeight
         self.keyCornerRadius = keyCornerRadius
         self.keyWidthFraction = keyWidthFraction
+        self.spaceWidth = spaceWidth
         self.keySpacing = keySpacing
         self.rowSpacing = rowSpacing
         self.suggestionsEnabled = suggestionsEnabled
         self.autocorrectEnabled = autocorrectEnabled
+        self.autoPunctuationEnabled = autoPunctuationEnabled
+        self.autoReturnToLetters = autoReturnToLetters
         self.soundPackID = soundPackID
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
@@ -150,13 +175,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         homeRowInset = try c.decodeIfPresent(Bool.self, forKey: .homeRowInset) ?? true
         homeRowInsetAmount = try c.decodeIfPresent(Double.self, forKey: .homeRowInsetAmount) ?? 0.05
         keyPressWarp = try c.decodeIfPresent(Bool.self, forKey: .keyPressWarp) ?? true
+        keyPressLinger = try c.decodeIfPresent(Double.self, forKey: .keyPressLinger) ?? 0.06
         keyHeight = try c.decodeIfPresent(Double.self, forKey: .keyHeight) ?? 46
         keyCornerRadius = try c.decodeIfPresent(Double.self, forKey: .keyCornerRadius) ?? 12
         keyWidthFraction = try c.decodeIfPresent(Double.self, forKey: .keyWidthFraction) ?? 1
+        spaceWidth = try c.decodeIfPresent(Double.self, forKey: .spaceWidth) ?? 5
         keySpacing = try c.decodeIfPresent(Double.self, forKey: .keySpacing) ?? 5
         rowSpacing = try c.decodeIfPresent(Double.self, forKey: .rowSpacing) ?? 7
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
+        autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
+        autoReturnToLetters = try c.decodeIfPresent(Bool.self, forKey: .autoReturnToLetters) ?? true
         soundPackID = try c.decodeIfPresent(String.self, forKey: .soundPackID) ?? SoundPack.default.id
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8

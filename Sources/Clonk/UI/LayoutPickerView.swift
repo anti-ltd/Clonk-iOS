@@ -35,6 +35,9 @@ struct LayoutPickerView: View {
                     SliderRow("Key width", value: $model.settings.keyWidthFraction,
                               in: 0.6...1, step: 0.02) { "\(Int(($0 * 100).rounded()))%" }
                     Divider()
+                    SliderRow("Space bar width", value: $model.settings.spaceWidth,
+                              in: 3...7, step: 0.5) { String(format: "%.1f keys", $0) }
+                    Divider()
                     SliderRow("Key spacing", value: $model.settings.keySpacing,
                               in: 1...12, step: 1) { "\(Int($0))pt" }
                     Divider()
@@ -87,6 +90,11 @@ struct LayoutPickerView: View {
                               subtitle: "Bloom and warp each key when pressed — best on Liquid Glass.",
                               isOn: $model.settings.keyPressWarp)
                     Divider()
+                    SliderRow("Press linger", value: $model.settings.keyPressLinger,
+                              in: 0...0.4, step: 0.02) {
+                        $0 < 0.005 ? "Off" : "\(Int(($0 * 1000).rounded()))ms"
+                    }
+                    Divider()
                     ToggleRow("Suggestions",
                               subtitle: "Offline autocomplete bar above the keys.",
                               isOn: $model.settings.suggestionsEnabled)
@@ -94,6 +102,14 @@ struct LayoutPickerView: View {
                     ToggleRow("Auto-correction",
                               subtitle: "Fix the word when you type a space or punctuation.",
                               isOn: $model.settings.autocorrectEnabled)
+                    Divider()
+                    ToggleRow("Auto punctuation",
+                              subtitle: "Add apostrophes to contractions like “dont” → “don’t”.",
+                              isOn: $model.settings.autoPunctuationEnabled)
+                    Divider()
+                    ToggleRow("Return to letters",
+                              subtitle: "After typing punctuation on the symbols page, flip back to letters.",
+                              isOn: $model.settings.autoReturnToLetters)
                 }
             }
             .padding(UX.screenPadding)

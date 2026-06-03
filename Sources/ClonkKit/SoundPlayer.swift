@@ -31,6 +31,11 @@ final class SoundPlayer {
 
         if settings.hapticsEnabled, hasFullAccess {
             haptics.impactOccurred(intensity: 0.6)
+            // Re-prime immediately: the generator's engine spins back down after
+            // ~1–2s idle, so without this the *next* tap in a fast burst has
+            // noticeably higher latency. Keeping it warm makes every keystroke's
+            // haptic land with the same crispness.
+            haptics.prepare()
         }
 
         guard settings.soundEnabled else { return }

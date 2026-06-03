@@ -27,6 +27,11 @@ public final class KeyboardLiveState {
     /// nil when the current word looks fine (or correction is off).
     public var autocorrection: Autocorrection?
 
+    /// Emoji matching the word being typed (e.g. "dog" → 🐶), shown as plain
+    /// non-primary chips in the suggestion bar. Never applied by space — only a
+    /// deliberate tap inserts one, replacing the typed word.
+    public var emojiSuggestions: [String] = []
+
     /// The return key's label, following the host field's `returnKeyType`
     /// (e.g. "Go", "Search", "Send", "Done"), or "return" by default.
     public var returnKeyTitle: String = "return"

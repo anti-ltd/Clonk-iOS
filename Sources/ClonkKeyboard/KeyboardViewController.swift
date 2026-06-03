@@ -25,6 +25,28 @@ final class KeyboardViewController: UIInputViewController {
     /// A correction the user explicitly rejected (tapped "keep") — suppressed
     /// until they move on to a different word.
     private var rejectedCorrection: String?
+
+    // MARK: - Local text mirror
+    //
+    // `documentContextBeforeInput` is a cross-process read that also lags one
+    // runloop tick behind our own edits, so hitting it on every keystroke is both
+    // slow and occasionally stale. Instead we keep a local mirror of the tail of
+    // what we've typed and read from that on the hot path, re-seeding from the
+    // proxy only when the mirror can't be trusted (cursor moved, external edit,
+    // focus change). `isApplyingEdit` marks our own mutations so the change
+    // callbacks don't mistake them for external edits.
+
+    /// The trailing characters of the document before the cursor, as far as we've
+    /// mirrored them (capped at `tailCap`). Only meaningful when `bufferValid`.
+    private var recentTail: String = ""
+    /// Whether `recentTail` is currently in sync with the document.
+    private var bufferValid: Bool = false
+    /// True while we're performing our own proxy edits (so selection/text change
+    /// callbacks don't invalidate the mirror for our own work).
+    private var isApplyingEdit: Bool = false
+    /// How many trailing characters we keep. Comfortably longer than any word so
+    /// trailing-word + smart-punctuation lookbehind always have what they need.
+    private let tailCap = 16
     private var settings = KeyboardSettings.default
     private var hosting: UIHostingController<AnyView>?
     private var heightConstraint: NSLayoutConstraint?
@@ -52,6 +74,7 @@ final class KeyboardViewController: UIInputViewController {
         // setup screen can reflect reality.
         store.reportFullAccess(hasFullAccess)
         reloadSettings()
+        loadLexicon()
         updateSuggestions()
         updateReturnKey()
 
@@ -69,16 +92,59 @@ final class KeyboardViewController: UIInputViewController {
         // while we weren't on screen.
         store.reportFullAccess(hasFullAccess)
         reloadSettings()
+        // loadLexicon()  // TEMP: disabled to isolate the launch crash.
+        // We may be attaching to a different text field than last time — the mirror
+        // can't be trusted across that, so re-seed on the next read.
+        invalidateMirror()
         updateSuggestions()
         updateReturnKey()
+    }
+
+    /// Pull in the user's supplementary lexicon — Contacts names plus the text
+    /// replacements they've set in Settings → General → Keyboard. This is the one
+    /// slice of the native suggestion machinery Apple exposes to a third-party
+    /// keyboard, so we feed it into the engine's bar + autocorrect.
+    private func loadLexicon() {
+        // `requestSupplementaryLexicon`'s completion is delivered on a *background*
+        // queue (`com.apple.TextInput.lexicon-request`), NOT the main thread. A
+        // closure that captured this MainActor controller directly would be
+        // inferred MainActor-isolated, so Swift 6 inserts an executor check at its
+        // entry — which traps (EXC_BREAKPOINT) the moment it runs off-main. So
+        // make the completion a non-isolated `@Sendable` closure, pull out plain
+        // data there, and hop to the main actor (via WeakBox, like
+        // `observeChanges` below) before touching `self`.
+        let box = WeakBox(self)
+        requestSupplementaryLexicon { @Sendable lexicon in
+            let entries = lexicon.entries.map { ($0.userInput, $0.documentText) }
+            Task { @MainActor in
+                guard let self = box.value else { return }
+                self.engine.setLexicon(entries)
+                self.updateSuggestions()
+            }
+        }
     }
 
     /// Fired by the system whenever the document text changes (including our
     /// own edits) — keep the suggestion bar in sync.
     override func textDidChange(_ textInput: (any UITextInput)?) {
         super.textDidChange(textInput)
+        // A change we didn't make (host cleared the field, autofill, another input
+        // view) means our mirror no longer matches the document.
+        if !isApplyingEdit { invalidateMirror() }
         scheduleSuggestionUpdate()
         updateReturnKey()
+    }
+
+    /// The cursor/selection moved. If it wasn't our own edit, the mirror's tail no
+    /// longer sits immediately before the cursor — re-seed on the next read.
+    override func selectionWillChange(_ textInput: (any UITextInput)?) {
+        super.selectionWillChange(textInput)
+        if !isApplyingEdit { invalidateMirror() }
+    }
+
+    override func selectionDidChange(_ textInput: (any UITextInput)?) {
+        super.selectionDidChange(textInput)
+        if !isApplyingEdit { invalidateMirror() }
     }
 
     /// Mirror the host field's `returnKeyType` onto the return key — so it reads
@@ -186,6 +252,9 @@ final class KeyboardViewController: UIInputViewController {
     /// laid out, so re-apply here (cheap; just sets background colours).
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        // Stop iOS's required-priority height constraint from inflating the
+        // keyboard mid-transition (the "huge then snaps" flash on switch).
+        tameSystemHeightConstraint()
         clearKeyboardBackground()
     }
 
@@ -195,17 +264,32 @@ final class KeyboardViewController: UIInputViewController {
             live: live,
             onInsert: { [weak self] text in
                 guard let self else { return }
-                // Apply the pending correction (the bar's preview) when a
-                // terminator commits the word — "space completes" it.
+                self.isApplyingEdit = true
+                defer { self.isApplyingEdit = false; self.scheduleSuggestionUpdate() }
+                // Apply the pending correction when a terminator commits the word
+                // — "space completes" it. Computed synchronously from the mirror
+                // here (not read off the debounced bar), so it fires reliably even
+                // when the user spaces within the debounce window.
                 if Self.wordTerminators.contains(text) {
                     self.applyPendingAutocorrect()
                 }
-                self.textDocumentProxy.insertText(text)
-                self.scheduleSuggestionUpdate()
+                // Smart punctuation (curly quotes, em-dash, double-space → ". ")
+                // rides the same auto-punctuation switch as contractions. Runs
+                // after any pending correction so it sees the committed word.
+                if self.settings.autoPunctuationEnabled,
+                   let edit = SmartPunctuation.edit(for: text, before: self.contextBeforeCursor()) {
+                    self.deleteBackwardMirrored(edit.deleteBackward)
+                    self.insertMirrored(edit.insert)
+                } else {
+                    self.insertMirrored(text)
+                }
             },
             onBackspace: { [weak self] in
-                self?.textDocumentProxy.deleteBackward()
-                self?.scheduleSuggestionUpdate()
+                guard let self else { return }
+                self.isApplyingEdit = true
+                self.deleteBackwardMirrored(1)
+                self.isApplyingEdit = false
+                self.scheduleSuggestionUpdate()
             },
             onAnyTap: { [weak self] in
                 guard let self else { return }
@@ -218,15 +302,22 @@ final class KeyboardViewController: UIInputViewController {
             onSuggestion: { [weak self] word in
                 self?.applySuggestion(word)
             },
+            onEmojiSuggestion: { [weak self] emoji in
+                self?.applyEmojiSuggestion(emoji)
+            },
             // Tapped the quoted literal → keep what they typed, drop the fix.
             onCancelAutocorrect: { [weak self] in
                 guard let self else { return }
                 self.rejectedCorrection = self.live.autocorrection?.from
                 self.live.autocorrection = nil
             },
-            // Space-bar trackpad: slide the cursor by whole characters.
+            // Space-bar trackpad: slide the cursor by whole characters. The cursor
+            // jumps off our typed tail, so the mirror no longer describes what's
+            // before it — drop trust and re-seed on the next read.
             onCursorMove: { [weak self] delta in
-                self?.textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
+                guard let self else { return }
+                self.textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
+                self.invalidateMirror()
             }
         )
         // Fill the host (which fills the input view) so the bar pins to the top
@@ -239,9 +330,43 @@ final class KeyboardViewController: UIInputViewController {
     /// The partial word immediately before the cursor (trailing letters, plus
     /// apostrophes so contractions like "don't" stay whole).
     private var currentPartialWord: String {
-        let context = textDocumentProxy.documentContextBeforeInput ?? ""
-        return String(context.reversed().prefix(while: { $0.isLetter || $0 == "'" }).reversed())
+        SmartPunctuation.trailingPartialWord(in: contextBeforeCursor())
     }
+
+    // MARK: - Local text mirror (avoids per-keystroke proxy reads)
+
+    /// The text just before the cursor, served from the local mirror when it's in
+    /// sync and re-seeded from the document proxy otherwise. Only the trailing
+    /// `tailCap` characters are guaranteed — enough for trailing-word detection
+    /// and smart-punctuation lookbehind, never for whole-document context.
+    private func contextBeforeCursor() -> String {
+        if bufferValid { return recentTail }
+        let ctx = textDocumentProxy.documentContextBeforeInput ?? ""
+        recentTail = String(ctx.suffix(tailCap))
+        bufferValid = true
+        return recentTail
+    }
+
+    /// Insert text into the document and keep the mirror in step.
+    private func insertMirrored(_ text: String) {
+        textDocumentProxy.insertText(text)
+        if bufferValid { recentTail = String((recentTail + text).suffix(tailCap)) }
+    }
+
+    /// Delete `n` characters backward and keep the mirror in step. If we'd delete
+    /// past what the mirror holds, drop trust rather than guess.
+    private func deleteBackwardMirrored(_ n: Int) {
+        guard n > 0 else { return }
+        for _ in 0..<n { textDocumentProxy.deleteBackward() }
+        if bufferValid {
+            if recentTail.count >= n { recentTail.removeLast(n) }
+            else { bufferValid = false }
+        }
+    }
+
+    /// Mark the mirror stale; the next `contextBeforeCursor()` re-seeds from the
+    /// proxy. Cheap, and self-healing — worst case is one extra proxy read.
+    private func invalidateMirror() { bufferValid = false }
 
     /// Debounce. Each keystroke cancels the previous pending compute and
     /// reschedules ~80ms out, so a fast burst collapses to a SINGLE
@@ -260,10 +385,11 @@ final class KeyboardViewController: UIInputViewController {
         guard settings.suggestionsEnabled else {
             if !live.suggestions.isEmpty { live.suggestions = [] }
             if live.autocorrection != nil { live.autocorrection = nil }
+            if !live.emojiSuggestions.isEmpty { live.emojiSuggestions = [] }
             return
         }
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
-        let partial = String(before.reversed().prefix(while: { $0.isLetter || $0 == "'" }).reversed())
+        let partial = SmartPunctuation.trailingPartialWord(in: before)
 
         // Off a word → let corrections fire again for the next word.
         if partial.isEmpty { rejectedCorrection = nil }
@@ -276,9 +402,11 @@ final class KeyboardViewController: UIInputViewController {
             previousWord: previousWord(before: before, partial: partial),
             sentenceStart: isSentenceStart(before: before, partial: partial),
             autocorrect: settings.autocorrectEnabled,
+            autoPunctuation: settings.autoPunctuationEnabled,
             rejected: rejectedCorrection)
         live.suggestions = result.predictions
         live.autocorrection = result.correction
+        live.emojiSuggestions = result.emoji
     }
 
     /// The completed word before the cursor (when no partial is being typed),
@@ -287,7 +415,7 @@ final class KeyboardViewController: UIInputViewController {
         guard partial.isEmpty else { return nil }
         let trimmed = before.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let last = trimmed.last, !".!?".contains(last) else { return nil }
-        let word = String(trimmed.reversed().prefix(while: { $0.isLetter || $0 == "'" }).reversed())
+        let word = SmartPunctuation.trailingPartialWord(in: trimmed)
         return word.isEmpty ? nil : word
     }
 
@@ -304,23 +432,56 @@ final class KeyboardViewController: UIInputViewController {
     /// Characters that end a word — typing one applies the pending correction.
     private static let wordTerminators: Set<String> = [" ", "\n", ".", ",", "!", "?", ";", ":"]
 
-    /// Commit the bar's pending correction (computed live as the user typed) by
-    /// swapping the just-finished word for the fix. No `UITextChecker` work on
-    /// this hot path — we only apply what's already on screen as the preview.
+    /// Commit a correction for the just-finished word when a terminator ends it.
+    ///
+    /// This is computed *synchronously here*, from the just-typed word, rather than
+    /// read off `live.autocorrection`. The bar's value is produced on an 80ms
+    /// debounce that resets on every keystroke — so a fast typist who hits space
+    /// within that window would find it stale or nil and lose the fix entirely.
+    /// Computing on the spot (one `UITextChecker` run per *word*, during the
+    /// natural micro-pause of pressing space) makes the correction fire reliably
+    /// no matter how fast the word was typed.
+    ///
+    /// Must be called inside an `isApplyingEdit` window, before the terminator is
+    /// inserted, so `contextBeforeCursor()` still ends at the finished word.
     private func applyPendingAutocorrect() {
-        guard settings.autocorrectEnabled, let c = live.autocorrection else { return }
+        guard settings.autocorrectEnabled || settings.autoPunctuationEnabled else { return }
         let word = currentPartialWord
-        guard word == c.from else { return }   // word changed under us; skip
-        for _ in 0..<word.count { textDocumentProxy.deleteBackward() }
-        textDocumentProxy.insertText(c.to)
+        guard !word.isEmpty else { return }
+        let result = engine.compute(
+            partial: word,
+            previousWord: nil,
+            sentenceStart: false,
+            autocorrect: settings.autocorrectEnabled,
+            autoPunctuation: settings.autoPunctuationEnabled,
+            rejected: rejectedCorrection)
+        guard let c = result.correction, c.from == word else { return }
+        deleteBackwardMirrored(word.count)
+        insertMirrored(c.to)
         live.autocorrection = nil
     }
 
     /// Replace the current partial word with the chosen suggestion + a space.
     private func applySuggestion(_ word: String) {
+        isApplyingEdit = true
         let partial = currentPartialWord
-        for _ in 0..<partial.count { textDocumentProxy.deleteBackward() }
-        textDocumentProxy.insertText(word + " ")
+        deleteBackwardMirrored(partial.count)
+        insertMirrored(word + " ")
+        isApplyingEdit = false
+        live.autocorrection = nil
+        sound.play(settings: settings, hasFullAccess: hasFullAccess)
+        scheduleSuggestionUpdate()
+    }
+
+    /// Swap the word being typed for the tapped emoji — no trailing space (so you
+    /// can keep going), and no autocorrect side effects. Mirrors iOS QuickType's
+    /// emoji-replaces-word behaviour.
+    private func applyEmojiSuggestion(_ emoji: String) {
+        isApplyingEdit = true
+        let partial = currentPartialWord
+        deleteBackwardMirrored(partial.count)
+        insertMirrored(emoji)
+        isApplyingEdit = false
         live.autocorrection = nil
         sound.play(settings: settings, hasFullAccess: hasFullAccess)
         scheduleSuggestionUpdate()

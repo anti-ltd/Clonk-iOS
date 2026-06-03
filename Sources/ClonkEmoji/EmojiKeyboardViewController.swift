@@ -97,6 +97,9 @@ final class EmojiKeyboardViewController: UIInputViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        // Stop iOS's required-priority height constraint from inflating the
+        // keyboard mid-transition (the "huge then snaps" flash on switch).
+        tameSystemHeightConstraint()
         clearKeyboardBackground()
     }
 
@@ -113,9 +116,19 @@ final class EmojiKeyboardViewController: UIInputViewController {
             },
             onNextKeyboard: needsInputModeSwitchKey
                 ? { [weak self] in self?.advanceToNextInputMode() }
-                : nil
+                : nil,
+            // Search mode shows a QWERTY and needs more room — grow the keyboard
+            // to whatever height the canvas asks for, animating the resize.
+            onRequestHeight: { [weak self] height in self?.setKeyboardHeight(height) }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Animate the keyboard to a new height (e.g. entering/leaving emoji search).
+    private func setKeyboardHeight(_ height: CGFloat) {
+        guard let heightConstraint, heightConstraint.constant != height else { return }
+        heightConstraint.constant = height
+        UIView.animate(withDuration: 0.28) { self.view.layoutIfNeeded() }
     }
 
     /// Delete a whole emoji — one grapheme cluster can be several UTF-16 units

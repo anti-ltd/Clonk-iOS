@@ -543,25 +543,28 @@ final class ShowcaseTyper {
         guard settings.suggestionsEnabled else {
             if !live.suggestions.isEmpty { live.suggestions = [] }
             if live.autocorrection != nil { live.autocorrection = nil }
+            if !live.emojiSuggestions.isEmpty { live.emojiSuggestions = [] }
             return
         }
         let before = displayed
-        let partial = String(before.reversed().prefix(while: { $0.isLetter || $0 == "'" }).reversed())
+        let partial = SmartPunctuation.trailingPartialWord(in: before)
         let result = suggestEngine.compute(
             partial: partial,
             previousWord: previousWord(before: before, partial: partial),
             sentenceStart: isSentenceStart(before: before, partial: partial),
             autocorrect: false,
+            autoPunctuation: false,
             rejected: nil)
         live.suggestions = result.predictions
         live.autocorrection = result.correction
+        live.emojiSuggestions = result.emoji
     }
 
     private func previousWord(before: String, partial: String) -> String? {
         guard partial.isEmpty else { return nil }
         let trimmed = before.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let last = trimmed.last, !".!?".contains(last) else { return nil }
-        let word = String(trimmed.reversed().prefix(while: { $0.isLetter || $0 == "'" }).reversed())
+        let word = SmartPunctuation.trailingPartialWord(in: trimmed)
         return word.isEmpty ? nil : word
     }
 
