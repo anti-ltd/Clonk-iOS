@@ -35,18 +35,32 @@ public final class SharedStore: @unchecked Sendable {
     }
 
     public func load() -> KeyboardSettings {
-        guard let url = settingsFileURL,
-              let data = try? Data(contentsOf: url),
-              let decoded = try? JSONDecoder().decode(KeyboardSettings.self, from: data)
-        else { return .default }
-        return decoded
+        if let url = settingsFileURL,
+           let data = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode(KeyboardSettings.self, from: data) {
+            return decoded
+        }
+        // App Group container unavailable (self-signed build without a matching
+        // provisioning profile). Fall back to standard UserDefaults so settings
+        // at least survive within this process rather than resetting every time.
+        if let data = UserDefaults.standard.data(forKey: "clink-settings-v1"),
+           let decoded = try? JSONDecoder().decode(KeyboardSettings.self, from: data) {
+            return decoded
+        }
+        return .default
     }
 
     public func save(_ settings: KeyboardSettings) {
-        guard let url = settingsFileURL,
-              let data = try? JSONEncoder().encode(settings) else { return }
-        try? data.write(to: url, options: .atomic)
-        postDidChange()
+        if let url = settingsFileURL,
+           let data = try? JSONEncoder().encode(settings) {
+            try? data.write(to: url, options: .atomic)
+            postDidChange()
+            return
+        }
+        // App Group unavailable — persist locally so settings survive re-launches.
+        if let data = try? JSONEncoder().encode(settings) {
+            UserDefaults.standard.set(data, forKey: "clink-settings-v1")
+        }
     }
 
     // MARK: - Runtime status (extension → app)
