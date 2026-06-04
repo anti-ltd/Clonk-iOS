@@ -22,12 +22,9 @@ public final class SharedStore: @unchecked Sendable {
     public static let shared = SharedStore()
 
     private let appGroupID: String
-    /// Kept only for the small extension→app status flag (Full Access).
-    private let defaults: UserDefaults?
 
     public init(appGroupID: String = SharedStore.appGroupID) {
         self.appGroupID = appGroupID
-        defaults = UserDefaults(suiteName: appGroupID)
     }
 
     /// `…/<AppGroup>/clink-settings.v1.json`
@@ -54,23 +51,31 @@ public final class SharedStore: @unchecked Sendable {
 
     // MARK: - Runtime status (extension → app)
 
-    private let fullAccessKey = "clink.status.fullAccess.v1"
+    /// `…/<AppGroup>/clink-status.v1.json`  Written by the keyboard extension;
+    /// read by the container app to reflect the real Full Access state.
+    private var statusFileURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent("clink-status.v1.json")
+    }
 
     /// The keyboard extension calls this on launch so the container app can
     /// reflect the real Full Access state (which only the extension can read).
-    /// May be stale until the keyboard has run at least once.
+    /// Uses a file — not UserDefaults — because keyboard extensions cannot write
+    /// to App Group UserDefaults without Full Access, which is circular.
     public func reportFullAccess(_ granted: Bool) {
-        // Only write when the value actually changes. Without Full Access the
-        // keyboard can't write the app group at all (the sandbox denies it), so an
-        // unconditional `set` on every appearance spammed a `fault` per layout
-        // pass. In the common no-access case the stored value is already `false`,
-        // so this guard skips the write entirely — no fault.
         guard lastKnownFullAccess != granted else { return }
-        defaults?.set(granted, forKey: fullAccessKey)
+        guard let url = statusFileURL,
+              let data = try? JSONEncoder().encode(["fullAccess": granted]) else { return }
+        try? data.write(to: url, options: .atomic)
     }
 
     public var lastKnownFullAccess: Bool {
-        defaults?.bool(forKey: fullAccessKey) ?? false
+        guard let url = statusFileURL,
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([String: Bool].self, from: data)
+        else { return false }
+        return decoded["fullAccess"] ?? false
     }
 
     // MARK: - Cross-process change notification

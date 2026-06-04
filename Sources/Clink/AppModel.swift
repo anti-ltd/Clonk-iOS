@@ -19,16 +19,12 @@ final class AppModel {
     /// convention list of enabled keyboard bundle identifiers.
     private(set) var isKeyboardEnabled: Bool = false
 
-    /// Whether the emoji keyboard is in the user's enabled keyboards.
-    private(set) var isEmojiEnabled: Bool = false
-
     /// Last Full Access state the extension reported. Stale until the keyboard
     /// has run once, so the UI treats it as a hint, not gospel.
     private(set) var hasFullAccess: Bool = false
 
     private let store = SharedStore.shared
     private let keyboardBundleID = "ltd.anti.clink.keyboard"
-    private let emojiBundleID = "ltd.anti.clink.emoji"
 
     init() {
         settings = store.load()
@@ -65,7 +61,6 @@ final class AppModel {
     func refreshStatus() {
         let enabled = (UserDefaults.standard.array(forKey: "AppleKeyboards") as? [String]) ?? []
         isKeyboardEnabled = enabled.contains(keyboardBundleID)
-        isEmojiEnabled = enabled.contains(emojiBundleID)
         hasFullAccess = store.lastKnownFullAccess
     }
 }

@@ -90,9 +90,8 @@ targets:
     dependencies:
       - package: iUX-ios
         product: iUXiOS
-      # Embeds the keyboard extensions into the app bundle's PlugIns dir.
+      # Embeds the keyboard extension into the app bundle's PlugIns dir.
       - target: ClinkKeyboard
-      - target: ClinkEmoji
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink
@@ -142,40 +141,3 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink.keyboard
         TARGETED_DEVICE_FAMILY: "1,2"
 
-  # ----------------------------------------------------------------
-  # Emoji keyboard extension — second keyboard, same shared config.
-  # ----------------------------------------------------------------
-  ClinkEmoji:
-    type: app-extension
-    platform: iOS
-    sources:
-      - Sources/ClinkEmoji
-      # Same shared code (settings, theme, emoji canvas) as the others.
-      - Sources/ClinkKit
-      # Privacy manifest for the emoji keyboard extension bundle.
-      - Resources/Privacy/Emoji/PrivacyInfo.xcprivacy
-    info:
-      path: Resources/ClinkEmoji-Info.plist
-      properties:
-        CFBundleDisplayName: Clink Emoji
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.keyboard-service
-          NSExtensionPrincipalClass: EmojiKeyboardViewController
-          NSExtensionAttributes:
-            IsASCIICapable: false
-            PrefersRightToLeftLayout: false
-            PrimaryLanguage: en-US
-            # Emoji needs no network/clipboard, so no Full Access prompt.
-            RequestsOpenAccess: false
-    entitlements:
-      path: Resources/ClinkEmoji.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.ltd.anti.clink
-    dependencies:
-      - package: iUX-ios
-        product: iUXiOS
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink.emoji
-        TARGETED_DEVICE_FAMILY: "1,2"

@@ -11,15 +11,15 @@ struct EnableFlowView: View {
             VStack(alignment: .leading, spacing: UX.cardSpacing) {
                 statusCard
 
-                CardSection("1 · Add the keyboards") {
+                CardSection("1 · Add the keyboard") {
                     step("Open the Settings app.")
                     step("General → Keyboard → Keyboards → Add New Keyboard…")
-                    step("Add both Clink and Clink Emoji under Third-Party Keyboards.")
+                    step("Add Clink under Third-Party Keyboards.")
                 }
 
-                CardSection("2 · Switch between them") {
-                    step("In any app, tap the 🌐 globe key to cycle keyboards.")
-                    step("Clink and Clink Emoji share these settings — configure once, both match.")
+                CardSection("2 · Use emoji") {
+                    step("In any app, tap the 🌐 globe key to switch to Clink.")
+                    step("Tap the emoji key (or swipe up from 123) to browse emoji right inside Clink — no extra keyboard needed.")
                 }
 
                 CardSection("3 · Full Access (optional)") {
@@ -51,9 +51,6 @@ struct EnableFlowView: View {
     private var statusCard: some View {
         CardSection {
             statusRow("Clink keyboard added", ok: model.isKeyboardEnabled)
-            Divider()
-            statusRow("Clink Emoji added", ok: model.isEmojiEnabled,
-                      offText: "Off — add it to type emoji")
             Divider()
             statusRow("Full Access", ok: model.hasFullAccess,
                       offText: "Off — custom sounds & haptics disabled")
