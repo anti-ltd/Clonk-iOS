@@ -61,7 +61,11 @@ jobs:
         run: |
           SHA="${{ github.sha }}"
           SHORT="${SHA:0:7}"
-          /opt/homebrew/bin/gh release create "$SHORT" build/Clink-unsigned.ipa \
-            --title "Clink $SHORT" \
+          DATE=$(date -u '+%y%m%d')
+          MSG=$(git log -1 --format='%s')
+          VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resources/Clink-Info.plist)
+          TAG="clink-$VER-$DATE-$SHORT"
+          /opt/homebrew/bin/gh release create "$TAG" build/Clink-unsigned.ipa \
+            --title "Clink[$VER - $DATE]($MSG)" \
             --notes "Unsigned IPA built from [\`$SHORT\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})." \
             --prerelease
