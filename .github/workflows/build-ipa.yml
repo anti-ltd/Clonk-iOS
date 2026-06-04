@@ -28,6 +28,12 @@ jobs:
       - name: Install xcodegen
         run: brew install xcodegen
 
+      - name: Checkout iUX-ios
+        uses: actions/checkout@v4
+        with:
+          repository: anti-ltd/iUX-iOS
+          path: ../iUX-ios
+
       - name: Regenerate Xcode project
         run: make project
 
