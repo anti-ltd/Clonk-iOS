@@ -79,17 +79,22 @@ public final class SharedStore: @unchecked Sendable {
     /// to App Group UserDefaults without Full Access, which is circular.
     public func reportFullAccess(_ granted: Bool) {
         guard lastKnownFullAccess != granted else { return }
-        guard let url = statusFileURL,
-              let data = try? JSONEncoder().encode(["fullAccess": granted]) else { return }
-        try? data.write(to: url, options: .atomic)
+        if let url = statusFileURL,
+           let data = try? JSONEncoder().encode(["fullAccess": granted]) {
+            try? data.write(to: url, options: .atomic)
+            return
+        }
+        // App Group unavailable — fall back to standard UserDefaults.
+        UserDefaults.standard.set(granted, forKey: "clink-fullaccess-v1")
     }
 
     public var lastKnownFullAccess: Bool {
-        guard let url = statusFileURL,
-              let data = try? Data(contentsOf: url),
-              let decoded = try? JSONDecoder().decode([String: Bool].self, from: data)
-        else { return false }
-        return decoded["fullAccess"] ?? false
+        if let url = statusFileURL,
+           let data = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode([String: Bool].self, from: data) {
+            return decoded["fullAccess"] ?? false
+        }
+        return UserDefaults.standard.bool(forKey: "clink-fullaccess-v1")
     }
 
     // MARK: - Cross-process change notification
