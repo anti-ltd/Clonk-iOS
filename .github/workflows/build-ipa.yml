@@ -61,7 +61,7 @@ jobs:
         run: |
           SHA="${{ github.sha }}"
           SHORT="${SHA:0:7}"
-          gh release create "$SHORT" build/Clink-unsigned.ipa \
+          /opt/homebrew/bin/gh release create "$SHORT" build/Clink-unsigned.ipa \
             --title "Clink $SHORT" \
             --notes "Unsigned IPA built from [\`$SHORT\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})." \
             --prerelease
