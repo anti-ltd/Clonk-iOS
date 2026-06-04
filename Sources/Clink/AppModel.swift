@@ -58,6 +58,22 @@ final class AppModel {
         if settings.darkThemeID == id { settings.darkThemeID = Theme.defaultDark.id }
     }
 
+    /// Import a theme from a `.clink` URL (e.g. opened from Files.app).
+    func importTheme(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url),
+              var theme = try? JSONDecoder().decode(Theme.self, from: data) else { return }
+        theme.id = "custom-\(UUID().uuidString.prefix(8))"
+        saveCustomTheme(theme)
+        if settings.matchSystemAppearance {
+            if theme.isDark { settings.darkThemeID = theme.id }
+            else { settings.lightThemeID = theme.id }
+        } else {
+            settings.themeID = theme.id
+        }
+    }
+
     func refreshStatus() {
         let enabled = (UserDefaults.standard.array(forKey: "AppleKeyboards") as? [String]) ?? []
         isKeyboardEnabled = enabled.contains(keyboardBundleID)

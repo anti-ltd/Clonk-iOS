@@ -50,6 +50,7 @@
 		A1FCC654C7BF323839575EB7 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
 		B6B4F51D8B37609FAB195703 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */; };
 		B71BF31701F8EBA454EA8769 /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */; };
+		B7AEFB5857D45F9FCF5A5F3D /* AdvancedSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */; };
 		C0F38A72B69F1619B74EC5A0 /* ThemeBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473E6FADCC90F3A24F2711AC /* ThemeBuilderView.swift */; };
 		C576639078F73C5EF212D064 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5181D0B09674CE8789540CEA /* RootView.swift */; };
 		CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */; };
@@ -119,6 +120,7 @@
 		89C0E3B52628790F5260C89C /* Clink.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Clink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionEngine.swift; sourceTree = "<group>"; };
 		904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCanvas.swift; sourceTree = "<group>"; };
+		934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsView.swift; sourceTree = "<group>"; };
 		996E57798F6EB6FD05B185E4 /* iUX-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "iUX-ios"; path = "../iUX-ios"; sourceTree = SOURCE_ROOT; };
 		9993AF7E588543B2754CAB3E /* SoundPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPack.swift; sourceTree = "<group>"; };
 		A06533C1C5E7C51A9D0B3454 /* ClinkKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClinkKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -262,6 +264,7 @@
 		C68EFFB03B2BF4A5F7331ACE /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */,
 				39FDB6FF761A1B9983D99D51 /* EmojiSettingsView.swift */,
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
 				6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */,
@@ -397,6 +400,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B7AEFB5857D45F9FCF5A5F3D /* AdvancedSettingsView.swift in Sources */,
 				7700D18C30068362D47F3DDF /* AppModel.swift in Sources */,
 				556A45C2449169ACA72D6B1F /* AppStage.swift in Sources */,
 				3B4276B1682008D117A56528 /* ClinkApp.swift in Sources */,

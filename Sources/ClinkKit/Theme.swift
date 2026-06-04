@@ -312,6 +312,26 @@ public extension Theme {
             accent: RGBA(hex: 0xFF6B35),
             isDark: true, material: .liquidGlass
         ),
+        Theme(
+            id: "dobble", name: "Dobble",
+            background: RGBA(0.10980392156862745, 0.10980392156862745, 0.11764705882352941, 1),
+            keyFill: RGBA(0.9553680419921875, 0.9195098876953125, 1, 0.9384483098983765),
+            keyText: RGBA(0.5051727294921875, 0, 0.5771484375, 1),
+            specialKeyFill: RGBA(0.99664306640625, 0.846649169921875, 1, 0.9178984761238098),
+            specialKeyText: RGBA(0.5908203125, 0, 0.7106170654296875, 1),
+            accent: RGBA(0.85614013671875, 0.6346588134765625, 1, 0.9738767743110657),
+            isDark: false, material: .liquidGlass
+        ),
+        Theme(
+            id: "snobble", name: "Snobble",
+            background: RGBA(0.10980392156862745, 0.10980392156862745, 0.11764705882352941, 1),
+            keyFill: RGBA(0.1396636962890625, 0, 0.1912689208984375, 0.5608813166618347),
+            keyText: RGBA(0.87738037109375, 0.846649169921875, 1, 1),
+            specialKeyFill: RGBA(0.161346435546875, 0, 0.1606597900390625, 0.8113809823989868),
+            specialKeyText: RGBA(0.8345794677734375, 0.7075347900390625, 1, 1),
+            accent: RGBA(0.2863311767578125, 0, 0.533447265625, 0.8581883311271667),
+            isDark: true, material: .liquidGlass
+        ),
     ]
 
     static let `default`: Theme = presets[0]

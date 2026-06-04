@@ -72,15 +72,19 @@ public final class KeyTouchRouter {
     /// bloom/colour spring never reaches full strength and the press reads dim.
     /// Holding it briefly lets the effect bloom fully, then spring back.
     fileprivate var lingerDuration: TimeInterval = 0.1
+    /// Scale applied to each key's frame before hit-testing (see `key(at:)`).
+    fileprivate var hitboxScale: Double = 1.0
 
     fileprivate func update(frames: [String: CGRect],
                             resolveSpec: @escaping (String) -> KeySpec?,
                             onPressDown: @escaping () -> Void,
-                            lingerDuration: TimeInterval) {
+                            lingerDuration: TimeInterval,
+                            hitboxScale: Double) {
         self.frames = frames
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
         self.lingerDuration = lingerDuration
+        self.hitboxScale = hitboxScale
     }
 
     // MARK: - Hit testing
@@ -101,12 +105,20 @@ public final class KeyTouchRouter {
         var best: String?
         var bestDist = CGFloat.greatestFiniteMagnitude
         for (id, f) in frames {
-            let dx = max(f.minX - point.x, 0, point.x - f.maxX)
-            let dy = max(f.minY - point.y, 0, point.y - f.maxY)
+            let sf = scaledFrame(f)
+            let dx = max(sf.minX - point.x, 0, point.x - sf.maxX)
+            let dy = max(sf.minY - point.y, 0, point.y - sf.maxY)
             let d = dx * dx + dy * dy
             if d < bestDist { bestDist = d; best = id }
         }
         return best
+    }
+
+    private func scaledFrame(_ f: CGRect) -> CGRect {
+        guard hitboxScale != 1.0 else { return f }
+        let w = f.width * CGFloat(hitboxScale)
+        let h = f.height * CGFloat(hitboxScale)
+        return CGRect(x: f.midX - w / 2, y: f.midY - h / 2, width: w, height: h)
     }
 
     // MARK: - Per-touch lifecycle (called by the UIView)
@@ -383,16 +395,19 @@ struct MultiTouchSurface: UIViewRepresentable {
     let resolveSpec: (String) -> KeySpec?
     let onPressDown: () -> Void
     let lingerDuration: TimeInterval
+    let hitboxScale: Double
 
     func makeUIView(context: Context) -> KeyGridTouchView {
         let v = KeyGridTouchView(router: router)
         router.update(frames: frames, resolveSpec: resolveSpec,
-                      onPressDown: onPressDown, lingerDuration: lingerDuration)
+                      onPressDown: onPressDown, lingerDuration: lingerDuration,
+                      hitboxScale: hitboxScale)
         return v
     }
 
     func updateUIView(_ uiView: KeyGridTouchView, context: Context) {
         router.update(frames: frames, resolveSpec: resolveSpec,
-                      onPressDown: onPressDown, lingerDuration: lingerDuration)
+                      onPressDown: onPressDown, lingerDuration: lingerDuration,
+                      hitboxScale: hitboxScale)
     }
 }

@@ -27,6 +27,10 @@ public struct KeyboardCanvas: View {
     /// Fired while dragging the space bar — a signed character delta to move the
     /// cursor by (the native space-bar trackpad).
     private let onCursorMove: (Int) -> Void
+    /// When true, render a semi-transparent hitbox outline over each key so the
+    /// user can see exactly which area maps to each key. Used by the Advanced
+    /// settings view; false for normal use.
+    private let showHitboxOverlay: Bool
 
     /// Live typing state (autocomplete suggestions). The extension feeds it;
     /// the in-app preview can pass sample words. Observed so the bar updates
@@ -37,6 +41,7 @@ public struct KeyboardCanvas: View {
         settings: KeyboardSettings,
         live: KeyboardLiveState = KeyboardLiveState(),
         controller: KeyboardController? = nil,
+        showHitboxOverlay: Bool = false,
         onInsert: @escaping (String) -> Void,
         onBackspace: @escaping () -> Void,
         onAnyTap: @escaping () -> Void = {},
@@ -51,6 +56,7 @@ public struct KeyboardCanvas: View {
         // Use the injected controller (the showcase simulator drives a shared
         // one) or spin up a private one for ordinary finger-driven use.
         _controller = State(initialValue: controller ?? KeyboardController())
+        self.showHitboxOverlay = showHitboxOverlay
         self.onInsert = onInsert
         self.onBackspace = onBackspace
         self.onAnyTap = onAnyTap
@@ -144,7 +150,8 @@ public struct KeyboardCanvas: View {
                             frames: anchors.mapValues { proxy[$0] },
                             resolveSpec: { currentKeySpecs()[$0] },
                             onPressDown: onAnyTap,
-                            lingerDuration: settings.keyPressLinger)
+                            lingerDuration: settings.keyPressLinger,
+                            hitboxScale: settings.hitboxScale)
                     }
                 }
         }
@@ -177,6 +184,25 @@ public struct KeyboardCanvas: View {
                 }
             }
             .allowsHitTesting(false)
+        }
+        // Hitbox debug overlay: outlines each key's touch area. Only visible in
+        // the Advanced settings view (showHitboxOverlay = true).
+        .overlayPreferenceValue(KeyFrameKey.self) { anchors in
+            if showHitboxOverlay {
+                GeometryReader { proxy in
+                    let scale = CGFloat(settings.hitboxScale)
+                    ForEach(anchors.sorted(by: { $0.key < $1.key }), id: \.key) { pair in
+                        let f = proxy[pair.value]
+                        let w = f.width * scale
+                        let h = f.height * scale
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .stroke(Color.cyan.opacity(0.75), lineWidth: 1.5)
+                            .frame(width: w, height: h)
+                            .position(x: f.midX, y: f.midY)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
         }
     }
 

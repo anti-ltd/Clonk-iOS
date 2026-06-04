@@ -105,6 +105,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var soundEnabled: Bool
     public var soundVolume: Double      // 0.0 ... 1.0
     public var hapticsEnabled: Bool
+    /// Multiplier applied to each key's frame before hit-testing. 1.0 = hitbox
+    /// matches the visual key exactly. Values above 1 make the hitbox larger
+    /// (more forgiving); values below 1 shrink it (more precise, with wider
+    /// dead zones between keys that still route to the nearest key).
+    public var hitboxScale: Double
     // Emoji
     /// The skin tone applied to any tone-capable emoji that has no per-emoji
     /// choice in `emojiSkinTones`. `.none` = neutral (yellow).
@@ -148,6 +153,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
         hapticsEnabled: Bool = false,
+        hitboxScale: Double = 0.85,
         defaultSkinTone: SkinTone = .none,
         emojiSkinTones: [String: SkinTone] = [:]
     ) {
@@ -184,6 +190,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
         self.hapticsEnabled = hapticsEnabled
+        self.hitboxScale = hitboxScale
         self.defaultSkinTone = defaultSkinTone
         self.emojiSkinTones = emojiSkinTones
     }
@@ -229,6 +236,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? false
+        hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.85
         // `try?`: a future-retired tone case shouldn't fail the whole decode.
         defaultSkinTone = (try? c.decodeIfPresent(SkinTone.self, forKey: .defaultSkinTone)) ?? .none
         emojiSkinTones = (try? c.decodeIfPresent([String: SkinTone].self, forKey: .emojiSkinTones)) ?? [:]

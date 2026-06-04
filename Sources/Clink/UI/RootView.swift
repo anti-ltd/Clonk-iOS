@@ -42,6 +42,11 @@ struct RootView: View {
                                value: model.settings.soundEnabled ? model.settings.soundPack.name : "Off") {
                             SoundPickerView()
                         }
+                        Divider()
+                        NavRow("Advanced", subtitle: "Hitbox size and precision tuning",
+                               systemImage: "slider.horizontal.3") {
+                            AdvancedSettingsView()
+                        }
                     }
 
                     CardSection("Keyboard") {

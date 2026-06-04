@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 /// file. Derived from the extension (not registered in Info.plist), which is
 /// enough to both name exports and filter the import picker.
 extension UTType {
-    static var clinkTheme: UTType { UTType(filenameExtension: "clink", conformingTo: .json) ?? .json }
+    static var clinkTheme: UTType { UTType("ltd.anti.clink.theme") ?? .json }
 }
 
 struct ThemeEditorView: View {

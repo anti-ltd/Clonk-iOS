@@ -7,11 +7,12 @@ import iUXiOS
 /// and Typing editors so they all feel the same.
 struct PinnedPreviewLayout<Content: View>: View {
     let settings: KeyboardSettings
+    var showHitboxOverlay: Bool = false
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(spacing: 0) {
-            KeyboardPreview(settings: settings)
+            KeyboardPreview(settings: settings, showHitboxOverlay: showHitboxOverlay)
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.screenPadding)
                 .padding(.bottom, UX.cardSpacing)
@@ -106,6 +107,7 @@ struct TabbedPreviewLayout: View {
 /// theme/layout right inside the app without leaving to another app.
 struct KeyboardPreview: View {
     let settings: KeyboardSettings
+    var showHitboxOverlay: Bool = false
     @State private var typed: String = ""
     // Sample suggestions so the preview shows the autocomplete bar populated.
     @State private var live = KeyboardLiveState(suggestions: ["clink", "keyboard", "hello"])
@@ -137,6 +139,7 @@ struct KeyboardPreview: View {
             KeyboardCanvas(
                 settings: settings,
                 live: live,
+                showHitboxOverlay: showHitboxOverlay,
                 onInsert: { typed.append($0) },
                 onBackspace: { if !typed.isEmpty { typed.removeLast() } },
                 onSuggestion: { typed += $0 + " " }
