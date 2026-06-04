@@ -63,6 +63,11 @@ targets:
       path: Resources/Clink-Info.plist
       properties:
         CFBundleDisplayName: Clink
+        # Export compliance: Clink runs fully offline and implements no
+        # encryption of its own (only standard OS-exempt APIs). Declaring this
+        # auto-clears App Store Connect's "Missing Compliance" prompt on every
+        # build, so we never get asked the encryption question again.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: ""
         UIApplicationSceneManifest:

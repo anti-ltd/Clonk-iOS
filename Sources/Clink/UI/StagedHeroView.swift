@@ -12,6 +12,10 @@ import SwiftUI
 
 struct StagedHeroView: View {
     @Environment(AppModel.self) private var model
+    // On iPad (regular width) the bubble must grow with the canvas, otherwise the
+    // 460pt phone cap leaves it marooned in dead space. Compact == iPhone, unchanged.
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isPad: Bool { hSize == .regular }
 
     /// The frozen "mid-type" moment: caps lock is engaged (the shift key glows)
     /// and the keyboard holds the key that types `nextChar` — so the shot glows
@@ -29,9 +33,9 @@ struct StagedHeroView: View {
         ZStack(alignment: .bottom) {
             HeroBackground().ignoresSafeArea()
 
-            VStack(spacing: 18) {
+            VStack(spacing: isPad ? 28 : 18) {
                 Spacer(minLength: 0)
-                HeroBubble(text: typed, theme: theme)
+                HeroBubble(text: typed, theme: theme, isPad: isPad)
                     .padding(.horizontal, 22)
                 KeyboardCanvas(
                     settings: model.settings,
@@ -83,17 +87,18 @@ private struct HeroBackground: View {
 private struct HeroBubble: View {
     let text: String
     let theme: Theme
+    var isPad: Bool = false
     private let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
     var body: some View {
         (Text(text) + Text("▏").foregroundColor(theme.accent.color))
-            .font(.system(size: 22))
+            .font(.system(size: isPad ? 34 : 22))
             .foregroundStyle(theme.keyText.color)
             .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .frame(minHeight: 48)
-            .frame(maxWidth: 460)
+            .padding(.horizontal, isPad ? 30 : 20)
+            .padding(.vertical, isPad ? 22 : 14)
+            .frame(minHeight: isPad ? 72 : 48)
+            .frame(maxWidth: isPad ? 880 : 460)
             // Frosted neutral matching the glass key popups — opaque so it never
             // re-samples the gradient as a translucent panel would.
             .background(Color(.sRGB, white: 0.16), in: shape)
