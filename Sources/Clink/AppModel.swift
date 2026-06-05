@@ -40,9 +40,27 @@ final class AppModel {
 
     // MARK: - Custom themes
 
-    /// Insert a new custom theme or update an existing one (matched by id).
+    /// Downscale and persist a picked background photo, returning the id to store
+    /// on the theme. The bytes go to the App Group (not the settings JSON) so the
+    /// keyboard extension can read them; the id is unique per import so a stored
+    /// image is never stale.
+    func saveBackgroundImage(_ jpeg: Data) -> String {
+        let id = "bg-\(UUID().uuidString.prefix(8))"
+        ThemeBackgroundStore.shared.save(jpeg, for: id)
+        return id
+    }
+
+    /// Insert a new custom theme or update an existing one (matched by id). If an
+    /// edit swaps out the background photo, the orphaned image file is deleted.
     func saveCustomTheme(_ theme: Theme) {
         if let i = settings.customThemes.firstIndex(where: { $0.id == theme.id }) {
+            let old = settings.customThemes[i]
+            if let oldID = old.backgroundImageID, oldID != theme.backgroundImageID {
+                ThemeBackgroundStore.shared.delete(id: oldID)
+            }
+            if let oldKeyID = old.keyImageID, oldKeyID != theme.keyImageID {
+                ThemeBackgroundStore.shared.delete(id: oldKeyID)
+            }
             settings.customThemes[i] = theme
         } else {
             settings.customThemes.append(theme)
@@ -52,6 +70,10 @@ final class AppModel {
     /// Remove a custom theme, reverting any selection that pointed at it back to
     /// the matching default so the keyboard never references a missing theme.
     func deleteCustomTheme(id: String) {
+        if let theme = settings.customThemes.first(where: { $0.id == id }) {
+            if let imageID = theme.backgroundImageID { ThemeBackgroundStore.shared.delete(id: imageID) }
+            if let keyImageID = theme.keyImageID { ThemeBackgroundStore.shared.delete(id: keyImageID) }
+        }
         settings.customThemes.removeAll { $0.id == id }
         if settings.themeID == id { settings.themeID = Theme.default.id }
         if settings.lightThemeID == id { settings.lightThemeID = Theme.defaultLight.id }
@@ -72,6 +94,56 @@ final class AppModel {
         } else {
             settings.themeID = theme.id
         }
+    }
+
+    // MARK: - Resetting
+
+    /// Reset just the Advanced-tab tuning (hitbox + space-bar cursor) to its
+    /// defaults, leaving every other setting untouched. The single `settings`
+    /// assignment persists once via `didSet`.
+    func resetAdvancedSettings() {
+        let d = KeyboardSettings.default
+        settings.hitboxScale = d.hitboxScale
+        settings.spaceCursorStride = d.spaceCursorStride
+        settings.spaceCursorActivationDelay = d.spaceCursorActivationDelay
+        settings.keyBloomScale = d.keyBloomScale
+        settings.keySpringResponse = d.keySpringResponse
+        settings.keySpringDamping = d.keySpringDamping
+        settings.spaceSpringResponse = d.spaceSpringResponse
+        settings.spaceSpringDamping = d.spaceSpringDamping
+        settings.spaceLeanMultiplier = d.spaceLeanMultiplier
+        settings.spaceCursorDragScale = d.spaceCursorDragScale
+        settings.popupSpringResponse = d.popupSpringResponse
+        settings.popupSpringDamping = d.popupSpringDamping
+        settings.repeatHoldDelay = d.repeatHoldDelay
+        settings.repeatInitialInterval = d.repeatInitialInterval
+        settings.repeatMinInterval = d.repeatMinInterval
+        settings.repeatAccelStep = d.repeatAccelStep
+    }
+
+    /// Reset everything to factory defaults, but KEEP user-created content — the
+    /// custom themes, their imported background photos, and per-emoji skin
+    /// tones — since those can't be recovered. Selection falls back to the
+    /// default theme.
+    func resetAllSettings() {
+        var d = KeyboardSettings.default
+        d.customThemes = settings.customThemes
+        d.emojiSkinTones = settings.emojiSkinTones
+        settings = d
+    }
+
+    // MARK: - Configuration export / import
+
+    /// The whole configuration encoded as JSON, for a `.clinkconfig` export.
+    func exportedConfiguration() -> Data? {
+        try? JSONEncoder().encode(settings)
+    }
+
+    /// Replace the entire configuration with an imported snapshot. A full
+    /// restore — the imported file's themes, mechanics, and tuning all take
+    /// over. The single assignment persists once via `didSet`.
+    func importConfiguration(_ imported: KeyboardSettings) {
+        settings = imported
     }
 
     func refreshStatus() {

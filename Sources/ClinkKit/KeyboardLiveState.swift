@@ -45,6 +45,10 @@ public final class KeyboardLiveState {
     /// does for action keys like Go / Search / Send / Done.
     public var returnKeyProminent: Bool = false
 
+    /// When true the suggestion bar area switches to clipboard-history mode,
+    /// showing recent copied items instead of autocomplete predictions.
+    public var clipboardMode: Bool = false
+
     public init(suggestions: [String] = [], autocorrection: Autocorrection? = nil) {
         self.suggestions = suggestions
         self.autocorrection = autocorrection

@@ -16,6 +16,41 @@ struct EmojiSettingsView: View {
         @Bindable var model = model
         ScrollView {
             VStack(spacing: UX.cardSpacing) {
+                CardSection("Layout") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Scroll direction").foregroundStyle(.secondary).font(.subheadline)
+                        Picker("Scroll direction", selection: $model.settings.emojiScrollDirection) {
+                            ForEach(EmojiScrollDirection.allCases) { dir in
+                                Text(dir.label).tag(dir)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    .padding(.vertical, UX.rowVPadding)
+                    Divider()
+                    ToggleRow("Show recent emoji",
+                              subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
+                              isOn: $model.settings.showRecentEmoji)
+                    if model.settings.showRecentEmoji {
+                        Divider()
+                        Button(role: .destructive) {
+                            model.settings.recentEmoji.removeAll()
+                        } label: {
+                            HStack {
+                                Text("Clear recent emoji")
+                                Spacer()
+                                Text("\(model.settings.recentEmoji.count)")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, UX.rowVPadding)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(model.settings.recentEmoji.isEmpty)
+                        .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
+                    }
+                }
+
                 CardSection("Default skin tone") {
                     Text("Applied to emoji that can take a skin tone, unless you’ve set one for that emoji by holding it down in the keyboard.")
                         .font(.caption)

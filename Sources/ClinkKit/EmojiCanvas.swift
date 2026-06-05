@@ -28,6 +28,9 @@ public struct EmojiCanvas: View {
     /// Return to the letter keyboard (the ABC tile). When the emoji keyboard is an
     /// internal mode of the merged keyboard, this just flips `showEmoji` back.
     private let onReturnToLetters: (() -> Void)?
+    /// Report that a base emoji was just inserted, so the host can record it into
+    /// `settings.recentEmoji` (the recents tab). Passed the neutral base glyph.
+    private let onRecordRecent: (String) -> Void
 
     @State private var controller: KeyboardController
     @State private var searching = false
@@ -80,6 +83,23 @@ public struct EmojiCanvas: View {
         nonmutating set { controller.emojiCategory = newValue }
     }
 
+    /// The categories shown right now: the static Unicode set, with a leading
+    /// "Recently used" tab prepended when enabled and non-empty. Recents are base
+    /// glyphs, so they render (and re-tone) exactly like any other category.
+    private var displayCategories: [EmojiCategory] {
+        guard settings.showRecentEmoji, !settings.recentEmoji.isEmpty else {
+            return EmojiData.categories
+        }
+        let recents = EmojiCategory(id: "recents", icon: "clock", emoji: settings.recentEmoji)
+        return [recents] + EmojiData.categories
+    }
+
+    /// `category` clamped into `displayCategories` — the recents tab appearing or
+    /// vanishing shifts indices, so always index through this.
+    private var safeCategory: Int {
+        min(max(category, 0), displayCategories.count - 1)
+    }
+
     public init(
         settings: KeyboardSettings,
         controller: KeyboardController? = nil,
@@ -89,7 +109,8 @@ public struct EmojiCanvas: View {
         onNextKeyboard: (() -> Void)? = nil,
         onRequestHeight: @escaping (CGFloat) -> Void = { _ in },
         onSetSkinTone: @escaping (String, SkinTone) -> Void = { _, _ in },
-        onReturnToLetters: (() -> Void)? = nil
+        onReturnToLetters: (() -> Void)? = nil,
+        onRecordRecent: @escaping (String) -> Void = { _ in }
     ) {
         self.settings = settings
         _controller = State(initialValue: controller ?? KeyboardController())
@@ -100,6 +121,7 @@ public struct EmojiCanvas: View {
         self.onRequestHeight = onRequestHeight
         self.onSetSkinTone = onSetSkinTone
         self.onReturnToLetters = onReturnToLetters
+        self.onRecordRecent = onRecordRecent
     }
 
     private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark) }
@@ -153,7 +175,7 @@ public struct EmojiCanvas: View {
                 searchResults
                 searchKeyboard
             } else {
-                grid(EmojiData.categories[category].emoji, scrollTarget: controller.pressedEmoji)
+                grid(displayCategories[safeCategory].emoji, scrollTarget: controller.pressedEmoji)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 tabBar
             }
@@ -237,31 +259,44 @@ public struct EmojiCanvas: View {
     /// to the top. Cells render with the resolved skin tone; holding a tone-capable
     /// emoji raises the swatch bar, sliding moves the selection, and releasing
     /// commits it (the native press-slide-release flow, driven by `EmojiHoldGesture`).
+    /// The emoji cells shared by both scroll axes — each publishes its on-screen
+    /// frame so the hold gesture can resolve which emoji a touch landed on.
+    @ViewBuilder private func cells(_ emoji: [String]) -> some View {
+        ForEach(emoji, id: \.self) { e in
+            EmojiCell(
+                glyph: displayGlyph(for: e),
+                simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
+                action: { insertFromTap(e) }
+            )
+            .id(e)
+            .background(GeometryReader { g in
+                Color.clear.preference(key: EmojiCellFramesKey.self,
+                                       value: [e: g.frame(in: .global)])
+            })
+        }
+    }
+
     private func grid(_ emoji: [String], scrollTarget: String?) -> some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                Color.clear.frame(height: 0).id("top")
-                LazyVGrid(columns: columns, spacing: 4) {
-                    ForEach(emoji, id: \.self) { e in
-                        EmojiCell(
-                            glyph: displayGlyph(for: e),
-                            simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
-                            action: { insertFromTap(e) }
-                        )
-                        .id(e)
-                        // Publish each visible cell's on-screen frame so the hold
-                        // gesture can resolve which emoji a touch landed on.
-                        .background(GeometryReader { g in
-                            Color.clear.preference(key: EmojiCellFramesKey.self,
-                                                   value: [e: g.frame(in: .global)])
-                        })
+        let horizontal = settings.emojiScrollDirection == .horizontal
+        return ScrollViewReader { proxy in
+            ScrollView(horizontal ? .horizontal : .vertical) {
+                // Zero-size start anchor (works on either axis): a category switch
+                // snaps the scroll back to here.
+                Color.clear.frame(width: 0, height: 0).id("top")
+                // The hold recogniser (scoped to the grid container). A quick tap
+                // never reaches the hold threshold, so it falls through to the
+                // cell Button; a hold raises the swatch bar.
+                Group {
+                    if horizontal {
+                        // Columns fill top-to-bottom, then scroll sideways for more.
+                        LazyHGrid(rows: columns, spacing: 4) { cells(emoji) }
+                    } else {
+                        // Rows wrap downward, then scroll down for more.
+                        LazyVGrid(columns: columns, spacing: 4) { cells(emoji) }
                     }
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 6)
-                // The hold recogniser (scoped to the grid container). A quick tap
-                // never reaches the hold threshold, so it falls through to the
-                // cell Button; a hold raises the swatch bar.
                 .background(EmojiHoldGesture(onBegan: holdBegan,
                                              onChanged: holdMoved,
                                              onEnded: holdEnded))
@@ -269,16 +304,17 @@ public struct EmojiCanvas: View {
             // Freeze scrolling while picking so sliding moves the selection, not
             // the grid.
             .scrollDisabled(picking != nil)
-            // Soft gutters top and bottom so rows fade in/out rather than hard-
-            // cutting against the search field and the tab bar — the vertical
-            // twin of the category strip's side fade.
+            // Soft gutters at the scrolling edges so cells fade in/out rather than
+            // hard-cutting against the search field and the tab bar.
             .mask(
                 LinearGradient(stops: [
                     .init(color: .clear, location: 0),
                     .init(color: .black, location: 0.05),
                     .init(color: .black, location: 0.95),
                     .init(color: .clear, location: 1),
-                ], startPoint: .top, endPoint: .bottom)
+                ],
+                startPoint: horizontal ? .leading : .top,
+                endPoint: horizontal ? .trailing : .bottom)
             )
             .background(GeometryReader { g in
                 Color.clear.preference(key: EmojiGridFrameKey.self, value: g.frame(in: .global))
@@ -288,7 +324,9 @@ public struct EmojiCanvas: View {
                 withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(e, anchor: .center) }
             }
             .onChange(of: category) { _, _ in
-                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("top", anchor: .top) }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo("top", anchor: horizontal ? .leading : .top)
+                }
             }
         }
         .onPreferenceChange(EmojiCellFramesKey.self) { cellFrames = $0 }
@@ -390,6 +428,7 @@ public struct EmojiCanvas: View {
         localTones[base] = tone
         onSetSkinTone(base, tone)
         onInsert(EmojiSkinTone.applied(tone, to: base))
+        onRecordRecent(base)
         holdCommitAt = Date()   // swallow the stray cell tap on this same release
         withAnimation(.snappy(duration: 0.16)) { picking = nil }
     }
@@ -404,6 +443,7 @@ public struct EmojiCanvas: View {
         }
         onAnyTap()
         onInsert(glyph(for: base))
+        onRecordRecent(base)
         triggerFlash(base)
     }
 
@@ -587,7 +627,7 @@ public struct EmojiCanvas: View {
     /// highlight slides past.
     @ViewBuilder private var tabRow: some View {
         let row = HStack(spacing: 6) {
-            ForEach(EmojiData.categories.indices, id: \.self) { idx in
+            ForEach(displayCategories.indices, id: \.self) { idx in
                 categoryTab(idx)
             }
         }
@@ -629,9 +669,9 @@ public struct EmojiCanvas: View {
     /// letter keyboard uses to keep its key letters crisp. Each glyph sits over its
     /// tile's published frame and blooms / recolours in sync with the tile beneath.
     private func tabGlyphLayer(frames: [Int: CGRect]) -> some View {
-        ForEach(EmojiData.categories.indices, id: \.self) { idx in
+        ForEach(displayCategories.indices, id: \.self) { idx in
             if let f = frames[idx] {
-                Image(systemName: EmojiData.categories[idx].icon)
+                Image(systemName: displayCategories[idx].icon)
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(idx == category ? Color.white : theme.specialKeyText.color)
                     .scaleEffect(pressedTab == idx ? 1.18 : 1)

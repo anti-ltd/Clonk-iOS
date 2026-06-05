@@ -8,11 +8,13 @@ import iUXiOS
 struct PinnedPreviewLayout<Content: View>: View {
     let settings: KeyboardSettings
     var showHitboxOverlay: Bool = false
+    var previewColorScheme: ColorScheme? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(spacing: 0) {
             KeyboardPreview(settings: settings, showHitboxOverlay: showHitboxOverlay)
+                .preferredColorScheme(previewColorScheme)
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.screenPadding)
                 .padding(.bottom, UX.cardSpacing)

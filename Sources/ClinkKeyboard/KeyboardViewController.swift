@@ -14,6 +14,7 @@ final class KeyboardViewController: UIInputViewController {
     private let store = SharedStore.shared
     private let sound = SoundPlayer()
     private let live = KeyboardLiveState()
+    private let clipboard = ClipboardManager()
     /// Shared transient UI state (plane/shift/emoji-mode). Held by the controller
     /// so letters ⇄ emoji is an internal SwiftUI swap — no system keyboard
     /// transition, so switching is instant with none of the appearance resize.
@@ -91,7 +92,7 @@ final class KeyboardViewController: UIInputViewController {
         // animated down to our 268 — the visible jump. Setting it now means the
         // first measurement already sees our target, so the keyboard opens at the
         // right height with nothing to animate.
-        v.targetHeight = KeyboardCanvas.preferredHeight(for: store.load())
+        v.targetHeight = KeyboardCanvas.preferredHeight(for: store.load(), hasFullAccess: hasFullAccess)
         view = v
     }
 
@@ -268,7 +269,7 @@ final class KeyboardViewController: UIInputViewController {
             // host app, like any keyboard sliding in). The height constraint is
             // updated alongside `heightConstraint` whenever the target changes.
             let hostHeight = host.view.heightAnchor.constraint(
-                equalToConstant: KeyboardCanvas.preferredHeight(for: new))
+                equalToConstant: KeyboardCanvas.preferredHeight(for: new, hasFullAccess: hasFullAccess))
             NSLayoutConstraint.activate([
                 host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
                 host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -283,12 +284,12 @@ final class KeyboardViewController: UIInputViewController {
             // the system hands the view an enormous height and the rows collapse.
             // We pin it to our content height; the canvas (pinned to all edges +
             // filling) then lays the rows out within it.
-            let h = view.heightAnchor.constraint(equalToConstant: KeyboardCanvas.preferredHeight(for: new))
+            let h = view.heightAnchor.constraint(equalToConstant: KeyboardCanvas.preferredHeight(for: new, hasFullAccess: hasFullAccess))
             h.priority = .required - 1
             h.isActive = true
             heightConstraint = h
         }
-        let target = KeyboardCanvas.preferredHeight(for: new)
+        let target = KeyboardCanvas.preferredHeight(for: new, hasFullAccess: hasFullAccess)
         heightConstraint?.constant = target
         hostContentHeight?.constant = target
         (view as? ClinkInputView)?.targetHeight = target
@@ -375,6 +376,8 @@ final class KeyboardViewController: UIInputViewController {
             settings: settings,
             live: live,
             controller: keyboard,
+            clipboard: clipboard,
+            hasFullAccess: hasFullAccess,
             onInsert: { [weak self] text in
                 guard let self else { return }
                 self.isApplyingEdit = true
@@ -431,6 +434,14 @@ final class KeyboardViewController: UIInputViewController {
                 guard let self else { return }
                 self.textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
                 self.invalidateMirror()
+            },
+            onClipboardInsert: { [weak self] text in
+                guard let self else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(text)
+                self.isApplyingEdit = false
+                self.live.clipboardMode = false
+                self.scheduleSuggestionUpdate()
             }
         )
         // Fill the host (which fills the input view) so the bar pins to the top
@@ -470,9 +481,27 @@ final class KeyboardViewController: UIInputViewController {
             onSetSkinTone: { [weak self] base, tone in self?.saveSkinTone(tone, for: base) },
             onReturnToLetters: { [weak self] in
                 withAnimation(.snappy(duration: 0.22)) { self?.keyboard.showEmoji = false }
-            }
+            },
+            onRecordRecent: { [weak self] base in self?.recordRecentEmoji(base) }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Record a just-inserted base emoji into the recents tab. Persisted *quietly*
+    /// (no change notification) because it fires on every emoji tap — instead of
+    /// reloading from disk, we update our in-memory settings and refresh the live
+    /// emoji canvas directly, so the recents tab reflects the tap without churn.
+    private func recordRecentEmoji(_ base: String) {
+        guard settings.showRecentEmoji else { return }
+        // If the recents tab wasn't showing yet, inserting this first emoji adds it
+        // at index 0 and shifts every category right by one. Bump the selected index
+        // so the user stays on the category they were viewing instead of being
+        // yanked to the new recents tab.
+        let recentsWasPresent = !settings.recentEmoji.isEmpty
+        settings.pushRecentEmoji(base)
+        if !recentsWasPresent { keyboard.emojiCategory += 1 }
+        store.save(settings, notify: false)
+        hosting?.rootView = AnyView(makeCanvas(for: settings))
     }
 
     /// Animate the keyboard to a new height (emoji search grows taller). Updates

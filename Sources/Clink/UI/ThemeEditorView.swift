@@ -33,9 +33,26 @@ struct ThemeEditorView: View {
         customThemes.contains { $0.id == theme.id }
     }
 
+    /// Settings used only for the live preview — pins the theme to whichever
+    /// appearance tab is selected so the preview tracks the tab, not the system
+    /// dark/light mode.
+    private var previewSettings: KeyboardSettings {
+        var s = model.settings
+        guard s.matchSystemAppearance else { return s }
+        s.matchSystemAppearance = false
+        s.themeID = appearanceTab == .light ? s.lightThemeID : s.darkThemeID
+        return s
+    }
+
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings) {
+        PinnedPreviewLayout(settings: previewSettings) {
+                CardSection("Background") {
+                    ToggleRow("Show background",
+                              subtitle: "Paint the selected theme's background — a custom theme's photo, or its colour — behind the keys. Off keeps the keyboard transparent so it blends with the app.",
+                              isOn: $model.settings.backgroundVisible)
+                }
+
                 if model.settings.matchSystemAppearance {
                     Picker("Appearance", selection: $appearanceTab) {
                         Text("Light").tag(Appearance.light)
@@ -151,6 +168,13 @@ struct ThemeEditorView: View {
         }
     }
 
+    private func duplicate(_ theme: Theme) -> Theme {
+        var copy = theme
+        copy.id = "custom-\(UUID().uuidString.prefix(8))"
+        copy.name = "\(theme.name) Copy"
+        return copy
+    }
+
     @ViewBuilder
     private func grid(_ title: String?, themes: [Theme], selectedID: String, select: @escaping (String) -> Void) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -168,13 +192,16 @@ struct ThemeEditorView: View {
                     if custom {
                         swatch.contextMenu {
                             Button { builderTheme = theme } label: { Label("Edit", systemImage: "pencil") }
+                            Button { builderTheme = duplicate(theme) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
                             Button { exportingTheme = theme } label: { Label("Export…", systemImage: "square.and.arrow.up") }
                             Button(role: .destructive) {
                                 model.deleteCustomTheme(id: theme.id)
                             } label: { Label("Delete", systemImage: "trash") }
                         }
                     } else {
-                        swatch
+                        swatch.contextMenu {
+                            Button { builderTheme = duplicate(theme) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
+                        }
                     }
                 }
             }
@@ -262,6 +289,9 @@ private struct ThemeSwatch: View {
                     ? [Color(hex: 0x3A3A52), Color(hex: 0x15151F)]
                     : [Color(hex: 0xAEC6E8), Color(hex: 0xE8DCC8)],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
+        } else if let id = theme.backgroundImageID,
+                  let image = ThemeBackgroundStore.shared.image(for: id) {
+            Image(uiImage: image).resizable().scaledToFill()
         } else {
             theme.background.color
         }

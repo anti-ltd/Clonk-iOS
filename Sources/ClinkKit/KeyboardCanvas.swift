@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The Clink keyboard, as a pure SwiftUI view. Lives in ClinkKit so that the
 /// keyboard *extension* renders it live (wired to the document proxy + sound)
@@ -10,6 +11,20 @@ import SwiftUI
 /// `onInsert` and `onBackspace` — plus `onAnyTap` (fired on every key-down so
 /// the host can clink + haptic) and an optional `onNextKeyboard` (the globe
 /// key; the app preview passes nil to hide it).
+/// Animation physics for key presses — bloom scale, spring response/damping —
+/// built from `KeyboardSettings` so every tuning value travels in the exported config.
+struct KeyPressPhysics {
+    var bloomScale: CGFloat          = 1.12
+    var springResponse: Double       = 0.26
+    var springDamping: Double        = 0.60
+    var spaceSpringResponse: Double  = 0.28
+    var spaceSpringDamping: Double   = 0.78
+    var spaceLeanMultiplier: CGFloat = 0.14
+    var spaceCursorDragScale: CGFloat = 0.90
+    var popupSpringResponse: Double  = 0.32
+    var popupSpringDamping: Double   = 0.62
+}
+
 public struct KeyboardCanvas: View {
     private let settings: KeyboardSettings
     private let onInsert: (String) -> Void
@@ -27,20 +42,31 @@ public struct KeyboardCanvas: View {
     /// Fired while dragging the space bar — a signed character delta to move the
     /// cursor by (the native space-bar trackpad).
     private let onCursorMove: (Int) -> Void
+    /// Fired when the user taps a clipboard chip — the host inserts the text at
+    /// the cursor and dismisses clipboard mode.
+    private let onClipboardInsert: (String) -> Void
     /// When true, render a semi-transparent hitbox outline over each key so the
     /// user can see exactly which area maps to each key. Used by the Advanced
     /// settings view; false for normal use.
     private let showHitboxOverlay: Bool
+    /// Whether the keyboard extension currently has Full Access. Gating
+    /// clipboard (which reads UIPasteboard) on this prevents a sandboxed crash.
+    private let hasFullAccess: Bool
 
     /// Live typing state (autocomplete suggestions). The extension feeds it;
     /// the in-app preview can pass sample words. Observed so the bar updates
     /// without rebuilding the keyboard.
     private var live: KeyboardLiveState
 
+    /// Clipboard history — observed so the bar updates when history changes.
+    private var clipboard: ClipboardManager
+
     public init(
         settings: KeyboardSettings,
         live: KeyboardLiveState = KeyboardLiveState(),
         controller: KeyboardController? = nil,
+        clipboard: ClipboardManager = ClipboardManager(),
+        hasFullAccess: Bool = false,
         showHitboxOverlay: Bool = false,
         onInsert: @escaping (String) -> Void,
         onBackspace: @escaping () -> Void,
@@ -49,13 +75,16 @@ public struct KeyboardCanvas: View {
         onSuggestion: @escaping (String) -> Void = { _ in },
         onEmojiSuggestion: @escaping (String) -> Void = { _ in },
         onCancelAutocorrect: @escaping () -> Void = {},
-        onCursorMove: @escaping (Int) -> Void = { _ in }
+        onCursorMove: @escaping (Int) -> Void = { _ in },
+        onClipboardInsert: @escaping (String) -> Void = { _ in }
     ) {
         self.settings = settings
         self.live = live
         // Use the injected controller (the showcase simulator drives a shared
         // one) or spin up a private one for ordinary finger-driven use.
         _controller = State(initialValue: controller ?? KeyboardController())
+        self.clipboard = clipboard
+        self.hasFullAccess = hasFullAccess
         self.showHitboxOverlay = showHitboxOverlay
         self.onInsert = onInsert
         self.onBackspace = onBackspace
@@ -65,6 +94,7 @@ public struct KeyboardCanvas: View {
         self.onEmojiSuggestion = onEmojiSuggestion
         self.onCancelAutocorrect = onCancelAutocorrect
         self.onCursorMove = onCursorMove
+        self.onClipboardInsert = onClipboardInsert
     }
 
     private typealias Plane = KeyboardController.Plane
@@ -98,6 +128,41 @@ public struct KeyboardCanvas: View {
 
     private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark) }
 
+    private var physics: KeyPressPhysics {
+        KeyPressPhysics(
+            bloomScale: CGFloat(settings.keyBloomScale),
+            springResponse: settings.keySpringResponse,
+            springDamping: settings.keySpringDamping,
+            spaceSpringResponse: settings.spaceSpringResponse,
+            spaceSpringDamping: settings.spaceSpringDamping,
+            spaceLeanMultiplier: CGFloat(settings.spaceLeanMultiplier),
+            spaceCursorDragScale: CGFloat(settings.spaceCursorDragScale),
+            popupSpringResponse: settings.popupSpringResponse,
+            popupSpringDamping: settings.popupSpringDamping)
+    }
+
+    /// The keyboard backdrop: clear unless the theme opts in, then a photo (when
+    /// `backgroundImageID` resolves to a stored image) or the solid colour. The
+    /// photo fills the keyboard region and is clipped to it; clipping lives on the
+    /// image — never on the whole canvas — so key popups can still balloon above.
+    @ViewBuilder private var backgroundLayer: some View {
+        if settings.backgroundVisible {
+            if let id = theme.backgroundImageID,
+               let image = ThemeBackgroundStore.shared.image(for: id) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            } else if let gradient = theme.backgroundGradient {
+                gradient.makeView()
+            } else {
+                theme.background.color
+            }
+        } else {
+            Color.clear
+        }
+    }
+
     /// Shared vertical metrics — also used by the extension to size the keyboard
     /// to its content (no dead space above / below the keys).
     public enum Metrics {
@@ -109,7 +174,7 @@ public struct KeyboardCanvas: View {
 
     /// The exact content height for a given configuration, so the host can pin
     /// the keyboard to it instead of guessing and centering.
-    public static func preferredHeight(for settings: KeyboardSettings) -> CGFloat {
+    public static func preferredHeight(for settings: KeyboardSettings, hasFullAccess: Bool = false) -> CGFloat {
         let key = CGFloat(settings.keyHeight)
         var rows = settings.layout.rows.count + 1   // letter rows + bottom row
         // The number row carries its own (possibly reduced) height; every other
@@ -120,20 +185,51 @@ public struct KeyboardCanvas: View {
             h += key * CGFloat(settings.numberRowHeightScale)
         }
         h += CGFloat(rows - 1) * CGFloat(settings.rowSpacing) + Metrics.vPadding * 2
-        if settings.suggestionsEnabled { h += Metrics.suggestionBarHeight }
+        if settings.suggestionsEnabled || (settings.clipboardEnabled && hasFullAccess) {
+            h += Metrics.suggestionBarHeight
+        }
         return h
     }
 
     public var body: some View {
         VStack(spacing: 0) {
-            if settings.suggestionsEnabled {
-                SuggestionBar(suggestions: live.suggestions, autocorrection: live.autocorrection,
-                              emoji: live.emojiSuggestions, theme: theme,
-                              onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
-                              onEmoji: onEmojiSuggestion)
-                    .frame(height: Metrics.suggestionBarHeight)
+            let showBar = settings.suggestionsEnabled || (settings.clipboardEnabled && hasFullAccess)
+            if showBar {
+                HStack(spacing: 0) {
+                    if settings.clipboardEnabled && hasFullAccess {
+                        ClipboardToggleButton(isActive: live.clipboardMode, theme: theme) {
+                            live.clipboardMode.toggle()
+                        }
+                        .frame(width: Metrics.suggestionBarHeight)
+                        barDivider(theme: theme)
+                    }
+                    if live.clipboardMode {
+                        ClipboardBar(
+                            items: clipboard.history, theme: theme,
+                            onTap: onClipboardInsert,
+                            onSave: { clipboard.captureFromPasteboard() },
+                            onClear: { clipboard.clear() }
+                        )
+                    } else if settings.suggestionsEnabled {
+                        SuggestionBar(suggestions: live.suggestions,
+                                      autocorrection: live.autocorrection,
+                                      emoji: live.emojiSuggestions, theme: theme,
+                                      onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
+                                      onEmoji: onEmojiSuggestion)
+                    } else {
+                        Spacer()
+                    }
+                }
+                .frame(height: Metrics.suggestionBarHeight)
             }
             keys
+                // The per-key image (glass themes): one photo laid behind the key
+                // area, masked to the key shapes, so each key reveals its slice and
+                // the glass above refracts it. Sits behind the glass container, so
+                // it's part of the backdrop the keys lens.
+                .backgroundPreferenceValue(KeyFrameKey.self) { anchors in
+                    keyImageLayer(anchors: anchors)
+                }
                 .padding(.vertical, Metrics.vPadding)
                 // Fill the remaining height so rows divide it evenly — no gap.
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -151,15 +247,24 @@ public struct KeyboardCanvas: View {
                             resolveSpec: { currentKeySpecs()[$0] },
                             onPressDown: onAnyTap,
                             lingerDuration: settings.keyPressLinger,
-                            hitboxScale: settings.hitboxScale)
+                            hitboxScale: settings.hitboxScale,
+                            cursorStride: CGFloat(settings.spaceCursorStride),
+                            cursorActivationDelay: settings.spaceCursorActivationDelay / 1000,
+                            repeatHoldDelay: settings.repeatHoldDelay / 1000,
+                            repeatInitialInterval: Int(settings.repeatInitialInterval),
+                            repeatMinInterval: Int(settings.repeatMinInterval),
+                            repeatAccelStep: Int(settings.repeatAccelStep))
                     }
                 }
         }
-        // Transparent backdrop: the keyboard blends with whatever sits behind it
-        // — iOS's own keyboard surface in the extension, the preview's backdrop
-        // in-app. Only the keys carry colour (their fills), so the keyboard reads
-        // as floating keys rather than an opaque slab that fights the system.
-        .background(Color.clear)
+        // Backdrop. By default transparent so the keyboard blends with whatever
+        // sits behind it — iOS's own keyboard surface in the extension, the
+        // preview's backdrop in-app — and only the keys carry colour, reading as
+        // floating keys rather than an opaque slab. When the global
+        // `settings.backgroundVisible` switch is on, we paint the active theme's
+        // background — a photo if one's set, otherwise its solid `background`
+        // colour — behind the keys.
+        .background { backgroundLayer }
         // Glyph layer: every key's letter, drawn ON TOP of the glass container so
         // the morph (which blends a bloomed key into its neighbours) can't drag
         // the glyph off-centre. Each glyph blooms in place with its key.
@@ -168,10 +273,14 @@ public struct KeyboardCanvas: View {
                 ForEach(glyphs) { g in
                     glyphLabel(g)
                         .scaleEffect(x: g.scaleX, y: g.scaleY, anchor: .center)
+                        // Offset rides BEFORE the spring: while dragging, only
+                        // `g.offsetX` changes (scale is constant) so it tracks the
+                        // finger live — no spring backlog. On release the scale flips
+                        // too, so the spring fires and carries the offset back to
+                        // centre in sync with the bar, instead of snapping.
                         .offset(x: g.offsetX)
                         .position(x: proxy[g.anchor].midX, y: proxy[g.anchor].midY)
-                        .animation(.interactiveSpring(response: 0.26, dampingFraction: 0.6), value: g.scaleX)
-                        .animation(.interactiveSpring(response: 0.28, dampingFraction: 0.72), value: g.offsetX)
+                        .animation(.interactiveSpring(response: settings.keySpringResponse, dampingFraction: settings.keySpringDamping), value: g.scaleX)
                 }
             }
             .allowsHitTesting(false)
@@ -292,8 +401,49 @@ public struct KeyboardCanvas: View {
         let tint = theme.accent.color
         return BalloonPopup(glyph: glyph, bulbWidth: headWidth, totalHeight: totalHeight,
                             glyphOffset: glyphOffset, shape: shape, tint: tint, theme: theme,
-                            glass: theme.material == .liquidGlass && settings.liquidGlassPopup)
+                            glass: theme.material == .liquidGlass && settings.liquidGlassPopup,
+                            springResponse: settings.popupSpringResponse,
+                            springDamping: settings.popupSpringDamping)
             .position(x: keyRect.midX, y: (top + bottom) / 2)
+    }
+
+    /// The Liquid-Glass key-image backdrop: one photo spanning the key area,
+    /// masked to the union of the key shapes so only the keys reveal it (each key
+    /// shows the slice behind it). Drawn behind the keys, it becomes the backdrop
+    /// the glass refracts. Nil unless this is a glass theme with a resolvable
+    /// `keyImageID`.
+    @ViewBuilder private func keyImageLayer(anchors: [String: Anchor<CGRect>]) -> some View {
+        if theme.material == .liquidGlass {
+            if let id = theme.keyImageID,
+               let image = ThemeBackgroundStore.shared.image(for: id) {
+                GeometryReader { proxy in
+                    let rects = anchors.values.map { proxy[$0] }
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .clipped()
+                        .mask { keyMaskShapes(rects: rects) }
+                }
+            } else if let gradient = theme.keyGradient {
+                GeometryReader { proxy in
+                    let rects = anchors.values.map { proxy[$0] }
+                    gradient.makeView()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .mask { keyMaskShapes(rects: rects) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func keyMaskShapes(rects: [CGRect]) -> some View {
+        ZStack {
+            ForEach(Array(rects.enumerated()), id: \.offset) { _, r in
+                RoundedRectangle(cornerRadius: CGFloat(settings.keyCornerRadius), style: .continuous)
+                    .frame(width: r.width, height: r.height)
+                    .position(x: r.midX, y: r.midY)
+            }
+        }
     }
 
     /// The stack of rows, wrapped in a `GlassEffectContainer` for Liquid Glass
@@ -527,7 +677,8 @@ public struct KeyboardCanvas: View {
                             popupEnabled: settings.keyPopupEnabled, pressWarp: settings.keyPressWarp,
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
-                            router: touch)
+                            router: touch,
+                            physics: physics)
                         .frame(width: unit * CGFloat(spec.weight))
                 }
             }
@@ -694,6 +845,8 @@ private struct BalloonPopup: View {
     let tint: Color
     let theme: Theme
     let glass: Bool
+    var springResponse: Double = 0.32
+    var springDamping: Double  = 0.62
 
     @State private var emerged = false
 
@@ -710,7 +863,7 @@ private struct BalloonPopup: View {
             .scaleEffect(x: emerged ? 1 : 0.9, y: emerged ? 1 : 0.5, anchor: .bottom)
             .opacity(emerged ? 1 : 0.5)
             .onAppear {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.62)) { emerged = true }
+                withAnimation(.spring(response: springResponse, dampingFraction: springDamping)) { emerged = true }
             }
     }
 }
@@ -814,6 +967,7 @@ private struct KeyView: View {
     /// Shared multitouch state — this key's press / warp is read out of here,
     /// written by the single UIKit touch surface (see `KeyTouchRouter`).
     let router: KeyTouchRouter
+    let physics: KeyPressPhysics
 
     /// Pressed for any reason: a real finger (the router) or the simulator.
     private var isPressed: Bool { router.pressed.contains(keyID) || simulatedPressed }
@@ -825,9 +979,6 @@ private struct KeyView: View {
 
     /// iOS-style destructive red for the pressed backspace key.
     private static let destructiveTint = Color(.sRGB, red: 0.91, green: 0.22, blue: 0.18)
-    /// How much the space bar shrinks while it's a cursor trackpad (held for the
-    /// whole drag, sprung back only on release).
-    private static let spaceDragScale: CGFloat = 0.9
 
     private var isCharacter: Bool { spec.kind == .character }
 
@@ -861,23 +1012,23 @@ private struct KeyView: View {
     /// vertically) while dragging the cursor; with `pressWarp` on, every key
     /// blooms a little on press. Both spring back on release.
     private var warp: (scaleX: CGFloat, scaleY: CGFloat, offset: CGFloat) {
-        if spec.isSpace, cursorActive {
-            let offset = max(min(dragX * 0.14, 28), -28)   // lean toward the finger
-            // While the space bar is acting as a cursor trackpad it SHRINKS (both
-            // width and height) and holds that smaller size for the whole drag —
-            // a fixed scale, not one tied to how far you've dragged. So passing
-            // back through the centre doesn't pop it to full size; it only springs
-            // back on release (when `cursorActive` clears). Width now matches what
-            // the height already did.
-            return (Self.spaceDragScale, Self.spaceDragScale, offset)
+        if spec.isSpace, isPressed {
+            // The bar leans toward the finger the whole time it's held (tracking
+            // `dragX` from the first move — no frozen dead zone) and SHRINKS a fixed
+            // amount once a real drag engages, holding that size for the whole drag.
+            // The lean is applied as a NON-animated `.offset` in `body`, so it glides
+            // live with the finger; on glass that means one liquid-merge morph per
+            // finger frame instead of a spring's backlog of them (the drag stutter).
+            let maxLean: CGFloat = 28
+            let offset = max(min(dragX * physics.spaceLeanMultiplier, maxLean), -maxLean)
+            let scale: CGFloat = cursorActive ? physics.spaceCursorDragScale
+                                              : (pressWarp && !showsPopup ? 1.04 : 1)
+            return (scale, scale, offset)
         }
         // Visible bloom on press for the generic keys. The shift key opts out —
         // it has its own interactive-glass morph (see `glass` / `surface`).
         if pressWarp, isPressed, !showsPopup, !spec.isShift {
-            // The space bar is much wider than a letter key, so the same scale
-            // factor reads as a far bigger bloom. Tone it down for the space bar.
-            let bloom: CGFloat = spec.isSpace ? 1.04 : 1.12
-            return (bloom, bloom, 0)
+            return (physics.bloomScale, physics.bloomScale, 0)
         }
         return (1, 1, 0)
     }
@@ -890,12 +1041,29 @@ private struct KeyView: View {
         // glass can animate the glyph along with it (the caps-lock morph).
         return surface
             .scaleEffect(x: w.scaleX, y: w.scaleY, anchor: .center)
+            // The lean offset rides BEFORE the springs below. While dragging, only
+            // `dragX` (the offset) changes — `isPressed`/`cursorActive` are steady —
+            // so no spring fires and the bar tracks the finger live, 1:1: one
+            // liquid-merge morph per finger frame, not a spring's backlog of them
+            // (that backlog was the drag stutter). On RELEASE the springs DO fire and
+            // carry the offset back to centre together with the scale, so it glides
+            // home instead of snapping.
             .offset(x: w.offset)
-            .animation(.interactiveSpring(response: 0.28, dampingFraction: 0.72), value: dragX)
-            // Spring the generic press bloom; shift self-animates via its glass.
-            .animation(pressWarp && !spec.isShift
-                       ? .interactiveSpring(response: 0.26, dampingFraction: 0.6) : nil,
+            // Press bloom (non-space). For the SPACE bar this uses the SAME spring as
+            // the cursor shrink below, so a drag-release — where `isPressed` and
+            // `cursorActive` clear in the same frame — settles on ONE spring instead
+            // of two different ones fighting over the scale (the release stutter).
+            .animation(spec.isSpace
+                       ? .interactiveSpring(response: physics.spaceSpringResponse, dampingFraction: physics.spaceSpringDamping)
+                       : (pressWarp && !spec.isShift
+                          ? .interactiveSpring(response: physics.springResponse, dampingFraction: physics.springDamping) : nil),
                        value: isPressed)
+            // The space bar's trackpad shrink in/out — a one-shot at engage/release,
+            // matched to the spring above. Scoped to space so a space drag never
+            // re-animates any other key.
+            .animation(spec.isSpace
+                       ? .interactiveSpring(response: physics.spaceSpringResponse, dampingFraction: physics.spaceSpringDamping) : nil,
+                       value: cursorActive)
             // Additive "tap registered" flash. The bloom above is sprung on
             // `isPressed`, which never re-toggles when the SAME key is tapped
             // twice inside the linger window (the second `l` in "tell") — so the
@@ -1022,24 +1190,29 @@ private struct KeyView: View {
     private var glassTint: Color? {
         if isPressed { return pressedTint }
         if spec.highlighted { return theme.accent.color }
-        return (isCharacter ? theme.keyFill : theme.specialKeyFill).color
+        // The resting fill tint is dialled by the theme's glass tint strength —
+        // lower lets more clear glass through so the refraction reads.
+        let base = (isCharacter ? theme.keyFill : theme.specialKeyFill).color
+        return base.opacity(theme.glassTintStrength)
     }
 
     @available(iOS 26.0, *)
     private var glass: Glass {
-        // Generic keys: non-interactive — their press warp is our own centred
-        // `scaleEffect`, and the material's interactive lens would shove the
-        // glyph off-centre. The shift key DOES use interactive glass: it draws
-        // its own glyph, so the lens morphs the glyph too — its signature
-        // caps-lock animation.
-        let base = spec.isShift ? Glass.regular.interactive() : Glass.regular
+        // Variant (regular / clear) and tint come from the theme. Interactive is
+        // always on for shift (it draws its own glyph, so the lens morphs it — the
+        // caps-lock animation) and otherwise opt-in per theme: generic key glyphs
+        // are drawn in a separate layer, so an interactive lens warps the material
+        // under the finger without dragging the glyph off-centre.
+        var base: Glass = theme.glassVariant == .clear ? .clear : .regular
+        if spec.isShift || theme.glassInteractive { base = base.interactive() }
         return glassTint.map { base.tint($0) } ?? base
     }
 
     private var glassFallbackTint: Color {
         if isPressed { return pressedTint.opacity(0.85) }
         if spec.highlighted { return theme.accent.color.opacity(0.85) }
-        return (isCharacter ? theme.keyFill : theme.specialKeyFill).color
+        let base = (isCharacter ? theme.keyFill : theme.specialKeyFill).color
+        return base.opacity(theme.glassTintStrength)
     }
 }
 
@@ -1149,6 +1322,107 @@ struct SuggestionBar: View {
     }
 
     private var divider: some View {
+        Rectangle()
+            .fill(theme.keyText.color.opacity(0.15))
+            .frame(width: 0.5)
+            .padding(.vertical, 11)
+    }
+}
+
+// MARK: - Clipboard bar support
+
+/// Shared thin vertical rule used between the clipboard icon and bar content.
+private func barDivider(theme: Theme) -> some View {
+    Rectangle()
+        .fill(theme.keyText.color.opacity(0.15))
+        .frame(width: 0.5)
+        .padding(.vertical, 11)
+}
+
+/// The clipboard icon button that lives on the left of the suggestion bar when
+/// clipboard history is enabled. Toggles between the icon (normal) and a
+/// filled variant (active / clipboard-mode open).
+struct ClipboardToggleButton: View {
+    let isActive: Bool
+    let theme: Theme
+    let onTap: () -> Void
+
+    var body: some View {
+        Button { onTap() } label: {
+            Image(systemName: isActive ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+                .font(.system(size: 16))
+                .foregroundStyle(isActive
+                    ? theme.accent.color
+                    : theme.keyText.color.opacity(0.55))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// The clipboard-mode content of the suggestion bar: a horizontally scrollable
+/// row of saved items on the left, with save and clear buttons pinned right.
+/// Save reads the current UIPasteboard and appends to history.
+/// Clear wipes the full history.
+struct ClipboardBar: View {
+    let items: [String]
+    let theme: Theme
+    let onTap: (String) -> Void
+    let onSave: () -> Void
+    let onClear: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if items.isEmpty {
+                Text("Nothing saved yet")
+                    .font(.system(size: 15))
+                    .foregroundStyle(theme.keyText.color.opacity(0.35))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                            if idx > 0 { chipDivider }
+                            clipChip(item)
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            chipDivider
+            iconButton("square.and.arrow.down", action: onSave)
+            chipDivider
+            iconButton("trash", action: onClear)
+        }
+    }
+
+    private func clipChip(_ text: String) -> some View {
+        Button { onTap(text) } label: {
+            Text(text)
+                .font(.system(size: 16))
+                .lineLimit(1)
+                .foregroundStyle(theme.keyText.color)
+                .padding(.horizontal, 10)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func iconButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button { action() } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 14))
+                .foregroundStyle(theme.keyText.color.opacity(0.5))
+                .frame(width: 40)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var chipDivider: some View {
         Rectangle()
             .fill(theme.keyText.color.opacity(0.15))
             .frame(width: 0.5)

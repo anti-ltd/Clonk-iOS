@@ -50,11 +50,15 @@ public final class SharedStore: @unchecked Sendable {
         return .default
     }
 
-    public func save(_ settings: KeyboardSettings) {
+    /// Persist settings. `notify` posts the cross-process change notification so a
+    /// running keyboard reloads; pass `false` for high-frequency, self-originated
+    /// writes (e.g. recording recent emoji as they're tapped) where the writer
+    /// updates its own live view directly and a reload would only cause churn.
+    public func save(_ settings: KeyboardSettings, notify: Bool = true) {
         if let url = settingsFileURL,
            let data = try? JSONEncoder().encode(settings) {
             try? data.write(to: url, options: .atomic)
-            postDidChange()
+            if notify { postDidChange() }
             return
         }
         // App Group unavailable — persist locally so settings survive re-launches.

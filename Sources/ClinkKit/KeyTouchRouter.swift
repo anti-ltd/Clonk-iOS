@@ -74,17 +74,39 @@ public final class KeyTouchRouter {
     fileprivate var lingerDuration: TimeInterval = 0.1
     /// Scale applied to each key's frame before hit-testing (see `key(at:)`).
     fileprivate var hitboxScale: Double = 1.0
+    /// Points of horizontal space-bar travel per one-character cursor move, and
+    /// the threshold to enter cursor-trackpad mode. Larger = less sensitive (see
+    /// `KeyboardSettings.spaceCursorStride`).
+    fileprivate var cursorStride: CGFloat = 10
+    /// Seconds the space bar must be held before cursor mode can engage (0 = instant).
+    fileprivate var cursorActivationDelay: TimeInterval = 0
+    fileprivate var repeatHoldDelay: TimeInterval = 0.450
+    fileprivate var repeatInitialInterval: Int = 110
+    fileprivate var repeatMinInterval: Int = 40
+    fileprivate var repeatAccelStep: Int = 6
 
     fileprivate func update(frames: [String: CGRect],
                             resolveSpec: @escaping (String) -> KeySpec?,
                             onPressDown: @escaping () -> Void,
                             lingerDuration: TimeInterval,
-                            hitboxScale: Double) {
+                            hitboxScale: Double,
+                            cursorStride: CGFloat,
+                            cursorActivationDelay: TimeInterval,
+                            repeatHoldDelay: TimeInterval,
+                            repeatInitialInterval: Int,
+                            repeatMinInterval: Int,
+                            repeatAccelStep: Int) {
         self.frames = frames
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
         self.lingerDuration = lingerDuration
         self.hitboxScale = hitboxScale
+        self.cursorStride = cursorStride
+        self.cursorActivationDelay = cursorActivationDelay
+        self.repeatHoldDelay = repeatHoldDelay
+        self.repeatInitialInterval = repeatInitialInterval
+        self.repeatMinInterval = repeatMinInterval
+        self.repeatAccelStep = repeatAccelStep
     }
 
     // MARK: - Hit testing
@@ -143,6 +165,16 @@ public final class KeyTouchRouter {
                 spaceCursorActive = false
                 spaceDragX = 0
                 spaceSteps = 0
+                spaceCursorReadyTask?.cancel()
+                if cursorActivationDelay > 0 {
+                    spaceCursorReady = false
+                    spaceCursorReadyTask = Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(cursorActivationDelay))
+                        if !Task.isCancelled { spaceCursorReady = true }
+                    }
+                } else {
+                    spaceCursorReady = true
+                }
             } else {
                 spec.action()
             }
@@ -174,12 +206,27 @@ public final class KeyTouchRouter {
         }
 
         guard spec.isSpace else { return }
-        // Past a small threshold the space touch becomes a cursor trackpad; a
-        // plain tap (no real movement) still types a space on release.
-        if abs(translationX) > Self.cursorStride { spaceCursorActive = true }
-        guard spaceCursorActive else { return }
+        // The bar's lean tracks the finger from the FIRST move, before the cursor
+        // even engages — otherwise it sits frozen through the dead zone and then
+        // lurches sideways the instant the threshold is crossed, which reads as a
+        // visual stutter (it "initiated" on press, froze, then jumped). Publishing
+        // the live translation every move keeps the lean continuous; the shrink
+        // (gated on `spaceCursorActive` in the view) springs in at engage.
         spaceDragX = translationX
-        let step = Int((translationX / Self.cursorStride).rounded(.towardZero))
+        // Past the stride threshold the space touch becomes a cursor trackpad; a
+        // plain tap (no real movement) still types a space on release.
+        if !spaceCursorActive {
+            guard spaceCursorReady, abs(translationX) > cursorStride else { return }
+            // Engage, and rebaseline the stepping to this exact point so the first
+            // character moves the instant we engage and every step after costs
+            // exactly one stride (measuring from the touch origin instead made the
+            // first character's travel vary with how far a fast finger overshot).
+            spaceCursorActive = true
+            spaceDragOrigin = translationX
+            spaceSteps = 0
+            spec.onCursorMove?(translationX > 0 ? 1 : -1)
+        }
+        let step = Int(((translationX - spaceDragOrigin) / cursorStride).rounded(.towardZero))
         if step != spaceSteps {
             spec.onCursorMove?(step - spaceSteps)
             spaceSteps = step
@@ -197,7 +244,19 @@ public final class KeyTouchRouter {
         switch spec.kind {
         case .character:
             if spec.isSpace {
-                if !spaceCursorActive { spec.action() }   // tap → space
+                spaceCursorReadyTask?.cancel()
+                spaceCursorReadyTask = nil
+                spaceCursorReady = true
+                if spaceCursorActive {
+                    // A cursor drag inserted nothing, so it must not bloom on
+                    // release: the linger started by `releaseHold` would keep the
+                    // bar "pressed" and pop it from its shrunk 0.9 up through the
+                    // press-bloom (1.04) before settling — a visible glitch. Drop
+                    // the press now so it springs straight back to full size.
+                    clearPress(id)
+                } else {
+                    spec.action()                         // tap → space
+                }
                 spaceCursorActive = false
                 spaceDragX = 0
                 spaceSteps = 0
@@ -218,6 +277,10 @@ public final class KeyTouchRouter {
         guard let spec = resolveSpec(id) else { return }
         if spec.isRepeatable { stopRepeating() }
         if spec.isSpace {
+            spaceCursorReadyTask?.cancel()
+            spaceCursorReadyTask = nil
+            spaceCursorReady = true
+            if spaceCursorActive { clearPress(id) }   // no post-drag bloom (see touchUp)
             spaceCursorActive = false
             spaceDragX = 0
             spaceSteps = 0
@@ -291,7 +354,14 @@ public final class KeyTouchRouter {
 
     private var repeatTask: Task<Void, Never>?
     private var spaceSteps = 0
-    private static let cursorStride: CGFloat = 10
+    /// Translation (pt) at the moment the space touch engaged cursor mode. Steps
+    /// are counted from here, not the touch origin, so the first character moves
+    /// the instant we engage (see `touchMoved`).
+    private var spaceDragOrigin: CGFloat = 0
+    /// Whether the activation-delay hold has elapsed for the current space touch.
+    /// Always true when `cursorActivationDelay` is 0 (instant mode).
+    private var spaceCursorReady = true
+    private var spaceCursorReadyTask: Task<Void, Never>?
     /// Upward travel (pt) before a drag-up key (123→emoji) fires.
     private static let dragUpThreshold: CGFloat = 24
     /// Keys whose `onDragUp` has fired for the current touch, so `touchUp` skips
@@ -300,15 +370,19 @@ public final class KeyTouchRouter {
 
     private func startRepeating(_ spec: KeySpec) {
         stopRepeating()
+        let holdDelay = repeatHoldDelay
+        let initialInterval = repeatInitialInterval
+        let minInterval = repeatMinInterval
+        let accelStep = repeatAccelStep
         repeatTask = Task { @MainActor in
             spec.action()                                    // first delete now
-            try? await Task.sleep(for: .milliseconds(450))   // hold delay
-            var interval = 110
+            try? await Task.sleep(for: .seconds(holdDelay))
+            var interval = initialInterval
             while !Task.isCancelled {
                 onPressDown()                               // clink on each repeat
                 spec.action()
                 deleteTick &+= 1                            // bounce the glyph
-                interval = max(40, interval - 6)           // accelerate
+                interval = max(minInterval, interval - accelStep)
                 try? await Task.sleep(for: .milliseconds(interval))
             }
         }
@@ -396,18 +470,34 @@ struct MultiTouchSurface: UIViewRepresentable {
     let onPressDown: () -> Void
     let lingerDuration: TimeInterval
     let hitboxScale: Double
+    let cursorStride: CGFloat
+    let cursorActivationDelay: TimeInterval
+    let repeatHoldDelay: TimeInterval
+    let repeatInitialInterval: Int
+    let repeatMinInterval: Int
+    let repeatAccelStep: Int
 
     func makeUIView(context: Context) -> KeyGridTouchView {
         let v = KeyGridTouchView(router: router)
         router.update(frames: frames, resolveSpec: resolveSpec,
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
-                      hitboxScale: hitboxScale)
+                      hitboxScale: hitboxScale, cursorStride: cursorStride,
+                      cursorActivationDelay: cursorActivationDelay,
+                      repeatHoldDelay: repeatHoldDelay,
+                      repeatInitialInterval: repeatInitialInterval,
+                      repeatMinInterval: repeatMinInterval,
+                      repeatAccelStep: repeatAccelStep)
         return v
     }
 
     func updateUIView(_ uiView: KeyGridTouchView, context: Context) {
         router.update(frames: frames, resolveSpec: resolveSpec,
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
-                      hitboxScale: hitboxScale)
+                      hitboxScale: hitboxScale, cursorStride: cursorStride,
+                      cursorActivationDelay: cursorActivationDelay,
+                      repeatHoldDelay: repeatHoldDelay,
+                      repeatInitialInterval: repeatInitialInterval,
+                      repeatMinInterval: repeatMinInterval,
+                      repeatAccelStep: repeatAccelStep)
     }
 }

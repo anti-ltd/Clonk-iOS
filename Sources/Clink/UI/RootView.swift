@@ -43,7 +43,7 @@ struct RootView: View {
                             SoundPickerView()
                         }
                         Divider()
-                        NavRow("Advanced", subtitle: "Hitbox size and precision tuning",
+                        NavRow("Advanced", subtitle: "Hitbox, cursor scroll, and precision tuning",
                                systemImage: "slider.horizontal.3") {
                             AdvancedSettingsView()
                         }

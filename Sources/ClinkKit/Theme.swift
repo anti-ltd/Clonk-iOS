@@ -1,5 +1,95 @@
 import SwiftUI
 
+// MARK: - Gradient types
+
+public enum GradientType: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case linear, radial, angular
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .linear:  return "Linear"
+        case .radial:  return "Radial"
+        case .angular: return "Angular"
+        }
+    }
+}
+
+/// One color stop in a `ThemeGradient`. The `id` is ephemeral (not persisted)
+/// so ForEach can track stops without requiring stable encoded identifiers.
+public struct GradientStop: Sendable, Equatable, Hashable, Identifiable {
+    public var id = UUID()
+    public var color: RGBA
+    public var position: Double  // 0…1
+
+    public init(color: RGBA, position: Double) {
+        self.color = color; self.position = position
+    }
+}
+
+extension GradientStop: Codable {
+    private enum CodingKeys: String, CodingKey { case color, position }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        color = try c.decode(RGBA.self, forKey: .color)
+        position = try c.decode(Double.self, forKey: .position)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(color, forKey: .color)
+        try c.encode(position, forKey: .position)
+    }
+}
+
+public struct ThemeGradient: Codable, Sendable, Equatable, Hashable {
+    public var type: GradientType
+    /// Rotation in degrees (0–360). Used by linear and angular; ignored by radial.
+    public var rotation: Double
+    public var stops: [GradientStop]
+
+    public init(type: GradientType = .linear, rotation: Double = 180, stops: [GradientStop]) {
+        self.type = type; self.rotation = rotation; self.stops = stops
+    }
+
+    /// A two-stop gradient seeded from `color`, lightened toward the second stop.
+    public static func seed(from color: RGBA) -> ThemeGradient {
+        let lighter = RGBA(min(color.r + 0.25, 1), min(color.g + 0.25, 1), min(color.b + 0.25, 1), color.a)
+        return ThemeGradient(stops: [
+            GradientStop(color: color, position: 0),
+            GradientStop(color: lighter, position: 1),
+        ])
+    }
+}
+
+public extension ThemeGradient {
+    private var swiftGradient: Gradient {
+        let sorted = stops.sorted { $0.position < $1.position }
+        return Gradient(stops: sorted.map { .init(color: $0.color.color, location: $0.position) })
+    }
+
+    @ViewBuilder func makeView() -> some View {
+        let g = swiftGradient
+        switch type {
+        case .linear:
+            LinearGradient(gradient: g, startPoint: linearStart, endPoint: linearEnd)
+        case .radial:
+            RadialGradient(gradient: g, center: .center, startRadius: 0, endRadius: 800)
+        case .angular:
+            AngularGradient(gradient: g, center: .center, angle: .degrees(rotation))
+        }
+    }
+
+    private var linearStart: UnitPoint {
+        let rad = (rotation - 90) * .pi / 180
+        return UnitPoint(x: 0.5 - cos(rad) * 0.5, y: 0.5 - sin(rad) * 0.5)
+    }
+    private var linearEnd: UnitPoint {
+        let rad = (rotation - 90) * .pi / 180
+        return UnitPoint(x: 0.5 + cos(rad) * 0.5, y: 0.5 + sin(rad) * 0.5)
+    }
+}
+
+// MARK: - Key material
+
 /// A keyboard color theme. Themes are pure data so they round-trip through the
 /// App Group and can be edited in the container app, then read by the keyboard
 /// extension. v0.1 ships a set of presets; a future version lets users author
@@ -13,6 +103,22 @@ public enum KeyMaterial: String, Codable, Sendable, Hashable {
     /// tints and text colors; the background goes translucent so the keys
     /// refract the system keyboard backdrop.
     case liquidGlass
+}
+
+/// Which Liquid Glass variant the keys use. `regular` is the frostier, more
+/// material look; `clear` is thinner and far more see-through — it refracts the
+/// backdrop more strongly. Maps to SwiftUI's `Glass.regular` / `Glass.clear`.
+public enum GlassVariant: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case regular
+    case clear
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .regular: return "Regular"
+        case .clear:   return "Clear"
+        }
+    }
 }
 
 public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
@@ -33,17 +139,87 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
     public var accent: RGBA
     /// Drives the extension's `UIInputView` appearance + status bar.
     public var isDark: Bool
+    /// When set (custom themes only), the id of a background **photo** in
+    /// `ThemeBackgroundStore`. When the global `KeyboardSettings.backgroundVisible`
+    /// switch is on, a present image is painted behind the keys in place of the
+    /// solid `background` colour; if the file is missing (e.g. a `.clink` imported
+    /// from another device) rendering falls back to `backgroundGradient`, then
+    /// `background`.
+    public var backgroundImageID: String?
+    /// Optional gradient painted behind the keys when `backgroundVisible` is on.
+    /// Overrides the solid `background` colour but is itself overridden by
+    /// `backgroundImageID` when an image resolves.
+    public var backgroundGradient: ThemeGradient?
+    /// When set on a **Liquid Glass** custom theme, the id of a photo in
+    /// `ThemeBackgroundStore` that fills the keys: one image is laid behind the
+    /// whole key area and each key reveals (masks to) the slice sitting behind it
+    /// — Q shows the image's top-left, P its top-right — with the glass on top
+    /// refracting that slice. Ignored on solid themes or if the file is missing.
+    public var keyImageID: String?
+    /// Optional gradient used as the per-key Liquid Glass backdrop — the same
+    /// masked-to-key-shapes approach as `keyImageID` but painted from a gradient
+    /// instead of a photo. Overridden by `keyImageID` when an image resolves.
+    /// Ignored on solid themes.
+    public var keyGradient: ThemeGradient?
+    /// Liquid Glass variant for the keys (regular / clear). Ignored on solid
+    /// themes. Defaults to `.regular` — the look every preset shipped with.
+    public var glassVariant: GlassVariant
+    /// Use the interactive glass lens on every key (not just shift), so the
+    /// material warps under a press. Off by default. Ignored on solid themes.
+    public var glassInteractive: Bool
+    /// How strongly the theme colours tint the glass, 0…1 — a multiplier on the
+    /// key-fill tint's own opacity. 1 = full tint (default); lower lets more clear
+    /// glass through so the refraction reads. Ignored on solid themes.
+    public var glassTintStrength: Double
 
     public init(
         id: String, name: String,
         background: RGBA, keyFill: RGBA, keyText: RGBA,
         specialKeyFill: RGBA, specialKeyText: RGBA, accent: RGBA,
-        isDark: Bool, material: KeyMaterial = .solid
+        isDark: Bool, material: KeyMaterial = .solid,
+        backgroundImageID: String? = nil,
+        backgroundGradient: ThemeGradient? = nil,
+        keyImageID: String? = nil,
+        keyGradient: ThemeGradient? = nil,
+        glassVariant: GlassVariant = .regular,
+        glassInteractive: Bool = false,
+        glassTintStrength: Double = 1.0
     ) {
         self.id = id; self.name = name; self.material = material
         self.background = background; self.keyFill = keyFill; self.keyText = keyText
         self.specialKeyFill = specialKeyFill; self.specialKeyText = specialKeyText
         self.accent = accent; self.isDark = isDark
+        self.backgroundImageID = backgroundImageID
+        self.backgroundGradient = backgroundGradient
+        self.keyImageID = keyImageID
+        self.keyGradient = keyGradient
+        self.glassVariant = glassVariant
+        self.glassInteractive = glassInteractive
+        self.glassTintStrength = glassTintStrength
+    }
+
+    // Custom decoder so older payloads (presets and `.clink` files written before
+    // `material` / `backgroundImageID` existed) still decode — the new keys fall
+    // back to their defaults rather than failing the whole settings blob.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        material = try c.decodeIfPresent(KeyMaterial.self, forKey: .material) ?? .solid
+        background = try c.decode(RGBA.self, forKey: .background)
+        keyFill = try c.decode(RGBA.self, forKey: .keyFill)
+        keyText = try c.decode(RGBA.self, forKey: .keyText)
+        specialKeyFill = try c.decode(RGBA.self, forKey: .specialKeyFill)
+        specialKeyText = try c.decode(RGBA.self, forKey: .specialKeyText)
+        accent = try c.decode(RGBA.self, forKey: .accent)
+        isDark = try c.decode(Bool.self, forKey: .isDark)
+        backgroundImageID = try c.decodeIfPresent(String.self, forKey: .backgroundImageID)
+        backgroundGradient = try c.decodeIfPresent(ThemeGradient.self, forKey: .backgroundGradient)
+        keyImageID = try c.decodeIfPresent(String.self, forKey: .keyImageID)
+        keyGradient = try c.decodeIfPresent(ThemeGradient.self, forKey: .keyGradient)
+        glassVariant = (try? c.decodeIfPresent(GlassVariant.self, forKey: .glassVariant)) ?? .regular
+        glassInteractive = try c.decodeIfPresent(Bool.self, forKey: .glassInteractive) ?? false
+        glassTintStrength = try c.decodeIfPresent(Double.self, forKey: .glassTintStrength) ?? 1.0
     }
 }
 
