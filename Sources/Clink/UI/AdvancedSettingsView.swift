@@ -118,8 +118,19 @@ struct AdvancedSettingsView: View {
                 $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
             }
         }
-        CardSection("Space bar cursor") {
-            Text("Slide on the space bar to move the cursor. Raise the activation time so the cursor only engages when you hold deliberately; lower the sensitivity if it still triggers by accident.")
+        CardSection("Cursor") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Movement type").foregroundStyle(.secondary).font(.subheadline)
+                Picker("Movement type", selection: $model.settings.cursorMovementType) {
+                    ForEach(CursorMovementType.allCases) { type in
+                        Text(type.label).tag(type)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.vertical, UX.rowVPadding)
+            Divider()
+            Text(cursorHelpText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -137,6 +148,12 @@ struct AdvancedSettingsView: View {
                         set: { model.settings.spaceCursorStride = 30 - $0 }),
                       in: 8...24, step: 2) {
                 $0 == 20 ? "Default" : "\(Int(($0 / 20 * 100).rounded()))%"
+            }
+            Divider()
+            SliderRow("Line length",
+                      value: $model.settings.cursorLineStride,
+                      in: 5...80, step: 5) {
+                "\(Int($0)) chars"
             }
         }
     }
@@ -262,6 +279,17 @@ struct AdvancedSettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private var cursorHelpText: String {
+        switch model.settings.cursorMovementType {
+        case .spacebar:
+            return "Slide on the space bar to move the cursor — left/right by characters, up/down by lines. Raise the activation time so the cursor only engages when you hold deliberately; lower the sensitivity if it still triggers by accident."
+        case .trackpad:
+            return "Hold the space bar to turn the keyboard into a trackpad — drag to move the cursor (left/right by characters, up/down by lines), then lift to return to the keys. Raise the activation time so it only engages on a deliberate hold; lower the sensitivity if it triggers by accident."
+        case .combined:
+            return "Type as normal — but hold the space bar and the keys blank out and stop responding while you drag the cursor (left/right by characters, up/down by lines), with the space bar morphing. Lift to return to the keys."
+        }
+    }
 
     private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {

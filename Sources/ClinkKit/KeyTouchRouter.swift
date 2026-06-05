@@ -80,6 +80,15 @@ public final class KeyTouchRouter {
     fileprivate var cursorStride: CGFloat = 10
     /// Seconds the space bar must be held before cursor mode can engage (0 = instant).
     fileprivate var cursorActivationDelay: TimeInterval = 0
+    /// Characters jumped per vertical "line" step when a space drag moves up/down
+    /// — the cursor API only moves by character offset, so a line is an estimate
+    /// (see `touchMoved`). User-tunable via `KeyboardSettings.cursorLineStride`.
+    fileprivate var cursorLineStride: Int = 30
+    /// "Combined" cursor mode: every touch (except the next-keyboard globe, so the
+    /// user is never trapped) is rebound to the space bar, so dragging anywhere
+    /// drives the space cursor pad and the bar morphs — while no key ever types.
+    /// Read by `KeyGridTouchView` to pick the binding target.
+    fileprivate var cursorCombined: Bool = false
     fileprivate var repeatHoldDelay: TimeInterval = 0.450
     fileprivate var repeatInitialInterval: Int = 110
     fileprivate var repeatMinInterval: Int = 40
@@ -92,6 +101,8 @@ public final class KeyTouchRouter {
                             hitboxScale: Double,
                             cursorStride: CGFloat,
                             cursorActivationDelay: TimeInterval,
+                            cursorLineStride: Int,
+                            cursorCombined: Bool,
                             repeatHoldDelay: TimeInterval,
                             repeatInitialInterval: Int,
                             repeatMinInterval: Int,
@@ -103,6 +114,8 @@ public final class KeyTouchRouter {
         self.hitboxScale = hitboxScale
         self.cursorStride = cursorStride
         self.cursorActivationDelay = cursorActivationDelay
+        self.cursorLineStride = cursorLineStride
+        self.cursorCombined = cursorCombined
         self.repeatHoldDelay = repeatHoldDelay
         self.repeatInitialInterval = repeatInitialInterval
         self.repeatMinInterval = repeatMinInterval
@@ -150,6 +163,10 @@ public final class KeyTouchRouter {
 
     fileprivate func touchDown(id: String) {
         guard let spec = resolveSpec(id) else { return }
+        // Combined cursor mode: once the space cursor is engaged, every other key
+        // goes inert — a stray second finger can't type mid-drag. The keyboard is
+        // fully normal otherwise (and until the drag engages).
+        if cursorCombined, spaceCursorActive, !spec.isSpace { return }
         heldCounts[id, default: 0] += 1
         cancelLinger(id)            // pressed again → stop any pending fade-out
         recomputePressed()
@@ -165,6 +182,7 @@ public final class KeyTouchRouter {
                 spaceCursorActive = false
                 spaceDragX = 0
                 spaceSteps = 0
+                spaceVSteps = 0
                 spaceCursorReadyTask?.cancel()
                 if cursorActivationDelay > 0 {
                     spaceCursorReady = false
@@ -213,23 +231,45 @@ public final class KeyTouchRouter {
         // the live translation every move keeps the lean continuous; the shrink
         // (gated on `spaceCursorActive` in the view) springs in at engage.
         spaceDragX = translationX
-        // Past the stride threshold the space touch becomes a cursor trackpad; a
-        // plain tap (no real movement) still types a space on release.
+        // Past the stride threshold the space touch becomes a 2-D cursor pad; a
+        // plain tap (no real movement) still types a space on release. Either axis
+        // crossing the stride engages — same for the space-bar slide and the
+        // trackpad panel; the panel is only a visual difference (see canvas).
         if !spaceCursorActive {
-            guard spaceCursorReady, abs(translationX) > cursorStride else { return }
+            guard spaceCursorReady,
+                  abs(translationX) > cursorStride || abs(translationY) > cursorStride else { return }
             // Engage, and rebaseline the stepping to this exact point so the first
-            // character moves the instant we engage and every step after costs
-            // exactly one stride (measuring from the touch origin instead made the
-            // first character's travel vary with how far a fast finger overshot).
+            // move lands the instant we engage and every step after costs exactly
+            // one stride (measuring from the touch origin instead made the first
+            // move's travel vary with how far a fast finger overshot).
             spaceCursorActive = true
             spaceDragOrigin = translationX
+            spaceDragOriginY = translationY
             spaceSteps = 0
-            spec.onCursorMove?(translationX > 0 ? 1 : -1)
+            spaceVSteps = 0
+            // Begin moving right at the threshold, on whichever axis crossed first
+            // (dominant axis), so a mostly-vertical engage doesn't jump a stray
+            // character sideways and vice-versa.
+            if abs(translationX) >= abs(translationY) {
+                spec.onCursorMove?(translationX > 0 ? 1 : -1)
+            } else {
+                spec.onCursorMove?(translationY > 0 ? cursorLineStride : -cursorLineStride)
+            }
         }
+        // Horizontal: one character per stride.
         let step = Int(((translationX - spaceDragOrigin) / cursorStride).rounded(.towardZero))
         if step != spaceSteps {
             spec.onCursorMove?(step - spaceSteps)
             spaceSteps = step
+        }
+        // Vertical: one "line" (a `cursorLineStride`-character jump) per coarser
+        // stride, so a small wobble doesn't fling the cursor across lines. Down
+        // (positive Y) moves the cursor forward.
+        let vStride = cursorStride * 2
+        let vStep = Int(((translationY - spaceDragOriginY) / vStride).rounded(.towardZero))
+        if vStep != spaceVSteps {
+            spec.onCursorMove?((vStep - spaceVSteps) * cursorLineStride)
+            spaceVSteps = vStep
         }
     }
 
@@ -260,6 +300,7 @@ public final class KeyTouchRouter {
                 spaceCursorActive = false
                 spaceDragX = 0
                 spaceSteps = 0
+                spaceVSteps = 0
             }
             // Non-space characters already committed on touch-down.
         case .function:
@@ -284,6 +325,7 @@ public final class KeyTouchRouter {
             spaceCursorActive = false
             spaceDragX = 0
             spaceSteps = 0
+            spaceVSteps = 0
         }
     }
 
@@ -358,6 +400,9 @@ public final class KeyTouchRouter {
     /// are counted from here, not the touch origin, so the first character moves
     /// the instant we engage (see `touchMoved`).
     private var spaceDragOrigin: CGFloat = 0
+    /// Vertical analogues for trackpad mode: line steps taken and the Y at engage.
+    private var spaceVSteps = 0
+    private var spaceDragOriginY: CGFloat = 0
     /// Whether the activation-delay hold has elapsed for the current space touch.
     /// Always true when `cursorActivationDelay` is 0 (instant mode).
     private var spaceCursorReady = true
@@ -472,6 +517,8 @@ struct MultiTouchSurface: UIViewRepresentable {
     let hitboxScale: Double
     let cursorStride: CGFloat
     let cursorActivationDelay: TimeInterval
+    let cursorLineStride: Int
+    let cursorCombined: Bool
     let repeatHoldDelay: TimeInterval
     let repeatInitialInterval: Int
     let repeatMinInterval: Int
@@ -483,6 +530,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
                       hitboxScale: hitboxScale, cursorStride: cursorStride,
                       cursorActivationDelay: cursorActivationDelay,
+                      cursorLineStride: cursorLineStride,
+                      cursorCombined: cursorCombined,
                       repeatHoldDelay: repeatHoldDelay,
                       repeatInitialInterval: repeatInitialInterval,
                       repeatMinInterval: repeatMinInterval,
@@ -495,6 +544,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
                       hitboxScale: hitboxScale, cursorStride: cursorStride,
                       cursorActivationDelay: cursorActivationDelay,
+                      cursorLineStride: cursorLineStride,
+                      cursorCombined: cursorCombined,
                       repeatHoldDelay: repeatHoldDelay,
                       repeatInitialInterval: repeatInitialInterval,
                       repeatMinInterval: repeatMinInterval,

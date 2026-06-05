@@ -23,6 +23,8 @@ final class AppModel {
     /// has run once, so the UI treats it as a hint, not gospel.
     private(set) var hasFullAccess: Bool = false
 
+    let clipboard = ClipboardManager()
+
     private let store = SharedStore.shared
     private let keyboardBundleID = "ltd.anti.clink.keyboard"
 
@@ -106,6 +108,8 @@ final class AppModel {
         settings.hitboxScale = d.hitboxScale
         settings.spaceCursorStride = d.spaceCursorStride
         settings.spaceCursorActivationDelay = d.spaceCursorActivationDelay
+        settings.cursorMovementType = d.cursorMovementType
+        settings.cursorLineStride = d.cursorLineStride
         settings.keyBloomScale = d.keyBloomScale
         settings.keySpringResponse = d.keySpringResponse
         settings.keySpringDamping = d.keySpringDamping

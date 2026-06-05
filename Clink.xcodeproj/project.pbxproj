@@ -51,14 +51,19 @@
 		9AB592CBAD274F35B8EA2CA8 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		A02430FCE33EDD5CEDFD516C /* SoundPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9993AF7E588543B2754CAB3E /* SoundPack.swift */; };
 		A1A40D5E05D2239F373953BF /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6093923E8A1E6FB4377D8BB8 /* ClipboardManager.swift */; };
+		F1A2B3C4D5E6079800000002 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6079800000001 /* SwipeRow.swift */; };
+		F1A2B3C4D5E6079800000003 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6079800000001 /* SwipeRow.swift */; };
 		A1FCC654C7BF323839575EB7 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
 		B6B4F51D8B37609FAB195703 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */; };
 		B71BF31701F8EBA454EA8769 /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */; };
 		B7AEFB5857D45F9FCF5A5F3D /* AdvancedSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */; };
+		B8066F654F10A0036D338B9D /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */; };
 		C0F38A72B69F1619B74EC5A0 /* ThemeBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473E6FADCC90F3A24F2711AC /* ThemeBuilderView.swift */; };
 		C576639078F73C5EF212D064 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5181D0B09674CE8789540CEA /* RootView.swift */; };
 		CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */; };
+		D8BFB7EBFEF96FC8CA3B08BB /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */; };
 		DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
+		DF275470B09C2ADC1CF62EF7 /* ClipboardHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */; };
 		E42BC9182B558D0C62C887A0 /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */; };
 		E90AFBB5D8A7267BCD721664 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC50AE872783BD6CBFC8F4F /* iUXiOS */; };
 		EF3C529E5FF3BBB3E2CECD0A /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E12DFC4B4EFFA4222046212 /* KeyboardViewController.swift */; };
@@ -116,6 +121,7 @@
 		550DB37AF0E30A5A41C1A9AC /* EmojiData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.swift; sourceTree = "<group>"; };
 		5C04D6AA199C403FCC06DCF8 /* StagedHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StagedHeroView.swift; sourceTree = "<group>"; };
 		6093923E8A1E6FB4377D8BB8 /* ClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManager.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6079800000001 /* SwipeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRow.swift; sourceTree = "<group>"; };
 		64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCanvas.swift; sourceTree = "<group>"; };
 		6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLiveState.swift; sourceTree = "<group>"; };
 		6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
@@ -137,6 +143,8 @@
 		E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
 		E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseView.swift; sourceTree = "<group>"; };
 		E887A5C7AFA3E881307455F8 /* AppStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStage.swift; sourceTree = "<group>"; };
+		EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardEntry.swift; sourceTree = "<group>"; };
+		FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryView.swift; sourceTree = "<group>"; };
 		FF59E26E52134F6C6A4604F2 /* SharedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -190,7 +198,9 @@
 		202B9603433555A44A538C68 /* ClinkKit */ = {
 			isa = PBXGroup;
 			children = (
+				EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */,
 				6093923E8A1E6FB4377D8BB8 /* ClipboardManager.swift */,
+				F1A2B3C4D5E6079800000001 /* SwipeRow.swift */,
 				904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */,
 				148AA47AC2638AB397929AF1 /* EmojiData.generated.swift */,
 				550DB37AF0E30A5A41C1A9AC /* EmojiData.swift */,
@@ -273,6 +283,7 @@
 			isa = PBXGroup;
 			children = (
 				934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */,
+				FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */,
 				39FDB6FF761A1B9983D99D51 /* EmojiSettingsView.swift */,
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
 				6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */,
@@ -412,7 +423,10 @@
 				7700D18C30068362D47F3DDF /* AppModel.swift in Sources */,
 				556A45C2449169ACA72D6B1F /* AppStage.swift in Sources */,
 				3B4276B1682008D117A56528 /* ClinkApp.swift in Sources */,
+				D8BFB7EBFEF96FC8CA3B08BB /* ClipboardEntry.swift in Sources */,
+				DF275470B09C2ADC1CF62EF7 /* ClipboardHistoryView.swift in Sources */,
 				A1A40D5E05D2239F373953BF /* ClipboardManager.swift in Sources */,
+				F1A2B3C4D5E6079800000002 /* SwipeRow.swift in Sources */,
 				DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */,
 				528F2D31362D9EE6A8B84E04 /* EmojiData.generated.swift in Sources */,
 				81FAF62E6679165478D16824 /* EmojiData.swift in Sources */,
@@ -450,7 +464,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B8066F654F10A0036D338B9D /* ClipboardEntry.swift in Sources */,
 				0E81EA4B12221DB1ED94AE9B /* ClipboardManager.swift in Sources */,
+				F1A2B3C4D5E6079800000003 /* SwipeRow.swift in Sources */,
 				A1FCC654C7BF323839575EB7 /* EmojiCanvas.swift in Sources */,
 				93C7B724742F3EBF59F3C840 /* EmojiData.generated.swift in Sources */,
 				96E8E4C6C67E8FF738391AEC /* EmojiData.swift in Sources */,

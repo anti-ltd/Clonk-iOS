@@ -135,6 +135,9 @@ final class KeyboardViewController: UIInputViewController {
         invalidateMirror()
         updateSuggestions()
         updateReturnKey()
+        // Seed shift from the setting + field context, overriding the controller's
+        // default `.on` so a fresh field obeys auto-capitalize (incl. when it's off).
+        refreshAutoCapitalize()
         // On a keyboard *switch* iOS creates us fresh and animates us in at its own
         // inflated default height (target + ~228pt) before re-measuring to our real
         // height. Because the keyboard is bottom-docked, "too tall" pushes our
@@ -201,6 +204,29 @@ final class KeyboardViewController: UIInputViewController {
         if !isApplyingEdit { invalidateMirror() }
         scheduleSuggestionUpdate()
         updateReturnKey()
+        refreshAutoCapitalize()
+    }
+
+    /// Engage shift at the start of a sentence (and release it mid-sentence) so
+    /// typing auto-capitalizes like the native keyboard — the one piece the
+    /// `autoCapitalize` setting was missing. Reads the local mirror, accurate the
+    /// instant after an edit (the document proxy lags a runloop tick). Never
+    /// disturbs caps-lock. Dispatched async so it settles *after* the canvas's own
+    /// one-shot-shift release, which runs right after our `onInsert` on a letter tap.
+    private func refreshAutoCapitalize() {
+        // Caps-lock is the user's explicit choice — never override it.
+        guard keyboard.shift != .locked else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.keyboard.shift != .locked else { return }
+            // Disabled → shift only ever reflects manual taps; the auto-engage is off,
+            // so a fresh field must start lowercase rather than the controller's default.
+            let before = self.contextBeforeCursor()
+            let partial = SmartPunctuation.trailingPartialWord(in: before)
+            let want: KeyboardController.Shift =
+                (self.settings.autoCapitalize && self.isSentenceStart(before: before, partial: partial))
+                ? .on : .off
+            if self.keyboard.shift != want { self.keyboard.shift = want }
+        }
     }
 
     /// The cursor/selection moved. If it wasn't our own edit, the mirror's tail no

@@ -109,6 +109,10 @@ public struct KeyboardCanvas: View {
     /// `KeyView` reads its pressed / warp state back out of this.
     @State private var touch = KeyTouchRouter()
 
+    /// Track whether the last key pressed was sentence punctuation, so we can
+    /// return to letters when the space bar is tapped (rather than immediately).
+    @State private var lastKeyWasPunctuation = false
+
     // Proxy the canvas's existing `plane` / `shift` reads & writes onto the
     // controller, so the rest of the view is untouched. `nonmutating set` works
     // because `controller` is a class — mutating it doesn't mutate the struct.
@@ -191,72 +195,108 @@ public struct KeyboardCanvas: View {
         return h
     }
 
+    /// True while the held-space trackpad is engaged — the keyboard's visible
+    /// chrome (bar, keys, glyphs) hides so only the move glyph shows over the
+    /// keyboard's backdrop. The touch surface stays live underneath (it is never
+    /// faded), so the in-progress drag keeps tracking.
+    private var trackpadActive: Bool {
+        settings.cursorMovementType == .trackpad && touch.spaceCursorActive
+    }
+
+    /// Combined cursor mode WHILE the space bar is held into cursor drag: the keys
+    /// stay on screen but blank their letters and go inert, and the space bar
+    /// morphs. The keyboard is fully normal otherwise. Distinct from
+    /// `trackpadActive`, which hides the keyboard entirely.
+    private var combinedActive: Bool {
+        settings.cursorMovementType == .combined && touch.spaceCursorActive
+    }
+
     public var body: some View {
         VStack(spacing: 0) {
             let showBar = settings.suggestionsEnabled || (settings.clipboardEnabled && hasFullAccess)
-            if showBar {
-                HStack(spacing: 0) {
-                    if settings.clipboardEnabled && hasFullAccess {
-                        ClipboardToggleButton(isActive: live.clipboardMode, theme: theme) {
-                            live.clipboardMode.toggle()
+
+            if settings.clipboardStyle == .overlay && live.clipboardMode {
+                // Full-keyboard replacement: panel header + scrollable entries.
+                // No background set here — backgroundLayer renders behind it normally.
+                ClipboardPanel(
+                    entries: clipboard.history,
+                    theme: theme,
+                    cornerRadius: CGFloat(settings.keyCornerRadius),
+                    onTap: { text in onClipboardInsert(text) },
+                    onSave: { clipboard.captureFromPasteboard() },
+                    onDismiss: { live.clipboardMode = false },
+                    onCopy: { idx in
+                        guard clipboard.history.indices.contains(idx) else { return }
+                        UIPasteboard.general.string = clipboard.history[idx].text
+                    },
+                    onTogglePin: { idx in clipboard.togglePin(at: idx) },
+                    onDelete: { idx in clipboard.delete(at: idx) },
+                    onClear: { clipboard.clear() }
+                )
+            } else {
+                // The whole suggestion/clipboard bar is removed while the trackpad
+                // is live — nothing but the move glyph should show. (Keys stay
+                // rendered but invisible below, so the touch surface keeps frames.)
+                if showBar && !trackpadActive {
+                    HStack(spacing: 0) {
+                        if settings.clipboardEnabled && hasFullAccess {
+                            ClipboardToggleButton(isActive: live.clipboardMode, theme: theme) {
+                                live.clipboardMode.toggle()
+                            }
+                            .frame(width: Metrics.suggestionBarHeight)
+                            barDivider(theme: theme)
                         }
-                        .frame(width: Metrics.suggestionBarHeight)
-                        barDivider(theme: theme)
+                        if live.clipboardMode && settings.clipboardStyle == .bar {
+                            ClipboardBar(
+                                entries: clipboard.history, theme: theme,
+                                onTap: onClipboardInsert,
+                                onSave: { clipboard.captureFromPasteboard() },
+                                onClear: { clipboard.clear() }
+                            )
+                        } else if settings.suggestionsEnabled {
+                            SuggestionBar(suggestions: live.suggestions,
+                                          autocorrection: live.autocorrection,
+                                          emoji: live.emojiSuggestions, theme: theme,
+                                          onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
+                                          onEmoji: onEmojiSuggestion)
+                        } else {
+                            Spacer()
+                        }
                     }
-                    if live.clipboardMode {
-                        ClipboardBar(
-                            items: clipboard.history, theme: theme,
-                            onTap: onClipboardInsert,
-                            onSave: { clipboard.captureFromPasteboard() },
-                            onClear: { clipboard.clear() }
-                        )
-                    } else if settings.suggestionsEnabled {
-                        SuggestionBar(suggestions: live.suggestions,
-                                      autocorrection: live.autocorrection,
-                                      emoji: live.emojiSuggestions, theme: theme,
-                                      onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
-                                      onEmoji: onEmojiSuggestion)
-                    } else {
-                        Spacer()
-                    }
+                    .frame(height: Metrics.suggestionBarHeight)
                 }
-                .frame(height: Metrics.suggestionBarHeight)
+                keys
+                    .backgroundPreferenceValue(KeyFrameKey.self) { anchors in
+                        keyImageLayer(anchors: anchors)
+                    }
+                    // Hide the keys (and their glass backdrop) while the trackpad
+                    // is live — the move glyph shows alone. The touch surface is
+                    // added AFTER this opacity, so it stays fully live for the drag.
+                    .opacity(trackpadActive ? 0 : 1)
+                    .padding(.vertical, Metrics.vPadding)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlayPreferenceValue(KeyFrameKey.self) { anchors in
+                        GeometryReader { proxy in
+                            MultiTouchSurface(
+                                router: touch,
+                                frames: anchors.mapValues { proxy[$0] },
+                                resolveSpec: { currentKeySpecs()[$0] },
+                                onPressDown: onAnyTap,
+                                lingerDuration: settings.keyPressLinger,
+                                hitboxScale: settings.hitboxScale,
+                                cursorStride: CGFloat(settings.spaceCursorStride),
+                                cursorActivationDelay: settings.spaceCursorActivationDelay / 1000,
+                                cursorLineStride: Int(settings.cursorLineStride),
+                                cursorCombined: settings.cursorMovementType == .combined,
+                                repeatHoldDelay: settings.repeatHoldDelay / 1000,
+                                repeatInitialInterval: Int(settings.repeatInitialInterval),
+                                repeatMinInterval: Int(settings.repeatMinInterval),
+                                repeatAccelStep: Int(settings.repeatAccelStep))
+                        }
+                    }
             }
-            keys
-                // The per-key image (glass themes): one photo laid behind the key
-                // area, masked to the key shapes, so each key reveals its slice and
-                // the glass above refracts it. Sits behind the glass container, so
-                // it's part of the backdrop the keys lens.
-                .backgroundPreferenceValue(KeyFrameKey.self) { anchors in
-                    keyImageLayer(anchors: anchors)
-                }
-                .padding(.vertical, Metrics.vPadding)
-                // Fill the remaining height so rows divide it evenly — no gap.
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // A single multitouch surface over the whole key region. It owns
-                // every touch (so simultaneous presses register independently),
-                // hit-tests each to the nearest key from the published frames, and
-                // drives `touch`. Sits only over the keys — the suggestion bar's
-                // buttons keep their own taps. The glyph/popup overlays above are
-                // hit-test-transparent, so touches fall straight through to here.
-                .overlayPreferenceValue(KeyFrameKey.self) { anchors in
-                    GeometryReader { proxy in
-                        MultiTouchSurface(
-                            router: touch,
-                            frames: anchors.mapValues { proxy[$0] },
-                            resolveSpec: { currentKeySpecs()[$0] },
-                            onPressDown: onAnyTap,
-                            lingerDuration: settings.keyPressLinger,
-                            hitboxScale: settings.hitboxScale,
-                            cursorStride: CGFloat(settings.spaceCursorStride),
-                            cursorActivationDelay: settings.spaceCursorActivationDelay / 1000,
-                            repeatHoldDelay: settings.repeatHoldDelay / 1000,
-                            repeatInitialInterval: Int(settings.repeatInitialInterval),
-                            repeatMinInterval: Int(settings.repeatMinInterval),
-                            repeatAccelStep: Int(settings.repeatAccelStep))
-                    }
-                }
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: live.clipboardMode)
         // Backdrop. By default transparent so the keyboard blends with whatever
         // sits behind it — iOS's own keyboard surface in the extension, the
         // preview's backdrop in-app — and only the keys carry colour, reading as
@@ -284,6 +324,9 @@ public struct KeyboardCanvas: View {
                 }
             }
             .allowsHitTesting(false)
+            // Blank the key letters while the trackpad covers them, and always in
+            // combined mode (the keys stay visible but show no glyphs).
+            .opacity(trackpadActive || combinedActive ? 0 : 1)
         }
         // Single popup layer above every key — its shape follows the chosen style.
         .overlayPreferenceValue(KeyPopupKey.self) { popup in
@@ -293,6 +336,7 @@ public struct KeyboardCanvas: View {
                 }
             }
             .allowsHitTesting(false)
+            .opacity(trackpadActive ? 0 : 1)
         }
         // Hitbox debug overlay: outlines each key's touch area. Only visible in
         // the Advanced settings view (showHitboxOverlay = true).
@@ -313,6 +357,19 @@ public struct KeyboardCanvas: View {
                 .allowsHitTesting(false)
             }
         }
+        // Trackpad cursor glyph: while the space bar is held into cursor mode and
+        // the user chose the trackpad type, the keyboard chrome above is hidden, so
+        // only this centred move glyph shows over the keyboard's own backdrop
+        // (which still paints behind the now-hidden keys, or stays clear when the
+        // background switch is off). Purely visual — `allowsHitTesting(false)`.
+        .overlay {
+            if trackpadActive {
+                TrackpadPanel(theme: theme)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: touch.spaceCursorActive)
     }
 
     /// One key's glyph for the on-top glyph layer (text or animated symbol).
@@ -547,7 +604,8 @@ public struct KeyboardCanvas: View {
         }
         // Globe — only in the extension (host passes a handler).
         if onNextKeyboard != nil {
-            specs.append(.init(kind: .function, label: .system("globe"), weight: 1.2) {
+            specs.append(.init(kind: .function, label: .system("globe"), weight: 1.2,
+                               isNextKeyboard: true) {
                 onNextKeyboard?()
             })
         }
@@ -556,6 +614,15 @@ public struct KeyboardCanvas: View {
         specs.append(.init(kind: .character, label: .text(""), weight: settings.spaceWidth,
                            isSpace: true, onCursorMove: onCursorMove) {
             insert(" ")
+            // Return to letters if the last key was sentence punctuation, completing
+            // the "punctuation → space → resume typing" flow. Opt-out via settings.
+            if lastKeyWasPunctuation {
+                if settings.autoReturnToLetters,
+                   plane != .letters {
+                    plane = .letters
+                }
+                lastKeyWasPunctuation = false
+            }
         })
         // Return key follows the host field: a ⏎ glyph for a plain return, the
         // action word ("Go", "Search", "Send", …) otherwise — prominent (accent)
@@ -620,21 +687,17 @@ public struct KeyboardCanvas: View {
     private func plainKey(_ glyph: String, fontSize: CGFloat? = nil) -> KeySpec {
         KeySpec(kind: .character, label: .text(glyph), weight: 1, fontSize: fontSize) {
             insert(glyph)
-            // Pop back to letters after sentence punctuation, so a quick
-            // "123 → , → keep typing" doesn't strand you on the symbols page.
-            // Mirrors the one-shot-shift convention (act, then auto-revert).
+            // Mark that a punctuation was pressed, so we can return to letters when
+            // the space bar is tapped (implements "return after space" behaviour).
             if settings.autoReturnToLetters,
                plane != .letters,
                Self.autoReturnPunctuation.contains(glyph) {
-                plane = .letters
-                // Drop you mid-sentence with the gap already typed, matching the
-                // "punctuation → space → next word" rhythm. Opt-out via settings.
-                // Limited to marks that always take a following space — quotes and
-                // apostrophes don't (an opening quote hugs the next word).
-                if settings.autoSpaceAfterReturn,
-                   Self.autoSpacePunctuation.contains(glyph) {
-                    insert(" ")
-                }
+                lastKeyWasPunctuation = true
+            } else {
+                // Clear the flag if pressing a non-punctuation key, so we don't
+                // unexpectedly return to letters if the user was just continuing
+                // to enter symbols after the punctuation.
+                lastKeyWasPunctuation = false
             }
         }
     }
@@ -657,7 +720,10 @@ public struct KeyboardCanvas: View {
     private func planeKey(_ glyph: String, to target: Plane, weight: Double,
                           onDragUp: (() -> Void)? = nil) -> KeySpec {
         KeySpec(kind: .function, label: .text(glyph), weight: weight,
-                onDragUp: onDragUp) { plane = target }
+                onDragUp: onDragUp) {
+            plane = target
+            lastKeyWasPunctuation = false
+        }
     }
 
     private func insert(_ s: String) { onInsert(s) }
@@ -678,7 +744,8 @@ public struct KeyboardCanvas: View {
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
                             router: touch,
-                            physics: physics)
+                            physics: physics,
+                            blankGlyph: combinedActive)
                         .frame(width: unit * CGFloat(spec.weight))
                 }
             }
@@ -691,6 +758,23 @@ public struct KeyboardCanvas: View {
         } else {
             content.frame(maxHeight: .infinity)
         }
+    }
+}
+
+// MARK: - Trackpad cursor panel
+
+/// The full-keyboard trackpad shown while the space bar is held in trackpad
+/// cursor mode — just a single centred 2-D move glyph, tinted the theme accent,
+/// over the keyboard's own backdrop (painted by the canvas). Purely visual: the
+/// drag is tracked by the multitouch surface beneath it, so it takes no touches.
+struct TrackpadPanel: View {
+    let theme: Theme
+
+    var body: some View {
+        Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+            .font(.system(size: 22, weight: .regular))
+            .foregroundStyle(theme.accent.color)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -894,6 +978,9 @@ struct KeySpec: Identifiable {
     /// The shift key — it has its own glass + symbol animation, so it opts out
     /// of the generic press-warp bloom (which would double up and look janky).
     let isShift: Bool
+    /// The globe / next-keyboard key — kept tappable in combined cursor mode so
+    /// the user can always switch away (every other key is rebound to the pad).
+    let isNextKeyboard: Bool
     /// Called with a signed character delta while dragging the space bar.
     let onCursorMove: ((Int) -> Void)?
     /// Override glyph point size (the number row uses this); nil = default sizing.
@@ -902,12 +989,14 @@ struct KeySpec: Identifiable {
 
     init(kind: Kind, label: Label, weight: Double, highlighted: Bool = false,
          isDestructive: Bool = false, isSpace: Bool = false, isRepeatable: Bool = false,
-         isShift: Bool = false, onCursorMove: ((Int) -> Void)? = nil,
+         isShift: Bool = false, isNextKeyboard: Bool = false,
+         onCursorMove: ((Int) -> Void)? = nil,
          onDragUp: (() -> Void)? = nil, fontSize: CGFloat? = nil,
          action: @escaping () -> Void) {
         self.kind = kind; self.label = label; self.weight = weight
         self.highlighted = highlighted; self.isDestructive = isDestructive
         self.isSpace = isSpace; self.isRepeatable = isRepeatable; self.isShift = isShift
+        self.isNextKeyboard = isNextKeyboard
         self.onCursorMove = onCursorMove; self.onDragUp = onDragUp
         self.fontSize = fontSize; self.action = action
     }
@@ -968,6 +1057,9 @@ private struct KeyView: View {
     /// written by the single UIKit touch surface (see `KeyTouchRouter`).
     let router: KeyTouchRouter
     let physics: KeyPressPhysics
+    /// Combined cursor mode — draw no glyph (the shift key draws its own, so it
+    /// needs telling; every other key's glyph is hidden by the canvas glyph layer).
+    var blankGlyph: Bool = false
 
     /// Pressed for any reason: a real finger (the router) or the simulator.
     private var isPressed: Bool { router.pressed.contains(keyID) || simulatedPressed }
@@ -1169,7 +1261,9 @@ private struct KeyView: View {
     }
 
     @ViewBuilder private var shiftLabel: some View {
-        if case let .system(name) = spec.label {
+        if blankGlyph {
+            EmptyView()
+        } else if case let .system(name) = spec.label {
             Image(systemName: name)
                 .font(.system(size: 18, weight: .medium))
                 .contentTransition(.symbolEffect(.replace))
@@ -1366,7 +1460,7 @@ struct ClipboardToggleButton: View {
 /// Save reads the current UIPasteboard and appends to history.
 /// Clear wipes the full history.
 struct ClipboardBar: View {
-    let items: [String]
+    let entries: [ClipboardEntry]
     let theme: Theme
     let onTap: (String) -> Void
     let onSave: () -> Void
@@ -1374,7 +1468,7 @@ struct ClipboardBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if items.isEmpty {
+            if entries.isEmpty {
                 Text("Nothing saved yet")
                     .font(.system(size: 15))
                     .foregroundStyle(theme.keyText.color.opacity(0.35))
@@ -1382,9 +1476,9 @@ struct ClipboardBar: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                        ForEach(Array(entries.enumerated()), id: \.offset) { idx, entry in
                             if idx > 0 { chipDivider }
-                            clipChip(item)
+                            clipChip(entry.text)
                         }
                     }
                     .padding(.horizontal, 6)
@@ -1423,6 +1517,170 @@ struct ClipboardBar: View {
     }
 
     private var chipDivider: some View {
+        Rectangle()
+            .fill(theme.keyText.color.opacity(0.15))
+            .frame(width: 0.5)
+            .padding(.vertical, 11)
+    }
+}
+
+// MARK: - Clipboard overlay panel (overlay style)
+
+/// Full-keyboard replacement shown when `clipboardStyle == .overlay` and the
+/// user opens the clipboard panel. Takes over the full keyboard frame (bar +
+/// keys area). Sets NO background — the keyboard's `backgroundLayer` renders
+/// behind it exactly as it does behind the keys.
+struct ClipboardPanel: View {
+    let entries: [ClipboardEntry]
+    let theme: Theme
+    let cornerRadius: CGFloat
+    let onTap: (String) -> Void
+    let onSave: () -> Void
+    let onDismiss: () -> Void
+    let onCopy: (Int) -> Void
+    let onTogglePin: (Int) -> Void
+    let onDelete: (Int) -> Void
+    let onClear: () -> Void
+
+    @State private var openRow: Int? = nil
+
+    private let scrollSpace = "clipScroll"
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header — same height and icon positioning as the suggestion bar.
+            HStack(spacing: 0) {
+                Image(systemName: "doc.on.clipboard.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(theme.accent.color)
+                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                divider
+                Spacer()
+                divider
+                headerButton("square.and.arrow.down", action: onSave)
+                divider
+                headerButton("trash", action: onClear)
+                divider
+                headerButton("xmark", action: onDismiss)
+            }
+            .frame(height: KeyboardCanvas.Metrics.suggestionBarHeight)
+
+            // Content area
+            if entries.isEmpty {
+                Text("Nothing saved yet")
+                    .font(.system(size: 15))
+                    .foregroundStyle(theme.keyText.color.opacity(0.35))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                GeometryReader { vp in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        cardList(viewportHeight: vp.size.height)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                    }
+                    // Soft fade at the scrolling edges, like the emoji grid.
+                    .mask(
+                        LinearGradient(stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.06),
+                            .init(color: .black, location: 0.94),
+                            .init(color: .clear, location: 1),
+                        ], startPoint: .top, endPoint: .bottom)
+                    )
+                }
+                // Name the *non-scrolling* viewport so each row's frame in this
+                // space reflects scrolling (on the ScrollView it'd be content
+                // space — constant — and rows would never close on scroll).
+                .coordinateSpace(name: scrollSpace)
+            }
+        }
+    }
+
+    /// The swipeable cards. The card's glass surface and the action circles share
+    /// one per-row `GlassEffectContainer` (see `SwipeRow.glassWrap`) so they morph
+    /// into a gooey bridge as the card is dragged; the card text rides above the
+    /// glass as a `SwipeRow` overlay so the material never frosts it.
+    @ViewBuilder private func cardList(viewportHeight: CGFloat) -> some View {
+        VStack(spacing: 6) {
+            ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                SwipeRow(id: index, cornerRadius: cornerRadius, actions: [
+                    SwipeAction(icon: "doc.on.doc.fill", label: "Copy",
+                                tint: .gray) { onCopy(index) },
+                    SwipeAction(icon: entry.pinned ? "pin.slash.fill" : "pin.fill",
+                                label: entry.pinned ? "Unpin" : "Pin",
+                                tint: theme.accent.color) { onTogglePin(index) },
+                    SwipeAction(icon: "trash.fill", label: "Delete",
+                                tint: .red) { onDelete(index) },
+                ], glass: theme.material == .liquidGlass,
+                   openID: $openRow, scrollSpace: scrollSpace, viewportHeight: viewportHeight,
+                   onTap: { onTap(entry.text) },
+                   cardBackground: { cardSurface }) {
+                    entryText(entry)
+                }
+            }
+        }
+    }
+
+    private func entryText(_ entry: ClipboardEntry) -> some View {
+        HStack(spacing: 10) {
+            if entry.pinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(theme.accent.color)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.text)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(theme.keyText.color)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if entry.date != .distantPast {
+                    Text(entry.date.clipboardRelative)
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.keyText.color.opacity(0.45))
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Card surface that tracks the keyboard's material: a theme-tinted liquid
+    /// glass lens (so swiped-under action circles refract through it) when the
+    /// keyboard is glass, an opaque key-fill otherwise.
+    @ViewBuilder private var cardSurface: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        switch theme.material {
+        case .liquidGlass:
+            if #available(iOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular.tint(theme.keyFill.color.opacity(theme.glassTintStrength)), in: shape)
+            } else {
+                shape.fill(.ultraThinMaterial)
+                    .overlay(shape.fill(theme.keyFill.color.opacity(theme.glassTintStrength)))
+            }
+        case .solid:
+            shape.fill(theme.keyFill.color)
+        }
+    }
+
+    private func headerButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button { action() } label: {
+            // Fixed square glyph box, centered, so every icon shares the same
+            // optical center regardless of its intrinsic shape.
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(theme.keyText.color.opacity(0.5))
+                .frame(width: 22, height: 22)
+                .frame(width: 52, height: KeyboardCanvas.Metrics.suggestionBarHeight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var divider: some View {
         Rectangle()
             .fill(theme.keyText.color.opacity(0.15))
             .frame(width: 0.5)

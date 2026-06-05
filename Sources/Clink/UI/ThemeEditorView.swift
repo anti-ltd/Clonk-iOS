@@ -21,6 +21,15 @@ struct ThemeEditorView: View {
     /// Whether the `.clink` import file picker is up.
     @State private var importing = false
 
+    /// Whether the "name your new theme" alert is up, and the dark flag the
+    /// fresh theme should seed from once named.
+    @State private var creatingName = false
+    @State private var pendingDark = false
+    /// The custom theme being renamed via long-press — drives the rename alert.
+    @State private var renameTarget: Theme?
+    /// Shared text buffer for both the create and rename name alerts.
+    @State private var nameField = ""
+
     /// Which appearance's themes are shown while "Match system appearance" is on —
     /// the two modes live behind a segmented tab rather than stacked sections.
     @State private var appearanceTab: Appearance = .light
@@ -103,6 +112,33 @@ struct ThemeEditorView: View {
         .sheet(item: $builderTheme) { theme in
             ThemeBuilderView(theme: theme)
         }
+        .alert("New Theme", isPresented: $creatingName) {
+            TextField("Theme name", text: $nameField)
+            Button("Cancel", role: .cancel) {}
+            Button("Create") {
+                var theme = Theme.newCustom(
+                    id: "custom-\(UUID().uuidString.prefix(8))", dark: pendingDark)
+                let trimmed = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
+                theme.name = trimmed.isEmpty ? "My Theme" : trimmed
+                builderTheme = theme
+            }
+        } message: {
+            Text("Name your theme.")
+        }
+        .alert("Rename Theme",
+               isPresented: Binding(get: { renameTarget != nil },
+                                    set: { if !$0 { renameTarget = nil } })) {
+            TextField("Theme name", text: $nameField)
+            Button("Cancel", role: .cancel) { renameTarget = nil }
+            Button("Save") {
+                if var theme = renameTarget {
+                    let trimmed = nameField.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty { theme.name = trimmed }
+                    model.saveCustomTheme(theme)
+                }
+                renameTarget = nil
+            }
+        }
     }
 
     /// Two equal-width actions: make a fresh theme, or pull one in from a `.clink`
@@ -110,10 +146,11 @@ struct ThemeEditorView: View {
     private var bottomBar: some View {
         HStack(spacing: UX.cardSpacing) {
             actionButton("Create", systemImage: "plus.circle.fill") {
-                // Seed the new theme's appearance from whatever's active now.
-                builderTheme = Theme.newCustom(
-                    id: "custom-\(UUID().uuidString.prefix(8))",
-                    dark: model.settings.theme.isDark)
+                // Name first via a dialog — the builder no longer carries a text
+                // field, which trapped the software keyboard in the pinned layout.
+                pendingDark = model.settings.theme.isDark
+                nameField = ""
+                creatingName = true
             }
             actionButton("Import", systemImage: "square.and.arrow.down") {
                 importing = true
@@ -191,6 +228,7 @@ struct ThemeEditorView: View {
                         .onTapGesture { select(theme.id) }
                     if custom {
                         swatch.contextMenu {
+                            Button { nameField = theme.name; renameTarget = theme } label: { Label("Rename", systemImage: "character.cursor.ibeam") }
                             Button { builderTheme = theme } label: { Label("Edit", systemImage: "pencil") }
                             Button { builderTheme = duplicate(theme) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
                             Button { exportingTheme = theme } label: { Label("Export…", systemImage: "square.and.arrow.up") }

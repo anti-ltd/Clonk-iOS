@@ -8,21 +8,41 @@ import UIKit
 @MainActor
 @Observable
 public final class ClipboardManager {
-    public private(set) var history: [String] = []
+    public private(set) var history: [ClipboardEntry] = []
 
     private let maxItems = 20
 
     public init() { load() }
 
     /// Add `string` to the front of the history. Deduplicates (existing entry
-    /// moves to front) and trims to `maxItems`. Persists immediately.
+    /// moves to front, keeping its pin state) and trims to `maxItems`. Pinned
+    /// entries always sort first and are exempt from trimming. Persists immediately.
     public func capture(string: String) {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        history.removeAll { $0 == trimmed }
-        history.insert(trimmed, at: 0)
-        if history.count > maxItems { history = Array(history.prefix(maxItems)) }
+        let wasPinned = history.first { $0.text == trimmed }?.pinned ?? false
+        history.removeAll { $0.text == trimmed }
+        history.insert(ClipboardEntry(text: trimmed, pinned: wasPinned), at: 0)
+        normalize()
         save()
+    }
+
+    /// Toggle the pinned state of the entry at `index`. Pinned entries float to
+    /// the top and survive trimming and "clear".
+    public func togglePin(at index: Int) {
+        guard history.indices.contains(index) else { return }
+        history[index].pinned.toggle()
+        normalize()
+        save()
+    }
+
+    /// Stable-partition pinned entries to the front (preserving recency within
+    /// each group) and trim the unpinned tail to `maxItems`.
+    private func normalize() {
+        let pinned = history.filter { $0.pinned }
+        var unpinned = history.filter { !$0.pinned }
+        if unpinned.count > maxItems { unpinned = Array(unpinned.prefix(maxItems)) }
+        history = pinned + unpinned
     }
 
     /// Read `UIPasteboard.general.string` and capture it. Only call this when
@@ -32,9 +52,16 @@ public final class ClipboardManager {
         capture(string: text)
     }
 
-    /// Wipe the full history and persist.
+    /// Remove a single entry by index.
+    public func delete(at index: Int) {
+        guard history.indices.contains(index) else { return }
+        history.remove(at: index)
+        save()
+    }
+
+    /// Wipe the history except pinned entries and persist.
     public func clear() {
-        history = []
+        history = history.filter { $0.pinned }
         save()
     }
 
@@ -43,19 +70,36 @@ public final class ClipboardManager {
     private var fileURL: URL? {
         FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupID)?
+            .appendingPathComponent("clink-clipboard.v2.json")
+    }
+
+    private var legacyFileURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupID)?
             .appendingPathComponent("clink-clipboard.v1.json")
     }
 
     private func load() {
+        // v2: [ClipboardEntry] with timestamps
         if let url = fileURL,
            let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode([String].self, from: data) {
+           let decoded = try? JSONDecoder().decode([ClipboardEntry].self, from: data) {
             history = decoded
             return
         }
+        // v1 migration: plain [String] — convert to entries with .distantPast date
+        if let url = legacyFileURL,
+           let data = try? Data(contentsOf: url),
+           let strings = try? JSONDecoder().decode([String].self, from: data) {
+            history = strings.map { ClipboardEntry(text: $0, date: .distantPast) }
+            save()
+            return
+        }
+        // UserDefaults fallback (v1)
         if let data = UserDefaults.standard.data(forKey: "clink-clipboard-v1"),
-           let decoded = try? JSONDecoder().decode([String].self, from: data) {
-            history = decoded
+           let strings = try? JSONDecoder().decode([String].self, from: data) {
+            history = strings.map { ClipboardEntry(text: $0, date: .distantPast) }
+            save()
         }
     }
 
@@ -66,7 +110,7 @@ public final class ClipboardManager {
             return
         }
         if let data = try? JSONEncoder().encode(history) {
-            UserDefaults.standard.set(data, forKey: "clink-clipboard-v1")
+            UserDefaults.standard.set(data, forKey: "clink-clipboard-v2")
         }
     }
 }

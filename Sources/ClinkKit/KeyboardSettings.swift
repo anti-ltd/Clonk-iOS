@@ -16,6 +16,22 @@ public enum KeyPopupStyle: String, Codable, Sendable, CaseIterable, Identifiable
     }
 }
 
+/// How clipboard history is presented in the keyboard.
+public enum ClipboardStyle: String, Codable, Sendable, CaseIterable, Identifiable {
+    /// Replaces the suggestion bar with a horizontal scroll of chips.
+    case bar
+    /// Pops an overlay panel over the keys — cards with text and timestamps.
+    case overlay
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .bar:     return "Bar"
+        case .overlay: return "Panel"
+        }
+    }
+}
+
 /// Which way the emoji grid scrolls. Vertical (rows wrap downward, scroll down
 /// for more) is the default; horizontal (columns fill top-to-bottom, swipe
 /// sideways for more) mirrors the older system emoji keyboard.
@@ -28,6 +44,30 @@ public enum EmojiScrollDirection: String, Codable, Sendable, CaseIterable, Ident
         switch self {
         case .vertical:   return "Vertical"
         case .horizontal: return "Horizontal"
+        }
+    }
+}
+
+/// How the text cursor is moved from the keyboard. `spacebar` is the default —
+/// slide along the space bar to nudge the cursor by characters. `trackpad` turns
+/// the whole keyboard into a 2-D trackpad while the space bar is held: drag
+/// anywhere to move the cursor (left/right by characters, up/down by lines),
+/// release to return to the keys — mirroring the system keyboard's trackpad.
+public enum CursorMovementType: String, Codable, Sendable, CaseIterable, Identifiable {
+    case spacebar
+    case trackpad
+    /// A normal keyboard that, while the space bar is held into a cursor drag,
+    /// blanks the key letters and makes the keys inert (the space bar morphs as
+    /// you move). Unlike `trackpad` it never hides the keyboard — the keys stay
+    /// visible, just letter-less, until you lift.
+    case combined
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .spacebar: return "Spacebar"
+        case .trackpad: return "Trackpad"
+        case .combined: return "Combined"
         }
     }
 }
@@ -107,6 +147,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Show the clipboard history button in the suggestion bar. Requires Full
     /// Access — without it the pasteboard is not readable from the extension.
     public var clipboardEnabled: Bool
+    /// How clipboard history is presented when the toggle is tapped.
+    public var clipboardStyle: ClipboardStyle
     /// Show the autocomplete / suggestion bar above the keys.
     public var suggestionsEnabled: Bool
     /// Auto-correct the just-typed word when a space / punctuation is entered.
@@ -145,6 +187,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// higher values require an intentional hold, reducing accidental activation
     /// when typing fast. Works hand-in-hand with `spaceCursorStride`.
     public var spaceCursorActivationDelay: Double
+    /// How the cursor is moved: slide on the space bar (`spacebar`, default) or
+    /// hold the space bar to open a full-keyboard 2-D trackpad (`trackpad`).
+    public var cursorMovementType: CursorMovementType
+    /// Characters the cursor jumps per vertical "line" step when dragging up/down.
+    /// The text API only moves the cursor by character offset, so a line is an
+    /// estimate — raise it for long lines, lower it for short ones. Applies to
+    /// both the space-bar slide and the trackpad. Default 30.
+    public var cursorLineStride: Double
     // Key press physics
     /// Scale applied to each key when it blooms on press (1.0 = no bloom).
     public var keyBloomScale: Double
@@ -226,6 +276,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keySpacing: Double = 1,
         rowSpacing: Double = 4,
         clipboardEnabled: Bool = false,
+        clipboardStyle: ClipboardStyle = .bar,
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
         autoPunctuationEnabled: Bool = true,
@@ -238,6 +289,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         hitboxScale: Double = 0.90,
         spaceCursorStride: Double = 10,
         spaceCursorActivationDelay: Double = 0,
+        cursorMovementType: CursorMovementType = .spacebar,
+        cursorLineStride: Double = 30,
         keyBloomScale: Double = 1.12,
         keySpringResponse: Double = 0.26,
         keySpringDamping: Double = 0.60,
@@ -283,6 +336,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.keySpacing = keySpacing
         self.rowSpacing = rowSpacing
         self.clipboardEnabled = clipboardEnabled
+        self.clipboardStyle = clipboardStyle
         self.suggestionsEnabled = suggestionsEnabled
         self.autocorrectEnabled = autocorrectEnabled
         self.autoPunctuationEnabled = autoPunctuationEnabled
@@ -295,6 +349,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.hitboxScale = hitboxScale
         self.spaceCursorStride = spaceCursorStride
         self.spaceCursorActivationDelay = spaceCursorActivationDelay
+        self.cursorMovementType = cursorMovementType
+        self.cursorLineStride = cursorLineStride
         self.keyBloomScale = keyBloomScale
         self.keySpringResponse = keySpringResponse
         self.keySpringDamping = keySpringDamping
@@ -349,6 +405,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keySpacing = try c.decodeIfPresent(Double.self, forKey: .keySpacing) ?? 5
         rowSpacing = try c.decodeIfPresent(Double.self, forKey: .rowSpacing) ?? 7
         clipboardEnabled = try c.decodeIfPresent(Bool.self, forKey: .clipboardEnabled) ?? false
+        clipboardStyle = (try? c.decodeIfPresent(ClipboardStyle.self, forKey: .clipboardStyle)) ?? .bar
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
@@ -361,6 +418,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.90
         spaceCursorStride = try c.decodeIfPresent(Double.self, forKey: .spaceCursorStride) ?? 10
         spaceCursorActivationDelay = try c.decodeIfPresent(Double.self, forKey: .spaceCursorActivationDelay) ?? 0
+        cursorMovementType = (try? c.decodeIfPresent(CursorMovementType.self, forKey: .cursorMovementType)) ?? .spacebar
+        cursorLineStride = try c.decodeIfPresent(Double.self, forKey: .cursorLineStride) ?? 30
         keyBloomScale = try c.decodeIfPresent(Double.self, forKey: .keyBloomScale) ?? 1.12
         keySpringResponse = try c.decodeIfPresent(Double.self, forKey: .keySpringResponse) ?? 0.26
         keySpringDamping = try c.decodeIfPresent(Double.self, forKey: .keySpringDamping) ?? 0.60

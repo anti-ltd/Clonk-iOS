@@ -32,6 +32,14 @@ struct RootView: View {
                             TypingView()
                         }
                         Divider()
+                        NavRow("Clipboard", subtitle: "History, re-paste, and management",
+                               systemImage: "clipboard",
+                               value: model.settings.clipboardEnabled
+                                   ? (model.clipboard.history.isEmpty ? "On" : "\(model.clipboard.history.count) saved")
+                                   : "Off") {
+                            ClipboardHistoryView()
+                        }
+                        Divider()
                         NavRow("Emoji", subtitle: "Default skin tone for emoji",
                                systemImage: "face.smiling", value: model.settings.defaultSkinTone.label) {
                             EmojiSettingsView()

@@ -62,7 +62,6 @@ struct ThemeBuilderView: View {
             // the keyboard stays put while the fields scroll under it.
             TabbedPreviewLayout(settings: previewSettings, tabs: [
                 PreviewTab("Style") {
-                    nameCard
                     styleCard
                     if draft.material == .liquidGlass { glassCard }
                     if isExisting { deleteButton }
@@ -98,12 +97,6 @@ struct ThemeBuilderView: View {
                     Button("Save") { save() }
                 }
             }
-        }
-    }
-
-    private var nameCard: some View {
-        CardSection("Name") {
-            TextFieldRow(prompt: "Theme name", text: $draft.name)
         }
     }
 
