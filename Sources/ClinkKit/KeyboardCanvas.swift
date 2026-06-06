@@ -30,6 +30,16 @@ struct KeyPressPhysics {
     var popupSpringDamping: Double   = 0.62
 }
 
+/// Collects each popover-picker row's frame (in the shared `panelSpace`) so the
+/// button's drag gesture can hit-test the finger against options.
+private struct PanelRowFrameKey: PreferenceKey {
+    static let defaultValue: [ActionPanel: CGRect] = [:]
+    static func reduce(value: inout [ActionPanel: CGRect],
+                       nextValue: () -> [ActionPanel: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
 public struct KeyboardCanvas: View {
     private let settings: KeyboardSettings
     private let onInsert: (String) -> Void
@@ -135,6 +145,27 @@ public struct KeyboardCanvas: View {
     /// While the notepad is in `notes` mode, whether the saved-notes archive is
     /// taking over the full keyboard (browsing) versus the inline compose strip.
     @State private var notepadBrowsing = false
+
+    // Press-hold-drag-release support for the popover picker. The button's drag
+    // gesture opens the menu on press, highlights the row under the finger, and
+    // on release selects (over a row) or dismisses (off-menu). A plain tap (no
+    // movement) just toggles the menu open/closed.
+    /// Each popover row's frame in the `panelSpace` coordinate space, for
+    /// hit-testing the finger against options during a drag.
+    @State private var panelRowFrames: [ActionPanel: CGRect] = [:]
+    /// The row the finger is currently over during a drag (highlighted).
+    @State private var pickerDragHover: ActionPanel? = nil
+    /// Whether the current drag moved beyond the tap threshold.
+    @State private var pickerDragMoved = false
+    /// Whether the menu was already open when this press began (so a tap on an
+    /// open menu closes it).
+    @State private var pickerWasOpenAtStart = false
+    /// Whether a press sequence is currently in flight.
+    @State private var pickerDragActive = false
+
+    /// Shared coordinate space so the button's drag location and the popover
+    /// rows' frames are measured against the same origin.
+    private static let panelSpace = "actionPanelSpace"
 
     // Proxy the canvas's existing `plane` / `shift` reads & writes onto the
     // controller, so the rest of the view is untouched. `nonmutating set` works
@@ -351,16 +382,72 @@ public struct KeyboardCanvas: View {
     /// one panel is enabled and the inline picker isn't expanded.
     @ViewBuilder private var actionPanelArea: some View {
         if settings.activateWithIcon && !enabledPanels.isEmpty {
-            ActionPanelButton(systemName: panelButtonIcon,
-                              isActive: live.activePanel != nil,
-                              theme: theme,
-                              hitboxScale: settings.panelButtonHitboxScale) {
-                panelButtonTapped()
+            Group {
+                // Popover with 2+ panels gets the press-hold-drag-release button;
+                // every other case is a plain tap button.
+                if settings.panelPickerStyle == .popover && enabledPanels.count >= 2 {
+                    panelDragButton
+                } else {
+                    ActionPanelButton(systemName: panelButtonIcon,
+                                      isActive: live.activePanel != nil,
+                                      theme: theme,
+                                      hitboxScale: settings.panelButtonHitboxScale) {
+                        panelButtonTapped()
+                    }
+                }
             }
             .frame(width: Metrics.suggestionBarHeight)
             .anchorPreference(key: BarHitboxKey.self, value: .bounds) { ["icon": $0] }
             barDivider(theme: theme)
         }
+    }
+
+    /// The popover trigger that supports both a plain tap (toggle the menu) and a
+    /// press-hold-drag-release flow: hold opens the menu, drag highlights the row
+    /// under the finger, release over a row selects it, release off-menu dismisses.
+    private var panelDragButton: some View {
+        Image(systemName: panelButtonIcon)
+            .font(.system(size: 16))
+            .foregroundStyle(live.activePanel != nil
+                ? theme.accent.color
+                : theme.keyText.color.opacity(0.55))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .hitboxExpand(settings.panelButtonHitboxScale,
+                          baseHeight: Metrics.suggestionBarHeight)
+            .gesture(panelDragGesture)
+    }
+
+    private var panelDragGesture: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.panelSpace))
+            .onChanged { v in
+                if !pickerDragActive {
+                    pickerDragActive = true
+                    pickerWasOpenAtStart = pickerOpen
+                    pickerDragMoved = false
+                    if !pickerOpen {
+                        withAnimation(.snappy(duration: 0.18)) { pickerOpen = true }
+                    }
+                }
+                let moved = hypot(v.location.x - v.startLocation.x,
+                                  v.location.y - v.startLocation.y)
+                if moved > 8 { pickerDragMoved = true }
+                pickerDragHover = panelRowFrames.first { $0.value.contains(v.location) }?.key
+            }
+            .onEnded { v in
+                defer {
+                    pickerDragActive = false
+                    pickerDragHover = nil
+                    pickerDragMoved = false
+                }
+                if let hover = panelRowFrames.first(where: { $0.value.contains(v.location) })?.key {
+                    activate(hover)                       // released over an option → select
+                } else if pickerDragMoved {
+                    withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }   // dragged off → dismiss
+                } else if pickerWasOpenAtStart {
+                    withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }   // tap on open menu → close
+                }
+                // else: a tap that opened the menu — leave it open for a follow-up tap.
+            }
     }
 
     /// The bar's right-hand content: the active panel's inline strip, otherwise
@@ -443,11 +530,21 @@ public struct KeyboardCanvas: View {
                         .foregroundStyle(theme.keyText.color)
                         .padding(.horizontal, 14)
                         .frame(height: 40)
+                        // Highlight the row the finger is dragging over.
+                        .background(pickerDragHover == panel
+                                    ? theme.accent.color.opacity(0.22) : .clear)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // Report this row's frame so the drag gesture can hit-test it.
+                    .background(GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: PanelRowFrameKey.self,
+                            value: [panel: proxy.frame(in: .named(Self.panelSpace))])
+                    })
                 }
             }
+            .onPreferenceChange(PanelRowFrameKey.self) { panelRowFrames = $0 }
             .frame(width: 168)
             .background {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -672,6 +769,10 @@ public struct KeyboardCanvas: View {
                 panelPopover
             }
         }
+        // Shared coordinate space for the popover drag: the button's drag location
+        // and the popover rows' frames are both measured here. Applied last so it
+        // encloses both the bar button and the popover overlay.
+        .coordinateSpace(name: Self.panelSpace)
     }
 
     /// One key's glyph for the on-top glyph layer (text or animated symbol).
