@@ -60,6 +60,22 @@ struct AdvancedSettingsView: View {
                       in: 0.75...1.25, step: 0.05) {
                 $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
             }
+            // Bar / icon targets sit above the keys and carry their own hitbox
+            // multipliers — only offered when each element is actually shown.
+            if model.settings.suggestionsEnabled {
+                Divider()
+                SliderRow("Suggestion bar", value: $model.settings.suggestionHitboxScale,
+                          in: 0.75...1.5, step: 0.05) {
+                    $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
+                }
+            }
+            if model.settings.activateWithIcon && panelIconAvailable {
+                Divider()
+                SliderRow("Panel icon", value: $model.settings.panelButtonHitboxScale,
+                          in: 0.75...1.5, step: 0.05) {
+                    $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
+                }
+            }
         }
         CardSection("Cursor") {
             VStack(alignment: .leading, spacing: 8) {
@@ -208,6 +224,15 @@ struct AdvancedSettingsView: View {
     }
 
     // MARK: - Helpers
+
+    /// Whether the top-left panel icon can appear at all — i.e. at least one
+    /// action panel is enabled. (Clipboard also needs Full Access at runtime, but
+    /// the slider is harmless to offer regardless.)
+    private var panelIconAvailable: Bool {
+        model.settings.clipboardEnabled
+            || model.settings.notepadEnabled
+            || model.settings.emojiEnabled
+    }
 
     private var cursorHelpText: String {
         switch model.settings.cursorMovementType {

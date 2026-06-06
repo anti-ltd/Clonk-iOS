@@ -45,6 +45,9 @@ public struct KeyboardCanvas: View {
     /// Fired when the user taps a clipboard chip — the host inserts the text at
     /// the cursor and dismisses clipboard mode.
     private let onClipboardInsert: (String) -> Void
+    /// Fired when the user dumps the notepad buffer (or taps a saved note) into
+    /// the host document. Distinct from `onClipboardInsert` only for clarity.
+    private let onNotepadInsert: (String) -> Void
     /// When true, render a semi-transparent hitbox outline over each key so the
     /// user can see exactly which area maps to each key. Used by the Advanced
     /// settings view; false for normal use.
@@ -61,11 +64,15 @@ public struct KeyboardCanvas: View {
     /// Clipboard history — observed so the bar updates when history changes.
     private var clipboard: ClipboardManager
 
+    /// Quick-notepad store — observed so the compose buffer / notes list update.
+    private var notepad: NotepadManager
+
     public init(
         settings: KeyboardSettings,
         live: KeyboardLiveState = KeyboardLiveState(),
         controller: KeyboardController? = nil,
         clipboard: ClipboardManager = ClipboardManager(),
+        notepad: NotepadManager = NotepadManager(),
         hasFullAccess: Bool = false,
         showHitboxOverlay: Bool = false,
         onInsert: @escaping (String) -> Void,
@@ -76,7 +83,8 @@ public struct KeyboardCanvas: View {
         onEmojiSuggestion: @escaping (String) -> Void = { _ in },
         onCancelAutocorrect: @escaping () -> Void = {},
         onCursorMove: @escaping (Int) -> Void = { _ in },
-        onClipboardInsert: @escaping (String) -> Void = { _ in }
+        onClipboardInsert: @escaping (String) -> Void = { _ in },
+        onNotepadInsert: @escaping (String) -> Void = { _ in }
     ) {
         self.settings = settings
         self.live = live
@@ -84,6 +92,7 @@ public struct KeyboardCanvas: View {
         // one) or spin up a private one for ordinary finger-driven use.
         _controller = State(initialValue: controller ?? KeyboardController())
         self.clipboard = clipboard
+        self.notepad = notepad
         self.hasFullAccess = hasFullAccess
         self.showHitboxOverlay = showHitboxOverlay
         self.onInsert = onInsert
@@ -95,6 +104,7 @@ public struct KeyboardCanvas: View {
         self.onCancelAutocorrect = onCancelAutocorrect
         self.onCursorMove = onCursorMove
         self.onClipboardInsert = onClipboardInsert
+        self.onNotepadInsert = onNotepadInsert
     }
 
     private typealias Plane = KeyboardController.Plane
@@ -112,6 +122,14 @@ public struct KeyboardCanvas: View {
     /// Track whether the last key pressed was sentence punctuation, so we can
     /// return to letters when the space bar is tapped (rather than immediately).
     @State private var lastKeyWasPunctuation = false
+
+    /// The panel picker is showing (only meaningful when 2+ panels are enabled).
+    /// For `.popover` it floats a menu; for `.inline` it expands the bar.
+    @State private var pickerOpen = false
+
+    /// While the notepad is in `notes` mode, whether the saved-notes archive is
+    /// taking over the full keyboard (browsing) versus the inline compose strip.
+    @State private var notepadBrowsing = false
 
     // Proxy the canvas's existing `plane` / `shift` reads & writes onto the
     // controller, so the rest of the view is untouched. `nonmutating set` works
@@ -189,7 +207,12 @@ public struct KeyboardCanvas: View {
             h += key * CGFloat(settings.numberRowHeightScale)
         }
         h += CGFloat(rows - 1) * CGFloat(settings.rowSpacing) + Metrics.vPadding * 2
-        if settings.suggestionsEnabled || (settings.clipboardEnabled && hasFullAccess) {
+        // The bar is present for suggestions, or for the panel icon when icon
+        // activation is on and at least one panel is enabled. (Slide-up-only
+        // activation adds no permanent bar — the picker is transient.)
+        let anyPanel = (settings.clipboardEnabled && hasFullAccess)
+            || settings.notepadEnabled || settings.emojiEnabled
+        if settings.suggestionsEnabled || (settings.activateWithIcon && anyPanel) {
             h += Metrics.suggestionBarHeight
         }
         return h
@@ -211,56 +234,296 @@ public struct KeyboardCanvas: View {
         settings.cursorMovementType == .combined && touch.spaceCursorActive
     }
 
+    // MARK: - Action panels (clipboard / notepad)
+
+    /// The panels available right now, in display order. Clipboard needs Full
+    /// Access (it reads the pasteboard); notepad and emoji do not.
+    private var enabledPanels: [ActionPanel] {
+        var panels: [ActionPanel] = []
+        if settings.clipboardEnabled && hasFullAccess { panels.append(.clipboard) }
+        if settings.notepadEnabled { panels.append(.notepad) }
+        if settings.emojiEnabled { panels.append(.emoji) }
+        return panels
+    }
+
+    /// Whether a panel takes over the whole keyboard (true overlay) rather than
+    /// living in the bar strip with the keys still visible. Clipboard honours its
+    /// style setting; the notepad only goes full-screen while browsing its saved
+    /// notes archive. Emoji never renders inside this canvas (it swaps to the
+    /// separate `EmojiCanvas`), so it's never an in-canvas overlay.
+    private func panelIsOverlay(_ panel: ActionPanel) -> Bool {
+        switch panel {
+        case .clipboard: return settings.clipboardStyle == .overlay
+        case .notepad:   return settings.notepadMode == .notes && notepadBrowsing
+        case .emoji:     return false
+        }
+    }
+
+    /// The panel currently rendered as a full-keyboard overlay, if any.
+    private var overlayPanel: ActionPanel? {
+        guard let active = live.activePanel, panelIsOverlay(active) else { return nil }
+        return active
+    }
+
+    /// True when the inline picker should expand across the bar.
+    private var pickerInlineExpanded: Bool {
+        pickerOpen && settings.panelPickerStyle == .inline && enabledPanels.count >= 2
+    }
+
+    /// True when the cards picker should take over the whole keyboard.
+    private var pickerCardsActive: Bool {
+        pickerOpen && settings.panelPickerStyle == .cards && enabledPanels.count >= 2
+    }
+
+    /// SF Symbol for the top-left button: the active panel's filled icon, the lone
+    /// enabled panel's icon, or a neutral grid when a picker is needed.
+    private var panelButtonIcon: String {
+        if let active = live.activePanel { return active.icon(active: true) }
+        let panels = enabledPanels
+        if panels.count == 1 { return panels[0].icon(active: false) }
+        return "square.grid.2x2"
+    }
+
+    /// Tap behaviour of the top-left button. One panel → toggle it. Many panels →
+    /// close the open one, else open the picker.
+    private func panelButtonTapped() {
+        let panels = enabledPanels
+        if panels.count == 1 {
+            togglePanel(panels[0])
+        } else if live.activePanel != nil {
+            closePanel()
+        } else {
+            pickerOpen.toggle()
+        }
+    }
+
+    /// Open a panel, dragging the 123 key up. Mirrors the button: lone panel
+    /// opens directly, otherwise the picker.
+    private func slideUpActivate() {
+        let panels = enabledPanels
+        guard !panels.isEmpty else { return }
+        if panels.count == 1 {
+            activate(panels[0])
+        } else {
+            withAnimation(.snappy(duration: 0.22)) { pickerOpen = true }
+        }
+    }
+
+    private func togglePanel(_ panel: ActionPanel) {
+        // Emoji lives in its own canvas — there's no "open emoji panel" state to
+        // toggle off from here (you return via the emoji ABC key), so just open.
+        if panel == .emoji { activate(.emoji); return }
+        if live.activePanel == panel { closePanel() }
+        else { live.activePanel = panel; pickerOpen = false }
+    }
+
+    /// Route a panel selection. Emoji flips the shared controller to swap in the
+    /// emoji canvas; clipboard / notepad open in-place via `live.activePanel`.
+    private func activate(_ panel: ActionPanel) {
+        pickerOpen = false
+        switch panel {
+        case .emoji:
+            withAnimation(.snappy(duration: 0.22)) { controller.showEmoji = true }
+        case .clipboard, .notepad:
+            live.activePanel = panel
+        }
+    }
+
+    private func closePanel() {
+        live.activePanel = nil
+        pickerOpen = false
+        notepadBrowsing = false
+    }
+
+    /// Collapse the picker (popover or inline) the moment a key is pressed — the
+    /// user resumed typing rather than choosing a panel.
+    private func dismissPickerOnInput() {
+        guard pickerOpen else { return }
+        withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }
+    }
+
+    /// The top-left button (single icon) plus its divider, shown when at least
+    /// one panel is enabled and the inline picker isn't expanded.
+    @ViewBuilder private var actionPanelArea: some View {
+        if settings.activateWithIcon && !enabledPanels.isEmpty {
+            ActionPanelButton(systemName: panelButtonIcon,
+                              isActive: live.activePanel != nil,
+                              theme: theme,
+                              hitboxScale: settings.panelButtonHitboxScale) {
+                panelButtonTapped()
+            }
+            .frame(width: Metrics.suggestionBarHeight)
+            .anchorPreference(key: BarHitboxKey.self, value: .bounds) { ["icon": $0] }
+            barDivider(theme: theme)
+        }
+    }
+
+    /// The bar's right-hand content: the active panel's inline strip, otherwise
+    /// the suggestion bar (or empty filler).
+    @ViewBuilder private var barContent: some View {
+        if live.activePanel == .clipboard && settings.clipboardStyle == .bar {
+            ClipboardBar(
+                entries: clipboard.history, theme: theme,
+                onTap: onClipboardInsert,
+                onSave: { clipboard.captureFromPasteboard() },
+                onClear: { clipboard.clear() }
+            )
+        } else if live.activePanel == .notepad {
+            NotepadBar(
+                text: notepad.scratch, mode: settings.notepadMode, theme: theme,
+                onInsert: { onNotepadInsert(notepad.scratch) },
+                onSave: { notepad.addNote(notepad.scratch); notepad.scratch = "" },
+                onBrowse: { notepadBrowsing = true },
+                onClear: { notepad.scratch = "" }
+            )
+        } else if settings.suggestionsEnabled {
+            SuggestionBar(suggestions: live.suggestions,
+                          autocorrection: live.autocorrection,
+                          emoji: live.emojiSuggestions, theme: theme,
+                          onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
+                          onEmoji: onEmojiSuggestion,
+                          hitboxScale: settings.suggestionHitboxScale)
+                .anchorPreference(key: BarHitboxKey.self, value: .bounds) { ["bar": $0] }
+        } else {
+            Spacer()
+        }
+    }
+
+    /// The inline picker: a close button then one labelled chip per panel,
+    /// expanded across the whole bar.
+    @ViewBuilder private var inlinePickerRow: some View {
+        ActionPanelButton(systemName: "xmark", isActive: false, theme: theme) {
+            pickerOpen = false
+        }
+        .frame(width: Metrics.suggestionBarHeight)
+        barDivider(theme: theme)
+        ForEach(Array(enabledPanels.enumerated()), id: \.element) { idx, panel in
+            if idx > 0 { barDivider(theme: theme) }
+            Button { activate(panel) } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: panel.icon(active: false))
+                        .font(.system(size: 15))
+                    Text(panel.label)
+                        .font(.system(size: 15))
+                }
+                .foregroundStyle(theme.keyText.color.opacity(0.8))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// The popover picker: a small floating menu under the button, over a
+    /// transparent tap-to-dismiss catcher that fills the keyboard.
+    private var panelPopover: some View {
+        ZStack(alignment: .topLeading) {
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                .onTapGesture { pickerOpen = false }
+            VStack(spacing: 0) {
+                ForEach(Array(enabledPanels.enumerated()), id: \.element) { idx, panel in
+                    if idx > 0 {
+                        Rectangle().fill(theme.keyText.color.opacity(0.12)).frame(height: 0.5)
+                    }
+                    Button { activate(panel) } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: panel.icon(active: false))
+                                .font(.system(size: 15))
+                                .frame(width: 18)
+                            Text(panel.label)
+                                .font(.system(size: 15))
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(theme.keyText.color)
+                        .padding(.horizontal, 14)
+                        .frame(height: 40)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(width: 168)
+            .background {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(theme.keyFill.color.opacity(0.35)))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(theme.keyText.color.opacity(0.12), lineWidth: 0.5))
+            }
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+            .padding(.leading, 6)
+            .offset(y: Metrics.suggestionBarHeight - 4)
+            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
+        }
+    }
+
     public var body: some View {
         VStack(spacing: 0) {
-            let showBar = settings.suggestionsEnabled || (settings.clipboardEnabled && hasFullAccess)
+            // The bar shows for suggestions, for the icon (when icon activation is
+            // on and a panel exists), whenever a panel is open in-bar, or while
+            // the inline picker is expanded (e.g. opened via slide-up).
+            let showBar = settings.suggestionsEnabled
+                || (settings.activateWithIcon && !enabledPanels.isEmpty)
+                || live.activePanel != nil
+                || pickerInlineExpanded
 
-            if settings.clipboardStyle == .overlay && live.clipboardMode {
-                // Full-keyboard replacement: panel header + scrollable entries.
+            if let overlay = overlayPanel {
+                // Full-keyboard replacement: panel header + scrollable content.
                 // No background set here — backgroundLayer renders behind it normally.
-                ClipboardPanel(
-                    entries: clipboard.history,
+                switch overlay {
+                case .emoji:
+                    // Never an in-canvas overlay (it swaps to EmojiCanvas).
+                    EmptyView()
+                case .clipboard:
+                    ClipboardPanel(
+                        entries: clipboard.history,
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onTap: { text in onClipboardInsert(text) },
+                        onSave: { clipboard.captureFromPasteboard() },
+                        onDismiss: { closePanel() },
+                        onCopy: { idx in
+                            guard clipboard.history.indices.contains(idx) else { return }
+                            UIPasteboard.general.string = clipboard.history[idx].text
+                        },
+                        onTogglePin: { idx in clipboard.togglePin(at: idx) },
+                        onDelete: { idx in clipboard.delete(at: idx) },
+                        onClear: { clipboard.clear() }
+                    )
+                case .notepad:
+                    NotepadBrowsePanel(
+                        notes: notepad.notes,
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onTap: { text in onNotepadInsert(text) },
+                        onLoad: { text in notepad.scratch = text; notepadBrowsing = false },
+                        onDelete: { idx in notepad.deleteNote(at: idx) },
+                        onClear: { notepad.clearNotes() },
+                        onDismiss: { notepadBrowsing = false }
+                    )
+                }
+            } else if pickerCardsActive {
+                // Cards picker: full-keyboard switcher, one card per panel.
+                PanelSwitcherPanel(
+                    panels: enabledPanels,
                     theme: theme,
                     cornerRadius: CGFloat(settings.keyCornerRadius),
-                    onTap: { text in onClipboardInsert(text) },
-                    onSave: { clipboard.captureFromPasteboard() },
-                    onDismiss: { live.clipboardMode = false },
-                    onCopy: { idx in
-                        guard clipboard.history.indices.contains(idx) else { return }
-                        UIPasteboard.general.string = clipboard.history[idx].text
-                    },
-                    onTogglePin: { idx in clipboard.togglePin(at: idx) },
-                    onDelete: { idx in clipboard.delete(at: idx) },
-                    onClear: { clipboard.clear() }
+                    onSelect: { activate($0) },
+                    onDismiss: { pickerOpen = false }
                 )
             } else {
-                // The whole suggestion/clipboard bar is removed while the trackpad
+                // The whole suggestion/panel bar is removed while the trackpad
                 // is live — nothing but the move glyph should show. (Keys stay
                 // rendered but invisible below, so the touch surface keeps frames.)
                 if showBar && !trackpadActive {
                     HStack(spacing: 0) {
-                        if settings.clipboardEnabled && hasFullAccess {
-                            ClipboardToggleButton(isActive: live.clipboardMode, theme: theme) {
-                                live.clipboardMode.toggle()
-                            }
-                            .frame(width: Metrics.suggestionBarHeight)
-                            barDivider(theme: theme)
-                        }
-                        if live.clipboardMode && settings.clipboardStyle == .bar {
-                            ClipboardBar(
-                                entries: clipboard.history, theme: theme,
-                                onTap: onClipboardInsert,
-                                onSave: { clipboard.captureFromPasteboard() },
-                                onClear: { clipboard.clear() }
-                            )
-                        } else if settings.suggestionsEnabled {
-                            SuggestionBar(suggestions: live.suggestions,
-                                          autocorrection: live.autocorrection,
-                                          emoji: live.emojiSuggestions, theme: theme,
-                                          onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
-                                          onEmoji: onEmojiSuggestion)
+                        if pickerInlineExpanded {
+                            inlinePickerRow
                         } else {
-                            Spacer()
+                            actionPanelArea
+                            barContent
                         }
                     }
                     .frame(height: Metrics.suggestionBarHeight)
@@ -281,7 +544,9 @@ public struct KeyboardCanvas: View {
                                 router: touch,
                                 frames: anchors.mapValues { proxy[$0] },
                                 resolveSpec: { currentKeySpecs()[$0] },
-                                onPressDown: onAnyTap,
+                                // Pressing any key while the picker is open
+                                // dismisses it — the user's typing, not choosing.
+                                onPressDown: { dismissPickerOnInput(); onAnyTap() },
                                 lingerDuration: settings.keyPressLinger,
                                 hitboxScale: settings.hitboxScale,
                                 cursorStride: CGFloat(settings.spaceCursorStride),
@@ -296,7 +561,9 @@ public struct KeyboardCanvas: View {
                     }
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: live.clipboardMode)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: live.activePanel)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: pickerOpen)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: notepadBrowsing)
         // Backdrop. By default transparent so the keyboard blends with whatever
         // sits behind it — iOS's own keyboard surface in the extension, the
         // preview's backdrop in-app — and only the keys carry colour, reading as
@@ -357,6 +624,27 @@ public struct KeyboardCanvas: View {
                 .allowsHitTesting(false)
             }
         }
+        // Hitbox debug overlay for the suggestion bar + panel icon: same cyan
+        // outline as the keys, scaled vertically by their own multipliers. Only
+        // the anchors that are actually rendered (bar / icon when enabled) appear.
+        .overlayPreferenceValue(BarHitboxKey.self) { anchors in
+            if showHitboxOverlay {
+                GeometryReader { proxy in
+                    ForEach(anchors.sorted(by: { $0.key < $1.key }), id: \.key) { pair in
+                        let f = proxy[pair.value]
+                        let scale = pair.key == "icon"
+                            ? settings.panelButtonHitboxScale
+                            : settings.suggestionHitboxScale
+                        let h = f.height * CGFloat(scale)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .stroke(Color.cyan.opacity(0.75), lineWidth: 1.5)
+                            .frame(width: f.width, height: h)
+                            .position(x: f.midX, y: f.midY)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+        }
         // Trackpad cursor glyph: while the space bar is held into cursor mode and
         // the user chose the trackpad type, the keyboard chrome above is hidden, so
         // only this centred move glyph shows over the keyboard's own backdrop
@@ -370,6 +658,15 @@ public struct KeyboardCanvas: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: touch.spaceCursorActive)
+        // Floating picker menu (popover style) — anchored under the top-left
+        // button, with a transparent catcher behind it to tap-dismiss. Added LAST
+        // so it sits above the key-glyph overlay (which is itself an overlay layer
+        // — otherwise the letters behind the menu bleed through it).
+        .overlay(alignment: .topLeading) {
+            if pickerOpen && settings.panelPickerStyle == .popover && enabledPanels.count >= 2 {
+                panelPopover
+            }
+        }
     }
 
     /// One key's glyph for the on-top glyph layer (text or animated symbol).
@@ -392,7 +689,9 @@ public struct KeyboardCanvas: View {
                     .animation(.snappy(duration: 0.25), value: g.glyph)
             } else {
                 Text(g.glyph)
-                    .font(.system(size: g.fontSize ?? (g.multiChar ? 16 : 22), weight: .regular))
+                    .font(.system(size: g.fontSize ?? (g.multiChar ? 16 : 22),
+                                  weight: theme.keyFontWeight.fontWeight,
+                                  design: theme.keyFontDesign.fontDesign))
             }
         }
         .foregroundStyle(g.color)
@@ -425,7 +724,9 @@ public struct KeyboardCanvas: View {
     private func tilePopup(_ glyph: String, width: CGFloat, height: CGFloat, fontSize: CGFloat) -> some View {
         let shape = RoundedRectangle(cornerRadius: popupCorner, style: .continuous)
         return Text(glyph)
-            .font(.system(size: fontSize, weight: .regular))
+            .font(.system(size: fontSize,
+                          weight: theme.keyFontWeight.fontWeight,
+                          design: theme.keyFontDesign.fontDesign))
             .foregroundStyle(theme.keyText.color)
             .frame(width: width, height: height)
             .modifier(PopupChrome(shape: shape, theme: theme,
@@ -589,16 +890,15 @@ public struct KeyboardCanvas: View {
     private var bottomRowSpecs: [KeySpec] {
         var specs: [KeySpec] = []
         // 123 / ABC plane toggle. On the letters plane, dragging the 123 key
-        // upward (toward shift) opens emoji — an internal mode swap, so it's
-        // instant with no system keyboard transition. A plain tap still switches
-        // to the number plane as before.
+        // upward (toward shift) opens the action panels — a lone panel directly,
+        // or the picker when several are enabled. Emoji is one of those panels,
+        // preserving the old "drag up for emoji" feel by default. Gated on the
+        // slide-up activation setting; a plain tap still switches to numbers.
         if plane == .letters {
-            specs.append(planeKey("123", to: .numbers, weight: 1.4,
-                                  onDragUp: {
-                                      withAnimation(.snappy(duration: 0.22)) {
-                                          controller.showEmoji = true
-                                      }
-                                  }))
+            let slideUp: (() -> Void)? =
+                (settings.activateWithSlideUp && !enabledPanels.isEmpty)
+                ? { slideUpActivate() } : nil
+            specs.append(planeKey("123", to: .numbers, weight: 1.4, onDragUp: slideUp))
         } else {
             specs.append(planeKey("ABC", to: .letters, weight: 1.4))
         }
@@ -631,7 +931,7 @@ public struct KeyboardCanvas: View {
             ?? .text(live.returnKeyTitle)
         specs.append(.init(kind: .function, label: returnLabel,
                            weight: 1.8, highlighted: live.returnKeyProminent) {
-            onInsert("\n")
+            insert("\n")
         })
         return specs
     }
@@ -670,7 +970,7 @@ public struct KeyboardCanvas: View {
     private var backspaceKey: KeySpec {
         KeySpec(kind: .function, label: .system("delete.left"), weight: settings.funcKeyWidth,
                 isDestructive: true, isRepeatable: true) {
-            onBackspace()
+            backspace()
         }
     }
 
@@ -726,7 +1026,25 @@ public struct KeyboardCanvas: View {
         }
     }
 
-    private func insert(_ s: String) { onInsert(s) }
+    /// Single choke point for every character / space / newline the keys emit.
+    /// While the notepad is composing, keystrokes feed its buffer instead of the
+    /// host document; otherwise they go to the host via `onInsert`.
+    private func insert(_ s: String) {
+        if live.activePanel == .notepad {
+            notepad.scratch += s
+        } else {
+            onInsert(s)
+        }
+    }
+
+    /// Backspace, routed the same way as `insert`.
+    private func backspace() {
+        if live.activePanel == .notepad {
+            if !notepad.scratch.isEmpty { notepad.scratch.removeLast() }
+        } else {
+            onBackspace()
+        }
+    }
 
     // MARK: - Row renderer (proportional widths, à la EmbeddedKeyboard)
 
@@ -1322,6 +1640,8 @@ struct SuggestionBar: View {
     let onTap: (String) -> Void
     let onKeepTyped: () -> Void
     let onEmoji: (String) -> Void
+    /// Vertical hit-target multiplier — see `KeyboardSettings.suggestionHitboxScale`.
+    var hitboxScale: Double = 1.0
 
     private enum Kind { case keep, primary, normal, emoji }
     private struct Candidate: Identifiable {
@@ -1374,7 +1694,7 @@ struct SuggestionBar: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
+                .hitboxExpand(hitboxScale, baseHeight: KeyboardCanvas.Metrics.suggestionBarHeight)
         }
         .buttonStyle(.plain)
     }
@@ -1427,25 +1747,324 @@ private func barDivider(theme: Theme) -> some View {
         .padding(.vertical, 11)
 }
 
-/// The clipboard icon button that lives on the left of the suggestion bar when
-/// clipboard history is enabled. Toggles between the icon (normal) and a
-/// filled variant (active / clipboard-mode open).
-struct ClipboardToggleButton: View {
+/// The top-left action-panel button on the suggestion bar. Renders whatever SF
+/// Symbol the canvas resolves (lone panel icon, active panel's filled icon, or a
+/// neutral grid when a picker is needed), accent-tinted while a panel is open.
+struct ActionPanelButton: View {
+    let systemName: String
     let isActive: Bool
     let theme: Theme
+    /// Vertical hit-target multiplier — see `KeyboardSettings.panelButtonHitboxScale`.
+    var hitboxScale: Double = 1.0
     let onTap: () -> Void
 
     var body: some View {
         Button { onTap() } label: {
-            Image(systemName: isActive ? "doc.on.clipboard.fill" : "doc.on.clipboard")
+            Image(systemName: systemName)
                 .font(.system(size: 16))
                 .foregroundStyle(isActive
                     ? theme.accent.color
                     : theme.keyText.color.opacity(0.55))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .hitboxExpand(hitboxScale, baseHeight: KeyboardCanvas.Metrics.suggestionBarHeight)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Notepad bar support
+
+/// The notepad's inline compose strip — the keys type into `text` while this is
+/// shown. Displays the buffer (tail-truncated so the caret end stays visible)
+/// with trailing actions: browse saved notes + save (notes mode only), insert
+/// the buffer into the host document, and clear.
+struct NotepadBar: View {
+    let text: String
+    let mode: NotepadMode
+    let theme: Theme
+    let onInsert: () -> Void
+    let onSave: () -> Void
+    let onBrowse: () -> Void
+    let onClear: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(text.isEmpty ? "Type to jot a note…" : text)
+                .font(.system(size: 16))
+                .lineLimit(1)
+                .truncationMode(.head)
+                .foregroundStyle(text.isEmpty
+                    ? theme.keyText.color.opacity(0.35)
+                    : theme.keyText.color)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+            if mode == .notes {
+                chipDivider
+                iconButton("tray.full", action: onBrowse)
+                chipDivider
+                iconButton("plus", action: onSave)
+            }
+            chipDivider
+            iconButton("text.insert", action: onInsert)
+            chipDivider
+            iconButton("xmark", action: onClear)
+        }
+    }
+
+    private func iconButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button { action() } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 14))
+                .foregroundStyle(theme.keyText.color.opacity(0.5))
+                .frame(width: 40)
+                .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var chipDivider: some View {
+        Rectangle()
+            .fill(theme.keyText.color.opacity(0.15))
+            .frame(width: 0.5)
+            .padding(.vertical, 11)
+    }
+}
+
+// MARK: - Notepad browse panel (saved-notes archive)
+
+/// Full-keyboard overlay listing the saved notes archive (notes mode). Mirrors
+/// `ClipboardPanel`: swipeable cards with insert / load-into-buffer / delete.
+/// Tapping a card inserts it into the host document; the load action drops it
+/// into the compose buffer for further editing.
+struct NotepadBrowsePanel: View {
+    let notes: [NotepadNote]
+    let theme: Theme
+    let cornerRadius: CGFloat
+    let onTap: (String) -> Void
+    let onLoad: (String) -> Void
+    let onDelete: (Int) -> Void
+    let onClear: () -> Void
+    let onDismiss: () -> Void
+
+    @State private var openRow: Int? = nil
+    private let scrollSpace = "noteScroll"
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 16))
+                    .foregroundStyle(theme.accent.color)
+                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                divider
+                Spacer()
+                divider
+                headerButton("trash", action: onClear)
+                divider
+                headerButton("xmark", action: onDismiss)
+            }
+            .frame(height: KeyboardCanvas.Metrics.suggestionBarHeight)
+
+            if notes.isEmpty {
+                Text("No saved notes yet")
+                    .font(.system(size: 15))
+                    .foregroundStyle(theme.keyText.color.opacity(0.35))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                GeometryReader { vp in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        cardList(viewportHeight: vp.size.height)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                    }
+                    .mask(
+                        LinearGradient(stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.06),
+                            .init(color: .black, location: 0.94),
+                            .init(color: .clear, location: 1),
+                        ], startPoint: .top, endPoint: .bottom)
+                    )
+                }
+                .coordinateSpace(name: scrollSpace)
+            }
+        }
+    }
+
+    @ViewBuilder private func cardList(viewportHeight: CGFloat) -> some View {
+        VStack(spacing: 6) {
+            ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
+                SwipeRow(id: index, cornerRadius: cornerRadius, actions: [
+                    SwipeAction(icon: "pencil", label: "Load",
+                                tint: theme.accent.color) { onLoad(note.text) },
+                    SwipeAction(icon: "trash.fill", label: "Delete",
+                                tint: .red) { onDelete(index) },
+                ], glass: theme.material == .liquidGlass,
+                   openID: $openRow, scrollSpace: scrollSpace, viewportHeight: viewportHeight,
+                   onTap: { onTap(note.text) },
+                   cardBackground: { cardSurface }) {
+                    noteText(note)
+                }
+            }
+        }
+    }
+
+    private func noteText(_ note: NotepadNote) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(note.text)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(theme.keyText.color)
+                .lineLimit(2)
+                .truncationMode(.tail)
+                .multilineTextAlignment(.leading)
+            Text(note.date.clipboardRelative)
+                .font(.system(size: 11))
+                .foregroundStyle(theme.keyText.color.opacity(0.45))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var cardSurface: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        switch theme.material {
+        case .liquidGlass:
+            if #available(iOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular.tint(theme.keyFill.color.opacity(theme.glassTintStrength)), in: shape)
+            } else {
+                shape.fill(.ultraThinMaterial)
+                    .overlay(shape.fill(theme.keyFill.color.opacity(theme.glassTintStrength)))
+            }
+        case .solid:
+            shape.fill(theme.keyFill.color)
+        }
+    }
+
+    private func headerButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button { action() } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(theme.keyText.color.opacity(0.5))
+                .frame(width: 22, height: 22)
+                .frame(width: 52, height: KeyboardCanvas.Metrics.suggestionBarHeight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(theme.keyText.color.opacity(0.15))
+            .frame(width: 0.5)
+            .padding(.vertical, 11)
+    }
+}
+
+// MARK: - Panel switcher (cards picker style)
+
+/// Full-keyboard switcher shown when `panelPickerStyle == .cards` and 2+ panels
+/// are enabled. One tappable card per panel — icon, label, one-line summary — in
+/// the same visual language as the clipboard / notepad card lists. Selecting a
+/// card routes through the canvas's `activate(_:)`.
+struct PanelSwitcherPanel: View {
+    let panels: [ActionPanel]
+    let theme: Theme
+    let cornerRadius: CGFloat
+    let onSelect: (ActionPanel) -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 16))
+                    .foregroundStyle(theme.accent.color)
+                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                divider
+                Spacer()
+                divider
+                headerButton("xmark", action: onDismiss)
+            }
+            .frame(height: KeyboardCanvas.Metrics.suggestionBarHeight)
+
+            GeometryReader { vp in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 6) {
+                        ForEach(panels) { panel in
+                            Button { onSelect(panel) } label: { cardRow(panel) }
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .frame(minHeight: vp.size.height, alignment: .top)
+                }
+            }
+        }
+    }
+
+    private func cardRow(_ panel: ActionPanel) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: panel.icon(active: false))
+                .font(.system(size: 20))
+                .foregroundStyle(theme.accent.color)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(panel.label)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(theme.keyText.color)
+                Text(panel.summary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(theme.keyText.color.opacity(0.5))
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(theme.keyText.color.opacity(0.3))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background { cardSurface }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private var cardSurface: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        switch theme.material {
+        case .liquidGlass:
+            if #available(iOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular.tint(theme.keyFill.color.opacity(theme.glassTintStrength)), in: shape)
+            } else {
+                shape.fill(.ultraThinMaterial)
+                    .overlay(shape.fill(theme.keyFill.color.opacity(theme.glassTintStrength)))
+            }
+        case .solid:
+            shape.fill(theme.keyFill.color)
+        }
+    }
+
+    private func headerButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button { action() } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(theme.keyText.color.opacity(0.5))
+                .frame(width: 22, height: 22)
+                .frame(width: 52, height: KeyboardCanvas.Metrics.suggestionBarHeight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(theme.keyText.color.opacity(0.15))
+            .frame(width: 0.5)
+            .padding(.vertical, 11)
     }
 }
 

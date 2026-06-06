@@ -16,6 +16,12 @@ struct EmojiSettingsView: View {
         @Bindable var model = model
         ScrollView {
             VStack(spacing: UX.cardSpacing) {
+                CardSection("Emoji panel") {
+                    ToggleRow("Emoji keyboard",
+                              subtitle: "Reach emoji from the panel button or by sliding up on 123. Off removes emoji entirely.",
+                              isOn: $model.settings.emojiEnabled)
+                }
+
                 CardSection("Layout") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Scroll direction").foregroundStyle(.secondary).font(.subheadline)

@@ -63,6 +63,7 @@ struct ThemeBuilderView: View {
             TabbedPreviewLayout(settings: previewSettings, tabs: [
                 PreviewTab("Style") {
                     styleCard
+                    fontCard
                     if draft.material == .liquidGlass { glassCard }
                     if isExisting { deleteButton }
                 },
@@ -115,6 +116,24 @@ struct ThemeBuilderView: View {
             ToggleRow("Dark theme",
                       subtitle: "Tints the status bar to match and sets the Liquid Glass fallback.",
                       isOn: $draft.isDark)
+        }
+    }
+
+    private var fontCard: some View {
+        CardSection("Font") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Design").foregroundStyle(.secondary).font(.subheadline)
+                Picker("Design", selection: $draft.keyFontDesign) {
+                    ForEach(ThemeFontDesign.allCases) { d in Text(d.label).tag(d) }
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.vertical, UX.rowVPadding)
+            Divider()
+            Picker("Weight", selection: $draft.keyFontWeight) {
+                ForEach(ThemeFontWeight.allCases) { w in Text(w.label).tag(w) }
+            }
+            .padding(.vertical, 2)
         }
     }
 

@@ -1,5 +1,48 @@
 import SwiftUI
 
+/// One of the optional "action panels" the keyboard can surface from the
+/// top-left button — currently the clipboard history and the quick notepad.
+/// Which ones are available is driven by `KeyboardSettings`; when more than one
+/// is enabled the button offers a picker, otherwise it toggles the only one
+/// directly. The active panel (if any) is held live in `KeyboardLiveState`.
+public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
+    case clipboard
+    case notepad
+    /// The emoji keyboard. Unlike the others it doesn't render inside
+    /// `KeyboardCanvas` — selecting it flips the controller's `showEmoji` to swap
+    /// in the separate `EmojiCanvas` — but it shares the same activation UI.
+    case emoji
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .clipboard: return "Clipboard"
+        case .notepad:   return "Notepad"
+        case .emoji:     return "Emoji"
+        }
+    }
+
+    /// One-line description shown under the label in the `cards` picker.
+    public var summary: String {
+        switch self {
+        case .clipboard: return "Recent copied text"
+        case .notepad:   return "Quick jotted notes"
+        case .emoji:     return "Emoji keyboard"
+        }
+    }
+
+    /// SF Symbol for the button / picker row. `active` swaps to the filled
+    /// variant when the panel is open (matching the old clipboard toggle).
+    public func icon(active: Bool) -> String {
+        switch self {
+        case .clipboard: return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
+        case .notepad:   return active ? "note.text.badge.plus" : "note.text"
+        case .emoji:     return active ? "face.smiling.fill" : "face.smiling"
+        }
+    }
+}
+
 /// A pending auto-correction for the word currently being typed: replace `from`
 /// (what the user typed) with `to` (the confident fix) when they hit space or
 /// punctuation. Surfaced live as a highlighted preview chip, iOS-style.
@@ -45,9 +88,10 @@ public final class KeyboardLiveState {
     /// does for action keys like Go / Search / Send / Done.
     public var returnKeyProminent: Bool = false
 
-    /// When true the suggestion bar area switches to clipboard-history mode,
-    /// showing recent copied items instead of autocomplete predictions.
-    public var clipboardMode: Bool = false
+    /// The action panel currently open (clipboard / notepad), or nil while the
+    /// user is just typing. Replaces the old `clipboardMode` flag now that more
+    /// than one panel can live behind the top-left button.
+    public var activePanel: ActionPanel? = nil
 
     public init(suggestions: [String] = [], autocorrection: Autocorrection? = nil) {
         self.suggestions = suggestions

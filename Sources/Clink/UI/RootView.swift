@@ -110,7 +110,16 @@ private struct StyleHub: View {
 private struct TypingHub: View {
     @Environment(AppModel.self) private var model
 
+    /// Panels currently switched on (clipboard / notepad / emoji) — used to show
+    /// the picker-style control only when a choice is actually needed.
+    private var enabledPanelCount: Int {
+        [model.settings.clipboardEnabled,
+         model.settings.notepadEnabled,
+         model.settings.emojiEnabled].filter { $0 }.count
+    }
+
     var body: some View {
+        @Bindable var model = model
         NavigationStack {
             ScrollView {
                 VStack(spacing: UX.cardSpacing) {
@@ -120,20 +129,60 @@ private struct TypingHub: View {
                                systemImage: "text.cursor", value: typingSummary) {
                             TypingView()
                         }
-                        Divider()
-                        NavRow("Emoji", subtitle: "Default skin tone and recents",
-                               systemImage: "face.smiling", value: model.settings.defaultSkinTone.label) {
-                            EmojiSettingsView()
-                        }
                     }
 
-                    CardSection("Clipboard") {
+                    CardSection("Action panels") {
                         NavRow("Clipboard", subtitle: "History, re-paste, and management",
                                systemImage: "clipboard",
                                value: model.settings.clipboardEnabled
                                    ? (model.clipboard.history.isEmpty ? "On" : "\(model.clipboard.history.count) saved")
                                    : "Off") {
                             ClipboardHistoryView()
+                        }
+                        Divider()
+                        NavRow("Notepad", subtitle: "Quick jots you can drop anywhere",
+                               systemImage: "note.text",
+                               value: model.settings.notepadEnabled
+                                   ? (model.settings.notepadMode == .notes && !model.notepad.notes.isEmpty
+                                       ? "\(model.notepad.notes.count) saved" : "On")
+                                   : "Off") {
+                            NotepadView()
+                        }
+                        Divider()
+                        NavRow("Emoji", subtitle: "Skin tone, recents, on/off",
+                               systemImage: "face.smiling",
+                               value: model.settings.emojiEnabled ? "On" : "Off") {
+                            EmojiSettingsView()
+                        }
+                    }
+
+                    CardSection("Panel access") {
+                        ToggleRow("Top-left icon",
+                                  subtitle: "Open panels from a button on the suggestion bar.",
+                                  isOn: $model.settings.activateWithIcon)
+                        Divider()
+                        ToggleRow("Slide up on 123",
+                                  subtitle: "Drag the 123 key upward to open panels.",
+                                  isOn: $model.settings.activateWithSlideUp)
+                        if enabledPanelCount >= 2 {
+                            Divider()
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Picker style")
+                                    .font(.subheadline)
+                                    .padding(.horizontal, 14)
+                                    .padding(.top, 10)
+                                Picker("Picker style", selection: $model.settings.panelPickerStyle) {
+                                    ForEach(PanelPickerStyle.allCases) { style in
+                                        Text(style.label).tag(style)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .padding(.horizontal, 14)
+                                Text("How the button / slide-up lets you choose when more than one panel is on.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .padding(.horizontal, 14)
+                                    .padding(.bottom, 10)
+                            }
                         }
                     }
                 }

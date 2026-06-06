@@ -32,6 +32,41 @@ public enum ClipboardStyle: String, Codable, Sendable, CaseIterable, Identifiabl
     }
 }
 
+/// What the quick notepad holds. `scratchpad` is a single persistent buffer you
+/// jot into and pull from; `notes` keeps that same compose buffer but adds a
+/// saved-notes archive you can store snippets into and re-insert later.
+public enum NotepadMode: String, Codable, Sendable, CaseIterable, Identifiable {
+    case scratchpad
+    case notes
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .scratchpad: return "Scratchpad"
+        case .notes:      return "Notes"
+        }
+    }
+}
+
+/// How the top-left button offers a choice when more than one action panel is
+/// enabled. `popover` floats a small menu above the button; `inline` expands the
+/// button into a row of panel icons across the bar; `cards` takes over the whole
+/// keyboard with a tappable card per panel (like the clipboard history cards).
+public enum PanelPickerStyle: String, Codable, Sendable, CaseIterable, Identifiable {
+    case popover
+    case inline
+    case cards
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .popover: return "Popover"
+        case .inline:  return "Inline"
+        case .cards:   return "Cards"
+        }
+    }
+}
+
 /// Which way the emoji grid scrolls. Vertical (rows wrap downward, scroll down
 /// for more) is the default; horizontal (columns fill top-to-bottom, swipe
 /// sideways for more) mirrors the older system emoji keyboard.
@@ -149,6 +184,23 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var clipboardEnabled: Bool
     /// How clipboard history is presented when the toggle is tapped.
     public var clipboardStyle: ClipboardStyle
+    /// Show the quick-notepad action panel behind the top-left button. Unlike
+    /// clipboard it needs no Full Access (it never reads the pasteboard).
+    public var notepadEnabled: Bool
+    /// Whether the notepad is a single scratchpad or a scratchpad + saved-notes
+    /// archive.
+    public var notepadMode: NotepadMode
+    /// Show the emoji keyboard as an action panel (reachable from the panel
+    /// button / slide-up like clipboard and notepad). On by default — turning it
+    /// off removes emoji access entirely.
+    public var emojiEnabled: Bool
+    /// Reach the action panels from the top-left button on the suggestion bar.
+    public var activateWithIcon: Bool
+    /// Reach the action panels by dragging the 123 key upward (the gesture emoji
+    /// used to own). Independent of `activateWithIcon` — both can be on.
+    public var activateWithSlideUp: Bool
+    /// How the panel button / slide-up offers a choice when 2+ panels are enabled.
+    public var panelPickerStyle: PanelPickerStyle
     /// Show the autocomplete / suggestion bar above the keys.
     public var suggestionsEnabled: Bool
     /// Auto-correct the just-typed word when a space / punctuation is entered.
@@ -176,6 +228,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// (more forgiving); values below 1 shrink it (more precise, with wider
     /// dead zones between keys that still route to the nearest key).
     public var hitboxScale: Double
+    /// Multiplier applied to the suggestion-bar chips' tap height before
+    /// hit-testing — mirrors `hitboxScale` for the keys. Only takes effect while
+    /// the suggestion bar is shown (`suggestionsEnabled`). 1.0 = matches the bar
+    /// exactly; >1 makes the chips taller to hit; <1 shrinks them.
+    public var suggestionHitboxScale: Double
+    /// Multiplier applied to the top-left panel button's tap height before
+    /// hit-testing. Only takes effect while icon activation is on
+    /// (`activateWithIcon` with at least one panel enabled).
+    public var panelButtonHitboxScale: Double
     /// How far (in points) a finger must slide across the space bar to move the
     /// text cursor by one character — also the threshold before a press flips
     /// from "tap to type a space" into cursor-trackpad mode. Smaller = more
@@ -277,6 +338,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         rowSpacing: Double = 4,
         clipboardEnabled: Bool = false,
         clipboardStyle: ClipboardStyle = .bar,
+        notepadEnabled: Bool = false,
+        notepadMode: NotepadMode = .scratchpad,
+        emojiEnabled: Bool = true,
+        activateWithIcon: Bool = true,
+        activateWithSlideUp: Bool = true,
+        panelPickerStyle: PanelPickerStyle = .popover,
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
         autoPunctuationEnabled: Bool = true,
@@ -287,6 +354,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundVolume: Double = 0.8,
         hapticsEnabled: Bool = false,
         hitboxScale: Double = 0.90,
+        suggestionHitboxScale: Double = 1.0,
+        panelButtonHitboxScale: Double = 1.0,
         spaceCursorStride: Double = 10,
         spaceCursorActivationDelay: Double = 0,
         cursorMovementType: CursorMovementType = .spacebar,
@@ -337,6 +406,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.rowSpacing = rowSpacing
         self.clipboardEnabled = clipboardEnabled
         self.clipboardStyle = clipboardStyle
+        self.notepadEnabled = notepadEnabled
+        self.notepadMode = notepadMode
+        self.emojiEnabled = emojiEnabled
+        self.activateWithIcon = activateWithIcon
+        self.activateWithSlideUp = activateWithSlideUp
+        self.panelPickerStyle = panelPickerStyle
         self.suggestionsEnabled = suggestionsEnabled
         self.autocorrectEnabled = autocorrectEnabled
         self.autoPunctuationEnabled = autoPunctuationEnabled
@@ -347,6 +422,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.soundVolume = soundVolume
         self.hapticsEnabled = hapticsEnabled
         self.hitboxScale = hitboxScale
+        self.suggestionHitboxScale = suggestionHitboxScale
+        self.panelButtonHitboxScale = panelButtonHitboxScale
         self.spaceCursorStride = spaceCursorStride
         self.spaceCursorActivationDelay = spaceCursorActivationDelay
         self.cursorMovementType = cursorMovementType
@@ -406,6 +483,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         rowSpacing = try c.decodeIfPresent(Double.self, forKey: .rowSpacing) ?? 7
         clipboardEnabled = try c.decodeIfPresent(Bool.self, forKey: .clipboardEnabled) ?? false
         clipboardStyle = (try? c.decodeIfPresent(ClipboardStyle.self, forKey: .clipboardStyle)) ?? .bar
+        notepadEnabled = try c.decodeIfPresent(Bool.self, forKey: .notepadEnabled) ?? false
+        notepadMode = (try? c.decodeIfPresent(NotepadMode.self, forKey: .notepadMode)) ?? .scratchpad
+        emojiEnabled = try c.decodeIfPresent(Bool.self, forKey: .emojiEnabled) ?? true
+        activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
+        activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
+        panelPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
@@ -416,6 +499,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? false
         hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.90
+        suggestionHitboxScale = try c.decodeIfPresent(Double.self, forKey: .suggestionHitboxScale) ?? 1.0
+        panelButtonHitboxScale = try c.decodeIfPresent(Double.self, forKey: .panelButtonHitboxScale) ?? 1.0
         spaceCursorStride = try c.decodeIfPresent(Double.self, forKey: .spaceCursorStride) ?? 10
         spaceCursorActivationDelay = try c.decodeIfPresent(Double.self, forKey: .spaceCursorActivationDelay) ?? 0
         cursorMovementType = (try? c.decodeIfPresent(CursorMovementType.self, forKey: .cursorMovementType)) ?? .spacebar

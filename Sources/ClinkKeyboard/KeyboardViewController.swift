@@ -15,6 +15,7 @@ final class KeyboardViewController: UIInputViewController {
     private let sound = SoundPlayer()
     private let live = KeyboardLiveState()
     private let clipboard = ClipboardManager()
+    private let notepad = NotepadManager()
     /// Shared transient UI state (plane/shift/emoji-mode). Held by the controller
     /// so letters ⇄ emoji is an internal SwiftUI swap — no system keyboard
     /// transition, so switching is instant with none of the appearance resize.
@@ -402,6 +403,7 @@ final class KeyboardViewController: UIInputViewController {
             live: live,
             controller: keyboard,
             clipboard: clipboard,
+            notepad: notepad,
             hasFullAccess: hasFullAccess,
             onInsert: { [weak self] text in
                 guard let self else { return }
@@ -465,7 +467,16 @@ final class KeyboardViewController: UIInputViewController {
                 self.isApplyingEdit = true
                 self.insertMirrored(text)
                 self.isApplyingEdit = false
-                self.live.clipboardMode = false
+                self.live.activePanel = nil
+                self.scheduleSuggestionUpdate()
+            },
+            onNotepadInsert: { [weak self] text in
+                guard let self else { return }
+                guard !text.isEmpty else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(text)
+                self.isApplyingEdit = false
+                self.live.activePanel = nil
                 self.scheduleSuggestionUpdate()
             }
         )

@@ -88,6 +88,60 @@ public extension ThemeGradient {
     }
 }
 
+// MARK: - Font design / weight
+
+public enum ThemeFontDesign: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case `default`, rounded, serif, monospaced
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .default:    return "Default"
+        case .rounded:    return "Rounded"
+        case .serif:      return "Serif"
+        case .monospaced: return "Mono"
+        }
+    }
+    public var fontDesign: Font.Design {
+        switch self {
+        case .default:    return .default
+        case .rounded:    return .rounded
+        case .serif:      return .serif
+        case .monospaced: return .monospaced
+        }
+    }
+}
+
+public enum ThemeFontWeight: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
+    case thin, ultraLight, light, regular, medium, semibold, bold, heavy, black
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .thin:       return "Thin"
+        case .ultraLight: return "Ultra Light"
+        case .light:      return "Light"
+        case .regular:    return "Regular"
+        case .medium:     return "Medium"
+        case .semibold:   return "Semibold"
+        case .bold:       return "Bold"
+        case .heavy:      return "Heavy"
+        case .black:      return "Black"
+        }
+    }
+    public var fontWeight: Font.Weight {
+        switch self {
+        case .thin:       return .thin
+        case .ultraLight: return .ultraLight
+        case .light:      return .light
+        case .regular:    return .regular
+        case .medium:     return .medium
+        case .semibold:   return .semibold
+        case .bold:       return .bold
+        case .heavy:      return .heavy
+        case .black:      return .black
+        }
+    }
+}
+
 // MARK: - Key material
 
 /// A keyboard color theme. Themes are pure data so they round-trip through the
@@ -171,6 +225,10 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
     /// key-fill tint's own opacity. 1 = full tint (default); lower lets more clear
     /// glass through so the refraction reads. Ignored on solid themes.
     public var glassTintStrength: Double
+    /// Font design applied to character keys (Default / Rounded / Serif / Mono).
+    public var keyFontDesign: ThemeFontDesign
+    /// Font weight applied to character keys.
+    public var keyFontWeight: ThemeFontWeight
 
     public init(
         id: String, name: String,
@@ -183,7 +241,9 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
         keyGradient: ThemeGradient? = nil,
         glassVariant: GlassVariant = .regular,
         glassInteractive: Bool = false,
-        glassTintStrength: Double = 1.0
+        glassTintStrength: Double = 1.0,
+        keyFontDesign: ThemeFontDesign = .default,
+        keyFontWeight: ThemeFontWeight = .regular
     ) {
         self.id = id; self.name = name; self.material = material
         self.background = background; self.keyFill = keyFill; self.keyText = keyText
@@ -196,6 +256,8 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
         self.glassVariant = glassVariant
         self.glassInteractive = glassInteractive
         self.glassTintStrength = glassTintStrength
+        self.keyFontDesign = keyFontDesign
+        self.keyFontWeight = keyFontWeight
     }
 
     // Custom decoder so older payloads (presets and `.clink` files written before
@@ -220,6 +282,8 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
         glassVariant = (try? c.decodeIfPresent(GlassVariant.self, forKey: .glassVariant)) ?? .regular
         glassInteractive = try c.decodeIfPresent(Bool.self, forKey: .glassInteractive) ?? false
         glassTintStrength = try c.decodeIfPresent(Double.self, forKey: .glassTintStrength) ?? 1.0
+        keyFontDesign = (try? c.decodeIfPresent(ThemeFontDesign.self, forKey: .keyFontDesign)) ?? .default
+        keyFontWeight = (try? c.decodeIfPresent(ThemeFontWeight.self, forKey: .keyFontWeight)) ?? .regular
     }
 }
 
@@ -445,6 +509,28 @@ public extension Theme {
             specialKeyText: RGBA(hex: 0x4A3B2A),
             accent: RGBA(hex: 0xB5651D),
             isDark: false
+        ),
+        Theme(
+            id: "coral", name: "Coral",
+            background: RGBA(hex: 0xF9F5EF),
+            keyFill: RGBA(hex: 0xFFFFFF),
+            keyText: RGBA(hex: 0x2A1F1A),
+            specialKeyFill: RGBA(hex: 0xEDE4D8),
+            specialKeyText: RGBA(hex: 0x2A1F1A),
+            accent: RGBA(hex: 0xD4614A),
+            isDark: false,
+            keyFontDesign: .serif
+        ),
+        Theme(
+            id: "cinder", name: "Cinder",
+            background: RGBA(hex: 0x1A1512),
+            keyFill: RGBA(hex: 0x2E2521),
+            keyText: RGBA(hex: 0xF2EDE4),
+            specialKeyFill: RGBA(hex: 0x231B17),
+            specialKeyText: RGBA(hex: 0xC4B8AE),
+            accent: RGBA(hex: 0xD4614A),
+            isDark: true,
+            keyFontDesign: .serif
         ),
         // Liquid Glass — colors act as tints; translucent backdrop so the keys
         // refract the system keyboard background.

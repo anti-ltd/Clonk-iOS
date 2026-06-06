@@ -24,6 +24,7 @@ final class AppModel {
     private(set) var hasFullAccess: Bool = false
 
     let clipboard = ClipboardManager()
+    let notepad = NotepadManager()
 
     private let store = SharedStore.shared
     private let keyboardBundleID = "ltd.anti.clink.keyboard"

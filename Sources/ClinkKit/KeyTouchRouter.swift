@@ -451,6 +451,33 @@ struct KeyFrameKey: PreferenceKey {
     }
 }
 
+/// Frames of the non-key tap targets that carry their own hitbox multiplier —
+/// the suggestion bar (`"bar"`) and the top-left panel icon (`"icon"`). Only
+/// populated for whichever is actually on screen; used to draw their hitbox
+/// outlines in the Advanced settings preview.
+struct BarHitboxKey: PreferenceKey {
+    static let defaultValue: [String: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [String: Anchor<CGRect>], nextValue: () -> [String: Anchor<CGRect>]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+extension View {
+    /// Grow (or shrink) this view's hit-test area vertically by `scale` without
+    /// affecting layout — mirrors the keys' `hitboxScale` for the bar chips and
+    /// panel icon. `scale` 1.0 is a no-op; >1 makes the target taller, <1
+    /// shrinks it. The outer negative padding cancels the layout effect so only
+    /// the `contentShape` (the hittable region) changes size.
+    @ViewBuilder
+    func hitboxExpand(_ scale: Double, baseHeight: CGFloat) -> some View {
+        let extra = baseHeight * (CGFloat(scale) - 1) / 2
+        self
+            .padding(.vertical, extra)
+            .contentShape(Rectangle())
+            .padding(.vertical, -extra)
+    }
+}
+
 // MARK: - The multitouch UIView
 
 /// A bare `UIView` that captures every touch over the key grid and routes it

@@ -15,6 +15,7 @@
 		11AEEB1D7DDDB7164EC009A0 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF59E26E52134F6C6A4604F2 /* SharedStore.swift */; };
 		14502B319F31C07584BE0863 /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */; };
 		25674E38D35421FBD754EEB9 /* SoundPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7949529FFC551E295B024531 /* SoundPickerView.swift */; };
+		28E95081DC7A6860561C8FC5 /* NotepadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3351629B8BC302520770F0F /* NotepadView.swift */; };
 		2D1FB5E1FF7C14C2198C873F /* TypingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5462C6538A73BD8117516CB5 /* TypingView.swift */; };
 		30B323B0F36FED3B16754F0B /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */; };
 		3B3347D1B0054A15BBA38250 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8927D850C4365DFDC1FD2FDA /* Theme.swift */; };
@@ -22,6 +23,7 @@
 		3D1C3196B45C36F4368D0066 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD5841C760DB0FAB7CCE6CC /* KeyboardLayout.swift */; };
 		403E200B7252F48793C0C358 /* ThemeBackgroundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948B52077B9A2F5C2149106D /* ThemeBackgroundStore.swift */; };
 		42D1C7EC2F36010E211F6E7B /* ThemeBackgroundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948B52077B9A2F5C2149106D /* ThemeBackgroundStore.swift */; };
+		497AAD62F94C2913BD45CA6A /* NotepadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B832DE3693AB61F6202524 /* NotepadManager.swift */; };
 		4ADC6C1280C2EFD33E91FE04 /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */; };
 		4BE2AF2874E1B00158143714 /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */; };
 		4C39743E419C219D53FB2233 /* KeyboardPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */; };
@@ -33,12 +35,14 @@
 		5B464F04381F8B7B0EC397B9 /* KeyboardLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD5841C760DB0FAB7CCE6CC /* KeyboardLayout.swift */; };
 		5EA493BD6E3F05E3F7D12CCD /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */; };
 		5EBF224AC395DD0579186B2D /* ShowcaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */; };
+		60F8FF84CD76E7334D3FE3F9 /* NotepadNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0160583BC8270DF57E31D4E4 /* NotepadNote.swift */; };
 		617021EF084EA3192ABE5872 /* EnableFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07CA903F575F647CCA010CD1 /* EnableFlowView.swift */; };
 		6458D8B669F1B46F9599AC7B /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247100C266670E093E13EFC1 /* SmartPunctuation.swift */; };
 		68627A6C8F349503A1764BC9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */; };
 		6A8DFD98B768C4B591019692 /* LayoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */; };
 		6BCACE64387F0B4208941CF6 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		7700D18C30068362D47F3DDF /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42B98FFA8432716147A36F0E /* AppModel.swift */; };
+		794E83C6983B78DF30043554 /* NotepadNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0160583BC8270DF57E31D4E4 /* NotepadNote.swift */; };
 		7B0084EDE7EC383024A52CD8 /* InputViewHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF12E5A3D107BD26DB173FD /* InputViewHeight.swift */; };
 		7E2D1B0A95A6A747FA6BCD50 /* KeyboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3084837B56B933D2E3846C3A /* KeyboardSettings.swift */; };
 		819662BE3E7814C19F18A12E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F7F467DA96CBD7A7FA140AE /* Assets.xcassets */; };
@@ -62,6 +66,7 @@
 		C576639078F73C5EF212D064 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5181D0B09674CE8789540CEA /* RootView.swift */; };
 		CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */; };
 		D8BFB7EBFEF96FC8CA3B08BB /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */; };
+		D96D477DF59015E02D971CB7 /* NotepadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B832DE3693AB61F6202524 /* NotepadManager.swift */; };
 		DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
 		DE8CCE9B5012754C8A6C7877 /* TuningPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91E48B211B55CCF9D4AF918 /* TuningPresets.swift */; };
 		DF275470B09C2ADC1CF62EF7 /* ClipboardHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */; };
@@ -103,6 +108,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0160583BC8270DF57E31D4E4 /* NotepadNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadNote.swift; sourceTree = "<group>"; };
 		02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRow.swift; sourceTree = "<group>"; };
 		07CA903F575F647CCA010CD1 /* EnableFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnableFlowView.swift; sourceTree = "<group>"; };
 		148AA47AC2638AB397929AF1 /* EmojiData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.generated.swift; sourceTree = "<group>"; };
@@ -129,6 +135,7 @@
 		6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLiveState.swift; sourceTree = "<group>"; };
 		6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
 		6E9C7A15D827D03AE993837E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		77B832DE3693AB61F6202524 /* NotepadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadManager.swift; sourceTree = "<group>"; };
 		7949529FFC551E295B024531 /* SoundPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPickerView.swift; sourceTree = "<group>"; };
 		8927D850C4365DFDC1FD2FDA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		89C0E3B52628790F5260C89C /* Clink.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Clink.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -139,6 +146,7 @@
 		996E57798F6EB6FD05B185E4 /* iUX-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "iUX-ios"; path = "../iUX-ios"; sourceTree = SOURCE_ROOT; };
 		9993AF7E588543B2754CAB3E /* SoundPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPack.swift; sourceTree = "<group>"; };
 		A06533C1C5E7C51A9D0B3454 /* ClinkKeyboard.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClinkKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B3351629B8BC302520770F0F /* NotepadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadView.swift; sourceTree = "<group>"; };
 		B558BC9C666527C188E5041E /* ClinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClinkApp.swift; sourceTree = "<group>"; };
 		BA82BC99C7A359DF18B9CDDD /* RGBA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RGBA.swift; sourceTree = "<group>"; };
 		CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -215,6 +223,8 @@
 				6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */,
 				3084837B56B933D2E3846C3A /* KeyboardSettings.swift */,
 				1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */,
+				77B832DE3693AB61F6202524 /* NotepadManager.swift */,
+				0160583BC8270DF57E31D4E4 /* NotepadNote.swift */,
 				BA82BC99C7A359DF18B9CDDD /* RGBA.swift */,
 				FF59E26E52134F6C6A4604F2 /* SharedStore.swift */,
 				247100C266670E093E13EFC1 /* SmartPunctuation.swift */,
@@ -293,6 +303,7 @@
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
 				6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */,
 				4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */,
+				B3351629B8BC302520770F0F /* NotepadView.swift */,
 				5181D0B09674CE8789540CEA /* RootView.swift */,
 				E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */,
 				7949529FFC551E295B024531 /* SoundPickerView.swift */,
@@ -448,6 +459,9 @@
 				4C39743E419C219D53FB2233 /* KeyboardPreview.swift in Sources */,
 				7E2D1B0A95A6A747FA6BCD50 /* KeyboardSettings.swift in Sources */,
 				6A8DFD98B768C4B591019692 /* LayoutPickerView.swift in Sources */,
+				D96D477DF59015E02D971CB7 /* NotepadManager.swift in Sources */,
+				60F8FF84CD76E7334D3FE3F9 /* NotepadNote.swift in Sources */,
+				28E95081DC7A6860561C8FC5 /* NotepadView.swift in Sources */,
 				59BA1AB5BB285F1D73A04CFF /* RGBA.swift in Sources */,
 				C576639078F73C5EF212D064 /* RootView.swift in Sources */,
 				EFB3F1685FF60E49ADF4DD07 /* SharedStore.swift in Sources */,
@@ -486,6 +500,8 @@
 				4ADC6C1280C2EFD33E91FE04 /* KeyboardLiveState.swift in Sources */,
 				F11DDFA538F1D32FA57E8BA1 /* KeyboardSettings.swift in Sources */,
 				EF3C529E5FF3BBB3E2CECD0A /* KeyboardViewController.swift in Sources */,
+				497AAD62F94C2913BD45CA6A /* NotepadManager.swift in Sources */,
+				794E83C6983B78DF30043554 /* NotepadNote.swift in Sources */,
 				0DF15917C08B02E1B79741BD /* RGBA.swift in Sources */,
 				11AEEB1D7DDDB7164EC009A0 /* SharedStore.swift in Sources */,
 				6458D8B669F1B46F9599AC7B /* SmartPunctuation.swift in Sources */,
