@@ -45,3 +45,6 @@ Icon
 
 # Logs
 *.log
+
+# Local release tooling
+push-asc.sh

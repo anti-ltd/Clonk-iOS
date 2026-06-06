@@ -50,7 +50,7 @@ struct LayoutPickerView: View {
             },
 
             PreviewTab("Size") {
-                CardSection("Size & Shape") {
+                TunedSection(title: "Size & Shape", presets: TuningPresets.size) {
                     SliderRow("Key height", value: $model.settings.keyHeight,
                               in: 38...58, step: 1) { "\(Int($0))pt" }
                     Divider()

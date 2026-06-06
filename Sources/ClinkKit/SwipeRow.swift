@@ -6,6 +6,11 @@ private struct VisibleKey: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
+private struct RowWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 /// A trailing action revealed by swiping a `SwipeRow` left.
 public struct SwipeAction: Identifiable {
     public let id = UUID()
@@ -51,6 +56,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
     @State private var dragStart: CGFloat? = nil
     // 1 = fully in the viewport, 0 = scrolled out.
     @State private var visible: CGFloat = 1
+    // Row width, captured for right-edge swipe gating.
+    @State private var rowWidth: CGFloat = 0
 
     private let slotWidth: CGFloat = 56
     private let circle: CGFloat = 40
@@ -102,17 +109,18 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 .onTapGesture {
                     if offset != 0 { close() } else { onTap?() }
                 }
-                // Swipe only engages from the card's right edge, so the rest of
-                // the card scrolls the list freely. The grab strip tracks the
-                // card's (shrinking) right edge and has a tall band so the swipe
-                // keeps tracking through vertical drift.
-                .overlay(alignment: .trailing) {
+                // Tall transparent grab band so the swipe keeps tracking through
+                // vertical drift. The gesture lives on this left-anchored card
+                // (a stable origin — a trailing strip would slide under the finger
+                // as the card shrinks and feed back into the drag). Engagement is
+                // gated by `startLocation` to the card's right edge so the rest of
+                // the card scrolls the list freely.
+                .background {
                     Color.clear
-                        .frame(width: edgeGrab)
                         .padding(.vertical, -28)
                         .contentShape(Rectangle())
-                        .simultaneousGesture(swipeGesture)
                 }
+                .simultaneousGesture(swipeGesture)
             Color.clear.frame(width: slid)
         }
         .background {
@@ -141,12 +149,37 @@ public struct SwipeRow<Content: View, Background: View>: View {
                     .frame(width: openWidth)
             }
         }
-        // Track how much of the row is in the scroll viewport.
-        .background {
-            GeometryReader { geo in
-                Color.clear.preference(key: VisibleKey.self, value: visibleFraction(geo))
+        // Transparent tap targets over the circle positions, in the FRONT so taps
+        // land reliably (Buttons inside the background glass container can miss).
+        // Only present while open so they don't block the closed card or scroll.
+        .overlay(alignment: .trailing) {
+            if slid > 1 {
+                HStack(spacing: 0) {
+                    ForEach(Array(actions.enumerated()), id: \.element.id) { _, action in
+                        Button {
+                            action.action()
+                            close()
+                        } label: {
+                            Color.clear.contentShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(action.label)
+                        .frame(width: slotWidth)
+                        .frame(maxHeight: .infinity)
+                    }
+                }
+                .frame(width: openWidth)
             }
         }
+        // Track how much of the row is in the scroll viewport, and its width.
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .preference(key: VisibleKey.self, value: visibleFraction(geo))
+                    .preference(key: RowWidthKey.self, value: geo.size.width)
+            }
+        }
+        .onPreferenceChange(RowWidthKey.self) { rowWidth = $0 }
         .onPreferenceChange(VisibleKey.self) { f in
             // Track scroll position directly — scroll already gives continuous
             // frames, so the card eases closed as it leaves the viewport.
@@ -183,6 +216,10 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 // scrolling still works; once engaged, keep tracking live.
                 if dragStart == nil {
                     guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                    // Only engage from the card's (current) right edge so the rest
+                    // of the card scrolls the list freely.
+                    let cardWidth = rowWidth + clamp(offset)   // rowWidth - slid
+                    guard rowWidth == 0 || value.startLocation.x > cardWidth - edgeGrab else { return }
                     dragStart = offset
                     // Claim the open slot as the swipe begins, so an already-open
                     // card animates closed in sync as this one opens.
@@ -273,8 +310,11 @@ public struct SwipeRow<Content: View, Background: View>: View {
     /// between adjacent action tints as they emerge (red→orange→…, no gap), and
     /// its strength stays up across the whole reveal, fading only at the ends.
     @ViewBuilder private func edgeGlow(slid: CGFloat) -> some View {
-        let g = glow(slid: slid)
-        RadialGradient(
+        // Only glass themes need the glow (it masks a lens emerging from under the
+        // translucent card); a solid card already hides it.
+        if glass {
+            let g = glow(slid: slid)
+            RadialGradient(
             gradient: Gradient(colors: [g.color.opacity(0.8), g.color.opacity(0)]),
             center: .trailing, startRadius: 0, endRadius: 80
         )

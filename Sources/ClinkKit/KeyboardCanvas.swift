@@ -744,8 +744,7 @@ public struct KeyboardCanvas: View {
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
                             router: touch,
-                            physics: physics,
-                            blankGlyph: combinedActive)
+                            physics: physics)
                         .frame(width: unit * CGFloat(spec.weight))
                 }
             }
@@ -1057,9 +1056,6 @@ private struct KeyView: View {
     /// written by the single UIKit touch surface (see `KeyTouchRouter`).
     let router: KeyTouchRouter
     let physics: KeyPressPhysics
-    /// Combined cursor mode — draw no glyph (the shift key draws its own, so it
-    /// needs telling; every other key's glyph is hidden by the canvas glyph layer).
-    var blankGlyph: Bool = false
 
     /// Pressed for any reason: a real finger (the router) or the simulator.
     private var isPressed: Bool { router.pressed.contains(keyID) || simulatedPressed }
@@ -1261,9 +1257,7 @@ private struct KeyView: View {
     }
 
     @ViewBuilder private var shiftLabel: some View {
-        if blankGlyph {
-            EmptyView()
-        } else if case let .system(name) = spec.label {
+        if case let .system(name) = spec.label {
             Image(systemName: name)
                 .font(.system(size: 18, weight: .medium))
                 .contentTransition(.symbolEffect(.replace))

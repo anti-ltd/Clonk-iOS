@@ -64,7 +64,7 @@ targets:
       properties:
         CFBundleDisplayName: Clink
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "4"
+        CFBundleVersion: "5"
         # Export compliance: Clink runs fully offline and implements no
         # encryption of its own (only standard OS-exempt APIs). Declaring this
         # auto-clears App Store Connect's "Missing Compliance" prompt on every
@@ -117,7 +117,7 @@ targets:
       properties:
         CFBundleDisplayName: Clink
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "4"
+        CFBundleVersion: "5"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           # The principal class is marked @objc(KeyboardViewController)

@@ -135,9 +135,9 @@ final class KeyboardViewController: UIInputViewController {
         invalidateMirror()
         updateSuggestions()
         updateReturnKey()
-        // Seed shift from the setting + field context, overriding the controller's
-        // default `.on` so a fresh field obeys auto-capitalize (incl. when it's off).
-        refreshAutoCapitalize()
+        // `updateSuggestions()` above also seeds shift from the setting + field
+        // context, overriding the controller's default `.on` so a fresh field
+        // obeys auto-capitalize (including when it's off).
         // On a keyboard *switch* iOS creates us fresh and animates us in at its own
         // inflated default height (target + ~228pt) before re-measuring to our real
         // height. Because the keyboard is bottom-docked, "too tall" pushes our
@@ -204,7 +204,6 @@ final class KeyboardViewController: UIInputViewController {
         if !isApplyingEdit { invalidateMirror() }
         scheduleSuggestionUpdate()
         updateReturnKey()
-        refreshAutoCapitalize()
     }
 
     /// Engage shift at the start of a sentence (and release it mid-sentence) so
@@ -213,20 +212,20 @@ final class KeyboardViewController: UIInputViewController {
     /// instant after an edit (the document proxy lags a runloop tick). Never
     /// disturbs caps-lock. Dispatched async so it settles *after* the canvas's own
     /// one-shot-shift release, which runs right after our `onInsert` on a letter tap.
-    private func refreshAutoCapitalize() {
-        // Caps-lock is the user's explicit choice — never override it.
+    /// Engage shift at the start of a sentence (and release it mid-sentence) so
+    /// typing auto-capitalizes like the native keyboard. Caps-lock is the user's
+    /// explicit choice — never override it. With the setting off, shift only ever
+    /// reflects manual taps, so a fresh field starts lowercase rather than the
+    /// controller's default `.on`. Called from `updateSuggestions`, off the settled
+    /// document-proxy read (not the local mirror — see the call site).
+    private func applyAutoCapitalize() {
         guard keyboard.shift != .locked else { return }
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.keyboard.shift != .locked else { return }
-            // Disabled → shift only ever reflects manual taps; the auto-engage is off,
-            // so a fresh field must start lowercase rather than the controller's default.
-            let before = self.contextBeforeCursor()
-            let partial = SmartPunctuation.trailingPartialWord(in: before)
-            let want: KeyboardController.Shift =
-                (self.settings.autoCapitalize && self.isSentenceStart(before: before, partial: partial))
-                ? .on : .off
-            if self.keyboard.shift != want { self.keyboard.shift = want }
-        }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let partial = SmartPunctuation.trailingPartialWord(in: before)
+        let want: KeyboardController.Shift =
+            (settings.autoCapitalize && isSentenceStart(before: before, partial: partial))
+            ? .on : .off
+        if keyboard.shift != want { keyboard.shift = want }
     }
 
     /// The cursor/selection moved. If it wasn't our own edit, the mirror's tail no
@@ -607,6 +606,14 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func updateSuggestions() {
+        // Auto-capitalize first, off the same settled proxy read the suggestions
+        // use — and *before* the suggestions-enabled gate, so shift still tracks
+        // sentence starts when the bar is hidden. Runs on the 80ms debounce, by
+        // which point `documentContextBeforeInput` reflects the latest edit (the
+        // local mirror can't be trusted here: auto-space / smart-punctuation fire
+        // their `textDidChange` after `isApplyingEdit` clears, invalidating it).
+        applyAutoCapitalize()
+
         guard settings.suggestionsEnabled else {
             if !live.suggestions.isEmpty { live.suggestions = [] }
             if live.autocorrection != nil { live.autocorrection = nil }
