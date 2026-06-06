@@ -14,7 +14,21 @@ import UIKit
 @MainActor
 public final class SuggestionEngine {
     private let checker = UITextChecker()
-    private let language = "en_US"
+    /// The `UITextChecker` language driving completions/guesses/spell-check.
+    /// Set via `setLanguage`; guaranteed to be a value the device can check.
+    private var language = "en_US"
+
+    /// Point the engine at a spelling/completion language (a `UITextChecker`
+    /// identifier such as "en_US" or "fr_FR"). Unsupported identifiers fall back
+    /// to "en_US" — UITextChecker silently returns nothing for a language it
+    /// can't load, which would leave the bar dead, so we guard against it here.
+    /// Clears the correction cache (its entries were resolved in the old tongue).
+    public func setLanguage(_ identifier: String) {
+        let resolved = UITextChecker.availableLanguages.contains(identifier) ? identifier : "en_US"
+        guard resolved != language else { return }
+        language = resolved
+        correctionCache = nil
+    }
 
     /// The user's supplementary lexicon (Contacts names + Settings → text
     /// replacements), fetched by the keyboard via `requestSupplementaryLexicon`.

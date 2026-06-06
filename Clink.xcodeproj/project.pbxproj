@@ -160,6 +160,7 @@
 		E685920684FE7F80A95C15E0 /* Theme+Synthwave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4586002B16E5A1F18E6B3C31 /* Theme+Synthwave.swift */; };
 		E744EE837F24A73392932FBE /* Theme+Latte.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5512C30FD91A60E65459B1A7 /* Theme+Latte.swift */; };
 		E7CEE5A0D037AF8CB8676B88 /* Theme+Carbon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FFFE172039C44D7B2D4E80 /* Theme+Carbon.swift */; };
+		E8783FD3CF1CC586286AE5CA /* LocalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6027B59C7DE78F22A746853 /* LocalizationView.swift */; };
 		E8FCEB6A74C21FA687FB8687 /* Theme+Mechanical.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E0F42F4CC343BA2793B08D /* Theme+Mechanical.swift */; };
 		E90AFBB5D8A7267BCD721664 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC50AE872783BD6CBFC8F4F /* iUXiOS */; };
 		EB4F862D23D1A7104C00B19D /* Theme+Nord.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25BD3CF22EC6A03A6C3D603 /* Theme+Nord.swift */; };
@@ -302,6 +303,7 @@
 		DD86C87065DBFAD706F52315 /* Theme+LiquidMint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidMint.swift"; sourceTree = "<group>"; };
 		E10C790FE1162939E62BDAA3 /* Theme+Ember.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Ember.swift"; sourceTree = "<group>"; };
 		E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
+		E6027B59C7DE78F22A746853 /* LocalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationView.swift; sourceTree = "<group>"; };
 		E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseView.swift; sourceTree = "<group>"; };
 		E887A5C7AFA3E881307455F8 /* AppStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStage.swift; sourceTree = "<group>"; };
 		E91E48B211B55CCF9D4AF918 /* TuningPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuningPresets.swift; sourceTree = "<group>"; };
@@ -506,6 +508,7 @@
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
 				6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */,
 				4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */,
+				E6027B59C7DE78F22A746853 /* LocalizationView.swift */,
 				B3351629B8BC302520770F0F /* NotepadView.swift */,
 				5181D0B09674CE8789540CEA /* RootView.swift */,
 				E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */,
@@ -675,6 +678,7 @@
 				4C39743E419C219D53FB2233 /* KeyboardPreview.swift in Sources */,
 				7E2D1B0A95A6A747FA6BCD50 /* KeyboardSettings.swift in Sources */,
 				6A8DFD98B768C4B591019692 /* LayoutPickerView.swift in Sources */,
+				E8783FD3CF1CC586286AE5CA /* LocalizationView.swift in Sources */,
 				79E38F01C4729B42FB644133 /* NotepadBar.swift in Sources */,
 				4A4C158EED59D9586744EB68 /* NotepadBrowsePanel.swift in Sources */,
 				D96D477DF59015E02D971CB7 /* NotepadManager.swift in Sources */,

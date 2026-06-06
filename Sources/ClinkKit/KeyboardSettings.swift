@@ -137,6 +137,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var backgroundVisible: Bool
     // Mechanics
     public var layoutID: String
+    /// The language the suggestion bar, autocomplete, and auto-correction run in,
+    /// as a `UITextChecker` identifier (e.g. "en_US", "fr_FR"). Drives the
+    /// completion/spelling dictionary; independent of the physical key `layoutID`.
+    /// Falls back to "en_US" inside the engine if the device can't spell-check it.
+    public var keyboardLanguage: String
     public var showNumberRow: Bool
     public var autoCapitalize: Bool
     public var keyPopupEnabled: Bool
@@ -346,6 +351,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         customThemes: [Theme] = [],
         backgroundVisible: Bool = false,
         layoutID: String = KeyboardLayout.default.id,
+        keyboardLanguage: String = "en_US",
         showNumberRow: Bool = false,
         autoCapitalize: Bool = true,
         keyPopupEnabled: Bool = false,
@@ -422,6 +428,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.customThemes = customThemes
         self.backgroundVisible = backgroundVisible
         self.layoutID = layoutID
+        self.keyboardLanguage = keyboardLanguage
         self.showNumberRow = showNumberRow
         self.autoCapitalize = autoCapitalize
         self.keyPopupEnabled = keyPopupEnabled
@@ -505,6 +512,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         customThemes = try c.decodeIfPresent([Theme].self, forKey: .customThemes) ?? []
         backgroundVisible = try c.decodeIfPresent(Bool.self, forKey: .backgroundVisible) ?? false
         layoutID = try c.decodeIfPresent(String.self, forKey: .layoutID) ?? KeyboardLayout.default.id
+        keyboardLanguage = try c.decodeIfPresent(String.self, forKey: .keyboardLanguage) ?? "en_US"
         showNumberRow = try c.decodeIfPresent(Bool.self, forKey: .showNumberRow) ?? false
         autoCapitalize = try c.decodeIfPresent(Bool.self, forKey: .autoCapitalize) ?? true
         keyPopupEnabled = try c.decodeIfPresent(Bool.self, forKey: .keyPopupEnabled) ?? true

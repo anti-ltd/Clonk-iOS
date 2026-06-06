@@ -22,7 +22,7 @@ struct RootView: View {
     @State private var routedFirstRun = false
 
     enum SidebarDestination: Hashable {
-        case clink, style, typing, feel
+        case clink, localization, style, typing, feel
         case clipboard, notepad, emoji, calculator
     }
 
@@ -155,7 +155,8 @@ private struct DetailHost: View {
     @ViewBuilder
     private var destinationView: some View {
         switch destination {
-        case .clink:      ClinkContent()
+        case .clink:        ClinkContent()
+        case .localization: LocalizationView()
         case .style:      StyleContent()
         case .typing:     TypingContent()
         case .feel:       FeelContent()
@@ -197,6 +198,9 @@ private struct SidebarPanel: View {
                 sectionLabel("Onboarding")
                 SidebarRow("Setup", icon: "keyboard", selected: destination == .clink) {
                     select(.clink)
+                }
+                SidebarRow("Localization", icon: "globe", selected: destination == .localization) {
+                    select(.localization)
                 }
 
                 sectionLabel("Customization")
