@@ -64,9 +64,22 @@ public final class ClipboardManager {
         save()
     }
 
+    /// Remove the first unpinned entry matching `text`. Pinned entries are skipped.
+    public func deleteUnpinned(text: String) {
+        guard let index = history.firstIndex(where: { $0.text == text && !$0.pinned }) else { return }
+        history.remove(at: index)
+        save()
+    }
+
     /// Wipe the history except pinned entries and persist.
     public func clear() {
         history = history.filter { $0.pinned }
+        save()
+    }
+
+    /// Wipe the history, optionally including pinned entries.
+    public func clearAll(ignoringPins: Bool) {
+        history = ignoringPins ? [] : history.filter { $0.pinned }
         save()
     }
 

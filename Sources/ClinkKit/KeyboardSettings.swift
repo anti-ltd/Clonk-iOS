@@ -190,6 +190,21 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var clipboardEnabled: Bool
     /// How clipboard history is presented when the toggle is tapped.
     public var clipboardStyle: ClipboardStyle
+    /// Dismiss the clipboard history panel automatically after a clip is pasted.
+    /// Off by default — lets the user paste multiple clips in one session.
+    public var clipboardCloseOnPaste: Bool
+    /// Remove a pasted clip from history after inserting it. Pinned entries are
+    /// never deleted by this — only unpinned clips are consumed on paste.
+    public var clipboardDeleteOnPaste: Bool
+    /// When clearing clipboard history, also delete pinned entries. On by default —
+    /// pins are treated as preference markers, not permanent locks.
+    public var clipboardIgnorePinsOnDelete: Bool
+    /// Automatically capture the current pasteboard when the keyboard finishes
+    /// its opening animation. Requires Full Access. Off by default.
+    public var autoCopyOnKeyboardOpen: Bool
+    /// Automatically capture the current pasteboard when the clipboard history
+    /// panel is opened. Requires Full Access. Off by default.
+    public var autoCopyOnClipboardOpen: Bool
     /// Show the quick-notepad action panel behind the top-left button. Unlike
     /// clipboard it needs no Full Access (it never reads the pasteboard).
     public var notepadEnabled: Bool
@@ -200,6 +215,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// button / slide-up like clipboard and notepad). On by default — turning it
     /// off removes emoji access entirely.
     public var emojiEnabled: Bool
+    /// Show the calculator as an action panel — evaluate arithmetic and insert
+    /// the result directly into the host document.
+    public var calculatorEnabled: Bool
     /// Reach the action panels from the top-left button on the suggestion bar.
     public var activateWithIcon: Bool
     /// Reach the action panels by dragging the 123 key upward (the gesture emoji
@@ -344,9 +362,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         rowSpacing: Double = 4,
         clipboardEnabled: Bool = false,
         clipboardStyle: ClipboardStyle = .bar,
+        clipboardCloseOnPaste: Bool = false,
+        clipboardDeleteOnPaste: Bool = false,
+        clipboardIgnorePinsOnDelete: Bool = true,
+        autoCopyOnKeyboardOpen: Bool = false,
+        autoCopyOnClipboardOpen: Bool = false,
         notepadEnabled: Bool = false,
         notepadMode: NotepadMode = .scratchpad,
         emojiEnabled: Bool = true,
+        calculatorEnabled: Bool = false,
         activateWithIcon: Bool = true,
         activateWithSlideUp: Bool = true,
         panelPickerStyle: PanelPickerStyle = .popover,
@@ -412,9 +436,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.rowSpacing = rowSpacing
         self.clipboardEnabled = clipboardEnabled
         self.clipboardStyle = clipboardStyle
+        self.clipboardCloseOnPaste = clipboardCloseOnPaste
+        self.clipboardDeleteOnPaste = clipboardDeleteOnPaste
+        self.clipboardIgnorePinsOnDelete = clipboardIgnorePinsOnDelete
+        self.autoCopyOnKeyboardOpen = autoCopyOnKeyboardOpen
+        self.autoCopyOnClipboardOpen = autoCopyOnClipboardOpen
         self.notepadEnabled = notepadEnabled
         self.notepadMode = notepadMode
         self.emojiEnabled = emojiEnabled
+        self.calculatorEnabled = calculatorEnabled
         self.activateWithIcon = activateWithIcon
         self.activateWithSlideUp = activateWithSlideUp
         self.panelPickerStyle = panelPickerStyle
@@ -489,9 +519,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         rowSpacing = try c.decodeIfPresent(Double.self, forKey: .rowSpacing) ?? 7
         clipboardEnabled = try c.decodeIfPresent(Bool.self, forKey: .clipboardEnabled) ?? false
         clipboardStyle = (try? c.decodeIfPresent(ClipboardStyle.self, forKey: .clipboardStyle)) ?? .bar
+        clipboardCloseOnPaste = try c.decodeIfPresent(Bool.self, forKey: .clipboardCloseOnPaste) ?? false
+        clipboardDeleteOnPaste = try c.decodeIfPresent(Bool.self, forKey: .clipboardDeleteOnPaste) ?? false
+        clipboardIgnorePinsOnDelete = try c.decodeIfPresent(Bool.self, forKey: .clipboardIgnorePinsOnDelete) ?? true
+        autoCopyOnKeyboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnKeyboardOpen) ?? false
+        autoCopyOnClipboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnClipboardOpen) ?? false
         notepadEnabled = try c.decodeIfPresent(Bool.self, forKey: .notepadEnabled) ?? false
         notepadMode = (try? c.decodeIfPresent(NotepadMode.self, forKey: .notepadMode)) ?? .scratchpad
         emojiEnabled = try c.decodeIfPresent(Bool.self, forKey: .emojiEnabled) ?? true
+        calculatorEnabled = try c.decodeIfPresent(Bool.self, forKey: .calculatorEnabled) ?? false
         activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
         activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
         panelPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover

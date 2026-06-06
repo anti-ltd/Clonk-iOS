@@ -18,23 +18,26 @@ public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
     /// `KeyboardCanvas` — selecting it flips the controller's `showEmoji` to swap
     /// in the separate `EmojiCanvas` — but it shares the same activation UI.
     case emoji
+    case calculator
 
     public var id: String { rawValue }
 
     public var label: String {
         switch self {
-        case .clipboard: return "Clipboard"
-        case .notepad:   return "Notepad"
-        case .emoji:     return "Emoji"
+        case .clipboard:   return "Clipboard"
+        case .notepad:     return "Notepad"
+        case .emoji:       return "Emoji"
+        case .calculator:  return "Calculator"
         }
     }
 
     /// One-line description shown under the label in the `cards` picker.
     public var summary: String {
         switch self {
-        case .clipboard: return "Recent copied text"
-        case .notepad:   return "Quick jotted notes"
-        case .emoji:     return "Emoji keyboard"
+        case .clipboard:   return "Recent copied text"
+        case .notepad:     return "Quick jotted notes"
+        case .emoji:       return "Emoji keyboard"
+        case .calculator:  return "Arithmetic calculator"
         }
     }
 
@@ -42,9 +45,10 @@ public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
     /// variant when the panel is open (matching the old clipboard toggle).
     public func icon(active: Bool) -> String {
         switch self {
-        case .clipboard: return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
-        case .notepad:   return active ? "note.text.badge.plus" : "note.text"
-        case .emoji:     return active ? "face.smiling.fill" : "face.smiling"
+        case .clipboard:  return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
+        case .notepad:    return active ? "note.text.badge.plus" : "note.text"
+        case .emoji:      return active ? "face.smiling.fill" : "face.smiling"
+        case .calculator: return active ? "calculator.fill" : "calculator"
         }
     }
 }

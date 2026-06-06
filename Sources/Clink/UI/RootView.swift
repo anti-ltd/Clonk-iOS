@@ -119,7 +119,8 @@ private struct TypingHub: View {
     private var enabledPanelCount: Int {
         [model.settings.clipboardEnabled,
          model.settings.notepadEnabled,
-         model.settings.emojiEnabled].filter { $0 }.count
+         model.settings.emojiEnabled,
+         model.settings.calculatorEnabled].filter { $0 }.count
     }
 
     var body: some View {
@@ -157,6 +158,12 @@ private struct TypingHub: View {
                                systemImage: "face.smiling",
                                value: model.settings.emojiEnabled ? "On" : "Off") {
                             EmojiSettingsView()
+                        }
+                        Divider()
+                        NavRow("Calculator", subtitle: "Arithmetic results you can insert anywhere",
+                               systemImage: "calculator",
+                               value: model.settings.calculatorEnabled ? "On" : "Off") {
+                            CalculatorSettingsView()
                         }
                     }
 

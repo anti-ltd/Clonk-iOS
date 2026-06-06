@@ -63,6 +63,8 @@ public struct KeyboardCanvas: View {
     /// Fired when the user dumps the notepad buffer (or taps a saved note) into
     /// the host document. Distinct from `onClipboardInsert` only for clarity.
     private let onNotepadInsert: (String) -> Void
+    /// Fired when the user taps the insert button in the calculator panel.
+    private let onCalculatorInsert: (String) -> Void
     /// When true, render a semi-transparent hitbox outline over each key so the
     /// user can see exactly which area maps to each key. Used by the Advanced
     /// settings view; false for normal use.
@@ -99,7 +101,8 @@ public struct KeyboardCanvas: View {
         onCancelAutocorrect: @escaping () -> Void = {},
         onCursorMove: @escaping (Int) -> Void = { _ in },
         onClipboardInsert: @escaping (String) -> Void = { _ in },
-        onNotepadInsert: @escaping (String) -> Void = { _ in }
+        onNotepadInsert: @escaping (String) -> Void = { _ in },
+        onCalculatorInsert: @escaping (String) -> Void = { _ in }
     ) {
         self.settings = settings
         self.live = live
@@ -120,6 +123,7 @@ public struct KeyboardCanvas: View {
         self.onCursorMove = onCursorMove
         self.onClipboardInsert = onClipboardInsert
         self.onNotepadInsert = onNotepadInsert
+        self.onCalculatorInsert = onCalculatorInsert
     }
 
     private typealias Plane = KeyboardController.Plane
@@ -279,6 +283,7 @@ public struct KeyboardCanvas: View {
         if settings.clipboardEnabled && hasFullAccess { panels.append(.clipboard) }
         if settings.notepadEnabled { panels.append(.notepad) }
         if settings.emojiEnabled { panels.append(.emoji) }
+        if settings.calculatorEnabled { panels.append(.calculator) }
         return panels
     }
 
@@ -289,9 +294,10 @@ public struct KeyboardCanvas: View {
     /// separate `EmojiCanvas`), so it's never an in-canvas overlay.
     private func panelIsOverlay(_ panel: ActionPanel) -> Bool {
         switch panel {
-        case .clipboard: return settings.clipboardStyle == .overlay
-        case .notepad:   return settings.notepadMode == .notes && notepadBrowsing
-        case .emoji:     return false
+        case .clipboard:   return settings.clipboardStyle == .overlay
+        case .notepad:     return settings.notepadMode == .notes && notepadBrowsing
+        case .emoji:       return false
+        case .calculator:  return true
         }
     }
 
@@ -360,7 +366,7 @@ public struct KeyboardCanvas: View {
         switch panel {
         case .emoji:
             withAnimation(.snappy(duration: 0.22)) { controller.showEmoji = true }
-        case .clipboard, .notepad:
+        case .clipboard, .notepad, .calculator:
             live.activePanel = panel
         }
     }
@@ -605,6 +611,13 @@ public struct KeyboardCanvas: View {
                         onClear: { notepad.clearNotes() },
                         onDismiss: { notepadBrowsing = false }
                     )
+                case .calculator:
+                    CalculatorPanel(
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onInsert: { text in onCalculatorInsert(text) },
+                        onDismiss: { closePanel() }
+                    )
                 }
             } else if pickerCardsActive {
                 // Cards picker: full-keyboard switcher, one card per panel.
@@ -773,6 +786,10 @@ public struct KeyboardCanvas: View {
         // and the popover rows' frames are both measured here. Applied last so it
         // encloses both the bar button and the popover overlay.
         .coordinateSpace(name: Self.panelSpace)
+        .onChange(of: live.activePanel) { _, new in
+            guard new == .clipboard, settings.autoCopyOnClipboardOpen, hasFullAccess else { return }
+            clipboard.captureFromPasteboard()
+        }
     }
 
     /// One key's glyph for the on-top glyph layer (text or animated symbol).

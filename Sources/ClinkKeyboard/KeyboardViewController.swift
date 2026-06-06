@@ -388,6 +388,9 @@ final class KeyboardViewController: UIInputViewController {
         if target > 0, view.bounds.height <= target + 12 {
             isSettling = false
             hosting?.view.isHidden = false
+            if settings.autoCopyOnKeyboardOpen && hasFullAccess {
+                clipboard.captureFromPasteboard()
+            }
         } else {
             hosting?.view.isHidden = true
         }
@@ -473,12 +476,21 @@ final class KeyboardViewController: UIInputViewController {
                 self.isApplyingEdit = true
                 self.insertMirrored(text)
                 self.isApplyingEdit = false
-                self.live.activePanel = nil
+                if self.settings.clipboardDeleteOnPaste { self.clipboard.deleteUnpinned(text: text) }
+                if self.settings.clipboardCloseOnPaste { self.live.activePanel = nil }
                 self.scheduleSuggestionUpdate()
             },
             onNotepadInsert: { [weak self] text in
                 guard let self else { return }
                 guard !text.isEmpty else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(text)
+                self.isApplyingEdit = false
+                self.live.activePanel = nil
+                self.scheduleSuggestionUpdate()
+            },
+            onCalculatorInsert: { [weak self] text in
+                guard let self, !text.isEmpty else { return }
                 self.isApplyingEdit = true
                 self.insertMirrored(text)
                 self.isApplyingEdit = false

@@ -56,6 +56,30 @@ struct ClipboardHistoryView: View {
                                 .padding(.horizontal, 14)
                                 .padding(.bottom, 10)
                         }
+                        Divider()
+                        ToggleRow("Delete on paste",
+                                  subtitle: "Remove a clip from history after pasting it. Pinned clips are never deleted.",
+                                  isOn: $model.settings.clipboardDeleteOnPaste)
+                        Divider()
+                        ToggleRow("Close on paste",
+                                  subtitle: "Dismiss the clipboard panel after pasting a clip.",
+                                  isOn: $model.settings.clipboardCloseOnPaste)
+                        Divider()
+                        ToggleRow("Delete pins on clear",
+                                  subtitle: "Include pinned clips when clearing all history.",
+                                  isOn: $model.settings.clipboardIgnorePinsOnDelete)
+                    }
+                }
+
+                if model.settings.clipboardEnabled {
+                    CardSection("Auto Copy") {
+                        ToggleRow("On keyboard open",
+                                  subtitle: "Capture the current clipboard when the keyboard finishes opening.",
+                                  isOn: $model.settings.autoCopyOnKeyboardOpen)
+                        Divider()
+                        ToggleRow("On history open",
+                                  subtitle: "Capture the current clipboard when the history panel is opened.",
+                                  isOn: $model.settings.autoCopyOnClipboardOpen)
                     }
                 }
 
@@ -100,7 +124,7 @@ struct ClipboardHistoryView: View {
                         }
 
                         Button(role: .destructive) {
-                            model.clipboard.clear()
+                            model.clipboard.clearAll(ignoringPins: model.settings.clipboardIgnorePinsOnDelete)
                         } label: {
                             Text("Clear All")
                                 .frame(maxWidth: .infinity)

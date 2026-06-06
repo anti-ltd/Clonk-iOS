@@ -72,6 +72,7 @@
 		62D806635952179BB0B76023 /* Theme+Latte.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5512C30FD91A60E65459B1A7 /* Theme+Latte.swift */; };
 		6385BAE51DB5635D90DAA773 /* Theme+Ember.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10C790FE1162939E62BDAA3 /* Theme+Ember.swift */; };
 		6458D8B669F1B46F9599AC7B /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247100C266670E093E13EFC1 /* SmartPunctuation.swift */; };
+		6729689C255FF2648C9B8FC6 /* CalculatorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */; };
 		68627A6C8F349503A1764BC9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */; };
 		6A8DFD98B768C4B591019692 /* LayoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */; };
 		6AC11BBA73FE855F3968E0FB /* Theme+SolarizedDark.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5FE9F8364688968E5539767 /* Theme+SolarizedDark.swift */; };
@@ -95,6 +96,7 @@
 		7DB4DC980B7D7DA73FE4C055 /* EmojiTabTapSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3B49F00E2D47A5C831BFC1 /* EmojiTabTapSurface.swift */; };
 		7E2D1B0A95A6A747FA6BCD50 /* KeyboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3084837B56B933D2E3846C3A /* KeyboardSettings.swift */; };
 		7E57D1D2DB3886AB66C203F1 /* KeyPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D10A388F860363D872978F /* KeyPopup.swift */; };
+		7EA392CE09942EDB298E76AE /* CalculatorSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F101CB1DD74A4CF9831A8D7 /* CalculatorSettingsView.swift */; };
 		819662BE3E7814C19F18A12E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F7F467DA96CBD7A7FA140AE /* Assets.xcassets */; };
 		81EA4F5DAFFA0E8D7EED7321 /* Theme+Snow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BEEC5E0D5D67EB9F4C99EF /* Theme+Snow.swift */; };
 		81FAF62E6679165478D16824 /* EmojiData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550DB37AF0E30A5A41C1A9AC /* EmojiData.swift */; };
@@ -147,6 +149,7 @@
 		D18539C5626B4195AA5B31E5 /* Theme+Dobble.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB390E73F039F0D0C8883754 /* Theme+Dobble.swift */; };
 		D25B8D2C2444B5A19BA80F80 /* Theme+LiquidDark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0687E21636A382CE51307EED /* Theme+LiquidDark.swift */; };
 		D4F80BCB1F91A2F9F0A0ADF0 /* Theme+LiquidMint.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD86C87065DBFAD706F52315 /* Theme+LiquidMint.swift */; };
+		D66A676C0FE8F0ACEA76ECF3 /* CalculatorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */; };
 		D8BFB7EBFEF96FC8CA3B08BB /* ClipboardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */; };
 		D96D477DF59015E02D971CB7 /* NotepadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77B832DE3693AB61F6202524 /* NotepadManager.swift */; };
 		DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
@@ -209,6 +212,7 @@
 		0160583BC8270DF57E31D4E4 /* NotepadNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadNote.swift; sourceTree = "<group>"; };
 		02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRow.swift; sourceTree = "<group>"; };
 		0687E21636A382CE51307EED /* Theme+LiquidDark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidDark.swift"; sourceTree = "<group>"; };
+		0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorPanel.swift; sourceTree = "<group>"; };
 		0782ECAE008251748D18E1D1 /* Theme+Sakura.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Sakura.swift"; sourceTree = "<group>"; };
 		07CA903F575F647CCA010CD1 /* EnableFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnableFlowView.swift; sourceTree = "<group>"; };
 		0C2601A5B41BF718DD05CA39 /* Theme+Graphite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Graphite.swift"; sourceTree = "<group>"; };
@@ -262,6 +266,7 @@
 		77B832DE3693AB61F6202524 /* NotepadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadManager.swift; sourceTree = "<group>"; };
 		7949529FFC551E295B024531 /* SoundPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPickerView.swift; sourceTree = "<group>"; };
 		7C00D1D75534E13782BF5FFA /* Theme+Crimson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Crimson.swift"; sourceTree = "<group>"; };
+		7F101CB1DD74A4CF9831A8D7 /* CalculatorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorSettingsView.swift; sourceTree = "<group>"; };
 		8927D850C4365DFDC1FD2FDA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		89603465B35CBE91068ED11D /* EmojiDeleteTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiDeleteTile.swift; sourceTree = "<group>"; };
 		89A61D8AEA35863190C24F72 /* ClipboardBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardBar.swift; sourceTree = "<group>"; };
@@ -358,6 +363,7 @@
 			isa = PBXGroup;
 			children = (
 				98BCE8C72329C3AC84F83958 /* ActionPanelButton.swift */,
+				0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */,
 				89A61D8AEA35863190C24F72 /* ClipboardBar.swift */,
 				EBC5EC598346B9248D5345DE /* ClipboardEntry.swift */,
 				6093923E8A1E6FB4377D8BB8 /* ClipboardManager.swift */,
@@ -494,6 +500,7 @@
 			children = (
 				934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */,
 				4660055B8E24F96BEFC47475 /* BackupView.swift */,
+				7F101CB1DD74A4CF9831A8D7 /* CalculatorSettingsView.swift */,
 				FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */,
 				39FDB6FF761A1B9983D99D51 /* EmojiSettingsView.swift */,
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
@@ -637,6 +644,8 @@
 				7700D18C30068362D47F3DDF /* AppModel.swift in Sources */,
 				556A45C2449169ACA72D6B1F /* AppStage.swift in Sources */,
 				FBDF432C0811C0D4E99CAF8A /* BackupView.swift in Sources */,
+				6729689C255FF2648C9B8FC6 /* CalculatorPanel.swift in Sources */,
+				7EA392CE09942EDB298E76AE /* CalculatorSettingsView.swift in Sources */,
 				3B4276B1682008D117A56528 /* ClinkApp.swift in Sources */,
 				EF7A071FFCD5BE0BF91C6E6F /* ClipboardBar.swift in Sources */,
 				D8BFB7EBFEF96FC8CA3B08BB /* ClipboardEntry.swift in Sources */,
@@ -732,6 +741,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8F6E5D4864A174BC64B937FE /* ActionPanelButton.swift in Sources */,
+				D66A676C0FE8F0ACEA76ECF3 /* CalculatorPanel.swift in Sources */,
 				BF04F250EE72481C7443F0A8 /* ClipboardBar.swift in Sources */,
 				B8066F654F10A0036D338B9D /* ClipboardEntry.swift in Sources */,
 				0E81EA4B12221DB1ED94AE9B /* ClipboardManager.swift in Sources */,
