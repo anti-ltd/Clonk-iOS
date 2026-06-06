@@ -1,253 +1,317 @@
 /**
- Root tab container. Four tabs — Style, Typing, Feel, Setup — each hosting a
- self-contained navigation stack for its settings group.
+ Root view with a collapsible slide-in sidebar. The sidebar overlays the content
+ from the left edge; a scrim tap or row selection closes it. Detail navigation
+ (Theme editor, Sound picker, etc.) lives inside the per-destination NavigationStack.
  */
 import SwiftUI
 import iUXiOS
 
-/// The app's home. A four-tab structure replaces the old single flat list: each
-/// tab is one clear mental bucket — how the keyboard *looks* (Style), what it
-/// does with *text* (Typing), how it *feels* to touch (Feel), and getting it
-/// running / managing it (Setup). Every leaf screen is reached from exactly one
-/// tab, so testers stop scanning seven look-alike rows to find a control.
+// Shared sidebar open/close state, injected via @Environment so DetailHost can
+// open the sidebar without threading a binding through every content view.
+@Observable @MainActor
+final class SidebarState {
+    var isOpen = false
+}
+
+// MARK: - Root
+
 struct RootView: View {
     @Environment(AppModel.self) private var model
-    @State private var tab: Tab = .style
-    /// One-shot: a first-run user (keyboard not yet enabled) lands on Setup.
+    @State private var sidebar = SidebarState()
+    @State private var destination: SidebarDestination = .clink
     @State private var routedFirstRun = false
 
-    enum Tab: Hashable { case style, typing, feel, setup }
+    enum SidebarDestination: Hashable {
+        case clink, style, typing, feel
+        case clipboard, notepad, emoji, calculator
+    }
+
+    private let sidebarWidth: CGFloat = 290
+    private let sidebarAnim = Animation.spring(response: 0.32, dampingFraction: 0.86)
 
     var body: some View {
-        TabView(selection: $tab) {
-            StyleHub(tab: $tab)
-                .tabItem { Label("Style", systemImage: "paintbrush") }
-                .tag(Tab.style)
+        ZStack(alignment: .leading) {
+            DetailHost(destination: destination)
+                .id(destination)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .environment(sidebar)
 
-            TypingHub()
-                .tabItem { Label("Typing", systemImage: "text.cursor") }
-                .tag(Tab.typing)
+            // Scrim
+            Color.black
+                .ignoresSafeArea()
+                .opacity(sidebar.isOpen ? 0.35 : 0)
+                .allowsHitTesting(sidebar.isOpen)
+                .onTapGesture { withAnimation(sidebarAnim) { sidebar.isOpen = false } }
 
-            FeelHub()
-                .tabItem { Label("Feel", systemImage: "hand.tap") }
-                .tag(Tab.feel)
-
-            SetupHub()
-                .tabItem { Label("Setup", systemImage: "gearshape") }
-                .tag(Tab.setup)
+            // Sidebar panel
+            sidebarPanel
         }
+        .animation(sidebarAnim, value: sidebar.isOpen)
+        .gesture(
+            DragGesture(minimumDistance: 12)
+                .onEnded { v in
+                    if sidebar.isOpen {
+                        // Swipe left anywhere to dismiss.
+                        if v.translation.width < -50 {
+                            withAnimation(sidebarAnim) { sidebar.isOpen = false }
+                        }
+                    } else if v.startLocation.x < 28 && v.translation.width > 50 {
+                        // Swipe in from the far-left edge to open.
+                        withAnimation(sidebarAnim) { sidebar.isOpen = true }
+                    }
+                }
+        )
         .onAppear {
-            if !routedFirstRun {
-                routedFirstRun = true
-                if !model.isKeyboardEnabled { tab = .setup }
+            guard !routedFirstRun else { return }
+            routedFirstRun = true
+            if !model.isKeyboardEnabled { destination = .clink }
+        }
+    }
+
+    @ViewBuilder
+    private var sidebarPanel: some View {
+        SidebarPanel(sidebar: sidebar, destination: $destination)
+            .frame(width: sidebarWidth)
+            .frame(maxHeight: .infinity)
+            .background(alignment: .trailing) {
+                Group {
+                    if #available(iOS 26.0, *) {
+                        Color.clear.glassEffect(.regular, in: Rectangle())
+                    } else {
+                        Rectangle().fill(.regularMaterial)
+                    }
+                }
+                // Wider + trailing-aligned so the glass rim bleeds off the
+                // left screen edge (no faint outline); ignoresSafeArea fills
+                // the top/bottom safe areas so the panel is full-height.
+                .frame(width: sidebarWidth + 40)
+                .ignoresSafeArea()
             }
+            .compositingGroup()
+            .shadow(color: .black.opacity(sidebar.isOpen ? 0.08 : 0), radius: 20, x: 5, y: 0)
+            .offset(x: sidebar.isOpen ? 0 : -sidebarWidth)
+    }
+}
+
+// MARK: - Detail host
+
+private struct DetailHost: View {
+    @Environment(SidebarState.self) private var sidebar
+    let destination: RootView.SidebarDestination
+
+    var body: some View {
+        NavigationStack {
+            destinationView
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                                sidebar.isOpen = true
+                            }
+                        } label: {
+                            Image(systemName: "sidebar.left")
+                        }
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var destinationView: some View {
+        switch destination {
+        case .clink:      ClinkContent()
+        case .style:      StyleContent()
+        case .typing:     TypingContent()
+        case .feel:       FeelContent()
+        case .clipboard:  ClipboardHistoryView()
+        case .notepad:    NotepadView()
+        case .emoji:      EmojiSettingsView()
+        case .calculator: CalculatorSettingsView()
         }
     }
 }
 
-// MARK: - Style
+// MARK: - Sidebar panel
 
-/// Everything about how the keyboard looks, over a live preview.
-private struct StyleHub: View {
+private struct SidebarPanel: View {
     @Environment(AppModel.self) private var model
-    @Binding var tab: RootView.Tab
+    let sidebar: SidebarState
+    @Binding var destination: RootView.SidebarDestination
+    @State private var showExtensionPicker = false
 
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    if !model.isKeyboardEnabled {
-                        enableBanner
-                    }
-
-                    KeyboardPreview(settings: model.settings)
-                        .padding(.top, 4)
-
-                    CardSection("Appearance") {
-                        NavRow("Theme", subtitle: "Colors, glass, and custom themes",
-                               systemImage: "paintpalette",
-                               value: model.settings.matchSystemAppearance ? "Auto" : model.settings.theme.name) {
-                            ThemeEditorView()
-                        }
-                        Divider()
-                        NavRow("Layout & Keys", subtitle: "Size, spacing, popups, and look",
-                               systemImage: "keyboard", value: model.settings.layout.name) {
-                            LayoutPickerView()
-                        }
-                    }
-                }
-                .padding(UX.screenPadding)
-            }
-            .navigationTitle("Style")
-            .background(Color(.systemGroupedBackground))
+    private func isEnabled(_ d: RootView.SidebarDestination) -> Bool {
+        switch d {
+        case .calculator: return model.settings.calculatorEnabled
+        case .clipboard:  return model.settings.clipboardEnabled
+        case .emoji:      return model.settings.emojiEnabled
+        case .notepad:    return model.settings.notepadEnabled
+        default:          return false
         }
     }
 
-    /// Shown until the keyboard is enabled — taps straight to the Setup tab
-    /// rather than burying the most important first step.
-    private var enableBanner: some View {
-        Button {
-            tab = .setup
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "keyboard.badge.ellipsis")
-                    .font(.title2)
-                    .foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Turn on Clink").font(.headline)
-                    Text("Add Clink in Settings to start typing with it.")
-                        .font(.caption).foregroundStyle(.secondary)
+    private var enabledExtensions: [ExtEntry] {
+        allExtensions.filter { isEnabled($0.id) }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                brandHeader
+
+                SidebarRow("Setup", icon: "keyboard", selected: destination == .clink) {
+                    select(.clink)
                 }
-                Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+
+                sectionLabel("Customization")
+                SidebarRow("Style",  icon: "paintbrush",  selected: destination == .style)  { select(.style)  }
+                SidebarRow("Typing", icon: "text.cursor", selected: destination == .typing) { select(.typing) }
+                SidebarRow("Feel",   icon: "hand.tap",    selected: destination == .feel)   { select(.feel)   }
+
+                extensionsSection
             }
-            .padding(14)
-            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.vertical, 8)
+        }
+        .sheet(isPresented: $showExtensionPicker) {
+            ExtensionPickerSheet()
+        }
+    }
+
+    @ViewBuilder
+    private var extensionsSection: some View {
+        HStack {
+            Text("Extensions")
+                .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+            Spacer()
+            Button { showExtensionPicker = true } label: {
+                Image(systemName: "gearshape")
+                    .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 6)
+
+        ForEach(enabledExtensions) { ext in
+            SidebarRow(ext.name, icon: ext.icon, selected: destination == ext.id) {
+                select(ext.id)
+            }
+        }
+    }
+
+    private var brandHeader: some View {
+        HStack(spacing: 10) {
+            Image("AppLogo")
+                .resizable()
+                .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Text("Clink").font(.title3.weight(.semibold))
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
+    }
+
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 6)
+    }
+
+    private func select(_ d: RootView.SidebarDestination) {
+        destination = d
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) { sidebar.isOpen = false }
+    }
+}
+
+// MARK: - Sidebar row
+
+private struct SidebarRow: View {
+    let label: String
+    let icon: String
+    let selected: Bool
+    let action: () -> Void
+
+    init(_ label: String, icon: String, selected: Bool, action: @escaping () -> Void) {
+        self.label = label; self.icon = icon; self.selected = selected; self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon).frame(width: 22, alignment: .center)
+                Text(label).fontWeight(selected ? .semibold : .regular)
+                Spacer()
+            }
+            .foregroundStyle(selected ? Color.white : Color.primary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .background {
+                if selected {
+                    if #available(iOS 26.0, *) {
+                        Color.clear.glassEffect(
+                            .regular.tint(Color.accentColor).interactive(),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        )
+                    } else {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.12))
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Typing
+// MARK: - Extension data
 
-/// What the keyboard does with text: prediction/correction, emoji, clipboard.
-private struct TypingHub: View {
+private struct ExtEntry: Identifiable {
+    let id: RootView.SidebarDestination
+    let name: String
+    let icon: String
+}
+
+private let allExtensions: [ExtEntry] = [
+    ExtEntry(id: .calculator, name: "Calculator", icon: "plus.slash.minus"),
+    ExtEntry(id: .clipboard,  name: "Clipboard",  icon: "clipboard"),
+    ExtEntry(id: .emoji,      name: "Emoji",      icon: "face.smiling"),
+    ExtEntry(id: .notepad,    name: "Notepad",    icon: "note.text"),
+]
+
+// MARK: - Extension picker sheet
+
+private struct ExtensionPickerSheet: View {
     @Environment(AppModel.self) private var model
-
-    /// Panels currently switched on (clipboard / notepad / emoji) — used to show
-    /// the picker-style control only when a choice is actually needed.
-    private var enabledPanelCount: Int {
-        [model.settings.clipboardEnabled,
-         model.settings.notepadEnabled,
-         model.settings.emojiEnabled,
-         model.settings.calculatorEnabled].filter { $0 }.count
-    }
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        @Bindable var model = model
+        @Bindable var m = model
         NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    CardSection("Text") {
-                        NavRow("Autocorrect & Suggestions",
-                               subtitle: "Predictions, corrections, punctuation",
-                               systemImage: "text.cursor", value: typingSummary) {
-                            TypingView()
-                        }
-                    }
-
-                    CardSection("Action panels") {
-                        NavRow("Clipboard", subtitle: "History, re-paste, and management",
-                               systemImage: "clipboard",
-                               value: model.settings.clipboardEnabled
-                                   ? (model.clipboard.history.isEmpty ? "On" : "\(model.clipboard.history.count) saved")
-                                   : "Off") {
-                            ClipboardHistoryView()
-                        }
-                        Divider()
-                        NavRow("Notepad", subtitle: "Quick jots you can drop anywhere",
-                               systemImage: "note.text",
-                               value: model.settings.notepadEnabled
-                                   ? (model.settings.notepadMode == .notes && !model.notepad.notes.isEmpty
-                                       ? "\(model.notepad.notes.count) saved" : "On")
-                                   : "Off") {
-                            NotepadView()
-                        }
-                        Divider()
-                        NavRow("Emoji", subtitle: "Skin tone, recents, on/off",
-                               systemImage: "face.smiling",
-                               value: model.settings.emojiEnabled ? "On" : "Off") {
-                            EmojiSettingsView()
-                        }
-                        Divider()
-                        NavRow("Calculator", subtitle: "Arithmetic results you can insert anywhere",
-                               systemImage: "calculator",
-                               value: model.settings.calculatorEnabled ? "On" : "Off") {
-                            CalculatorSettingsView()
-                        }
-                    }
-
-                    CardSection("Panel access") {
-                        ToggleRow("Top-left icon",
-                                  subtitle: "Open panels from a button on the suggestion bar.",
-                                  isOn: $model.settings.activateWithIcon)
-                        Divider()
-                        ToggleRow("Slide up on 123",
-                                  subtitle: "Drag the 123 key upward to open panels.",
-                                  isOn: $model.settings.activateWithSlideUp)
-                        if enabledPanelCount >= 2 {
-                            Divider()
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Picker style")
-                                    .font(.subheadline)
-                                    .padding(.horizontal, 14)
-                                    .padding(.top, 10)
-                                Picker("Picker style", selection: $model.settings.panelPickerStyle) {
-                                    ForEach(PanelPickerStyle.allCases) { style in
-                                        Text(style.label).tag(style)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                                .padding(.horizontal, 14)
-                                Text("How the button / slide-up lets you choose when more than one panel is on.")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                    .padding(.horizontal, 14)
-                                    .padding(.bottom, 10)
-                            }
-                        }
-                    }
-                }
-                .padding(UX.screenPadding)
+            List {
+                Toggle(isOn: $m.settings.calculatorEnabled) { Label("Calculator", systemImage: "calculator") }
+                Toggle(isOn: $m.settings.clipboardEnabled)  { Label("Clipboard",  systemImage: "clipboard")  }
+                Toggle(isOn: $m.settings.emojiEnabled)      { Label("Emoji",      systemImage: "face.smiling") }
+                Toggle(isOn: $m.settings.notepadEnabled)    { Label("Notepad",    systemImage: "note.text")   }
             }
-            .navigationTitle("Typing")
-            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Extensions")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
         }
-    }
-
-    /// "On" when the keyboard is actively predicting or correcting, else "Off".
-    private var typingSummary: String {
-        (model.settings.suggestionsEnabled || model.settings.autocorrectEnabled) ? "On" : "Off"
+        .presentationDetents([.medium])
     }
 }
 
-// MARK: - Feel
+// MARK: - Clink (setup)
 
-/// How the keyboard feels: sound/haptics, and the low-level touch tuning.
-private struct FeelHub: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    CardSection("Output") {
-                        NavRow("Sound & Haptics", subtitle: "Sounds, volume, and haptics",
-                               systemImage: "speaker.wave.2",
-                               value: model.settings.soundEnabled ? model.settings.soundPack.name : "Off") {
-                            SoundPickerView()
-                        }
-                    }
-
-                    CardSection("Touch") {
-                        NavRow("Touch & Feel", subtitle: "Hitbox, cursor scroll, and precision tuning",
-                               systemImage: "slider.horizontal.3") {
-                            AdvancedSettingsView()
-                        }
-                    }
-                }
-                .padding(UX.screenPadding)
-            }
-            .navigationTitle("Feel")
-            .background(Color(.systemGroupedBackground))
-        }
-    }
-}
-
-// MARK: - Setup
-
-/// Getting Clink running and managing it: enable status + guide, plus backup /
-/// restore and reset (promoted out of the old "Advanced" screen).
-private struct SetupHub: View {
+private struct ClinkContent: View {
     @Environment(AppModel.self) private var model
 
     private var appVersion: String {
@@ -257,38 +321,28 @@ private struct SetupHub: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    statusCard
-
-                    CardSection("Get started") {
-                        NavRow("Enable Clink",
-                               subtitle: "Add the keyboard, use emoji, and Full Access",
-                               systemImage: "keyboard.badge.ellipsis") {
-                            EnableFlowView()
-                        }
-                    }
-
-                    CardSection("Manage") {
-                        NavRow("Backup & Restore",
-                               subtitle: "Save, share, import, or reset your setup",
-                               systemImage: "arrow.up.arrow.down.square") {
-                            BackupView()
-                        }
-                    }
-
-                    Text(appVersion)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 4)
+        ScrollView {
+            VStack(spacing: UX.cardSpacing) {
+                statusCard
+                CardSection("Get started") {
+                    NavRow("Enable Clink",
+                           subtitle: "Add the keyboard, use emoji, and Full Access",
+                           systemImage: "keyboard.badge.ellipsis") { EnableFlowView() }
                 }
-                .padding(UX.screenPadding)
+                CardSection("Manage") {
+                    NavRow("Backup & Restore",
+                           subtitle: "Save, share, import, or reset your setup",
+                           systemImage: "arrow.up.arrow.down.square") { BackupView() }
+                }
+                Text(appVersion)
+                    .font(.caption).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
             }
-            .navigationTitle("Setup")
-            .background(Color(.systemGroupedBackground))
+            .padding(UX.screenPadding)
         }
+        .navigationTitle("Clink")
+        .background(Color(.systemGroupedBackground))
     }
 
     private var statusCard: some View {
@@ -307,12 +361,130 @@ private struct SetupHub: View {
                 .foregroundStyle(ok ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
-                if !ok, let offText {
-                    Text(offText).font(.caption).foregroundStyle(.secondary)
-                }
+                if !ok, let offText { Text(offText).font(.caption).foregroundStyle(.secondary) }
             }
             Spacer()
         }
         .padding(.vertical, UX.rowVPadding)
+    }
+}
+
+// MARK: - Style
+
+private struct StyleContent: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: UX.cardSpacing) {
+                KeyboardPreview(settings: model.settings).padding(.top, 4)
+                CardSection("Appearance") {
+                    NavRow("Theme",
+                           subtitle: "Colors, glass, and custom themes",
+                           systemImage: "paintpalette",
+                           value: model.settings.matchSystemAppearance ? "Auto" : model.settings.theme.name) {
+                        ThemeEditorView()
+                    }
+                    Divider()
+                    NavRow("Layout & Keys",
+                           subtitle: "Size, spacing, popups, and look",
+                           systemImage: "keyboard",
+                           value: model.settings.layout.name) {
+                        LayoutPickerView()
+                    }
+                }
+            }
+            .padding(UX.screenPadding)
+        }
+        .navigationTitle("Style")
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+// MARK: - Typing
+
+private struct TypingContent: View {
+    @Environment(AppModel.self) private var model
+
+    private var enabledPanelCount: Int {
+        [model.settings.clipboardEnabled, model.settings.notepadEnabled,
+         model.settings.emojiEnabled, model.settings.calculatorEnabled].filter { $0 }.count
+    }
+
+    var body: some View {
+        @Bindable var model = model
+        ScrollView {
+            VStack(spacing: UX.cardSpacing) {
+                CardSection("Text") {
+                    NavRow("Autocorrect & Suggestions",
+                           subtitle: "Predictions, corrections, punctuation",
+                           systemImage: "text.cursor",
+                           value: (model.settings.suggestionsEnabled || model.settings.autocorrectEnabled) ? "On" : "Off") {
+                        TypingView()
+                    }
+                }
+                CardSection("Panel access") {
+                    ToggleRow("Top-left icon",
+                              subtitle: "Open panels from a button on the suggestion bar.",
+                              isOn: $model.settings.activateWithIcon)
+                    Divider()
+                    ToggleRow("Slide up on 123",
+                              subtitle: "Drag the 123 key upward to open panels.",
+                              isOn: $model.settings.activateWithSlideUp)
+                    if enabledPanelCount >= 2 {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Picker style")
+                                .font(.subheadline)
+                                .padding(.horizontal, 14).padding(.top, 10)
+                            Picker("Picker style", selection: $model.settings.panelPickerStyle) {
+                                ForEach(PanelPickerStyle.allCases) { style in
+                                    Text(style.label).tag(style)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .padding(.horizontal, 14)
+                            Text("How the button / slide-up lets you choose when more than one panel is on.")
+                                .font(.caption).foregroundStyle(.secondary)
+                                .padding(.horizontal, 14).padding(.bottom, 10)
+                        }
+                    }
+                }
+            }
+            .padding(UX.screenPadding)
+        }
+        .navigationTitle("Typing")
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+// MARK: - Feel
+
+private struct FeelContent: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: UX.cardSpacing) {
+                CardSection("Output") {
+                    NavRow("Sound & Haptics",
+                           subtitle: "Sounds, volume, and haptics",
+                           systemImage: "speaker.wave.2",
+                           value: model.settings.soundEnabled ? model.settings.soundPack.name : "Off") {
+                        SoundPickerView()
+                    }
+                }
+                CardSection("Touch") {
+                    NavRow("Touch & Feel",
+                           subtitle: "Hitbox, cursor scroll, and precision tuning",
+                           systemImage: "slider.horizontal.3") {
+                        AdvancedSettingsView()
+                    }
+                }
+            }
+            .padding(UX.screenPadding)
+        }
+        .navigationTitle("Feel")
+        .background(Color(.systemGroupedBackground))
     }
 }
