@@ -43,21 +43,38 @@ struct RootView: View {
                 .allowsHitTesting(sidebar.isOpen)
                 .onTapGesture { withAnimation(sidebarAnim) { sidebar.isOpen = false } }
 
+            // Left-edge grabber: narrow strip that captures a horizontal
+            // swipe-in to open, with high priority so the content scroll view
+            // can't steal a vertical-leaning drag. Only present while closed.
+            if !sidebar.isOpen {
+                Color.clear
+                    .frame(width: 24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(
+                        DragGesture(minimumDistance: 12)
+                            .onEnded { v in
+                                // Only fire when the drag is clearly horizontal.
+                                guard v.translation.width > 40,
+                                      v.translation.width > abs(v.translation.height) else { return }
+                                withAnimation(sidebarAnim) { sidebar.isOpen = true }
+                            }
+                    )
+            }
+
             // Sidebar panel
             sidebarPanel
+
+            // Always-on liquid-glass strip filling the top safe area.
+            topGlassStrip
         }
         .animation(sidebarAnim, value: sidebar.isOpen)
         .gesture(
             DragGesture(minimumDistance: 12)
                 .onEnded { v in
-                    if sidebar.isOpen {
-                        // Swipe left anywhere to dismiss.
-                        if v.translation.width < -50 {
-                            withAnimation(sidebarAnim) { sidebar.isOpen = false }
-                        }
-                    } else if v.startLocation.x < 28 && v.translation.width > 50 {
-                        // Swipe in from the far-left edge to open.
-                        withAnimation(sidebarAnim) { sidebar.isOpen = true }
+                    // Swipe left anywhere to dismiss.
+                    if sidebar.isOpen && v.translation.width < -50 {
+                        withAnimation(sidebarAnim) { sidebar.isOpen = false }
                     }
                 }
         )
@@ -74,22 +91,40 @@ struct RootView: View {
             .frame(width: sidebarWidth)
             .frame(maxHeight: .infinity)
             .background(alignment: .trailing) {
+                let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
                 Group {
                     if #available(iOS 26.0, *) {
-                        Color.clear.glassEffect(.regular, in: Rectangle())
+                        Color.clear.glassEffect(.regular, in: shape)
                     } else {
-                        Rectangle().fill(.regularMaterial)
+                        shape.fill(.regularMaterial)
                     }
                 }
-                // Wider + trailing-aligned so the glass rim bleeds off the
-                // left screen edge (no faint outline); ignoresSafeArea fills
-                // the top/bottom safe areas so the panel is full-height.
+                // Wider + trailing-aligned so the glass rim (and left rounded
+                // corners) bleed off the left screen edge — only the right
+                // corners show. Bottom bleeds past the safe area; the top stays
+                // inside it so the panel sits below the status-bar strip.
                 .frame(width: sidebarWidth + 40)
-                .ignoresSafeArea()
+                .ignoresSafeArea(edges: .bottom)
             }
             .compositingGroup()
             .shadow(color: .black.opacity(sidebar.isOpen ? 0.08 : 0), radius: 20, x: 5, y: 0)
             .offset(x: sidebar.isOpen ? 0 : -sidebarWidth)
+    }
+
+    private var topGlassStrip: some View {
+        VStack(spacing: 0) {
+            Group {
+                if #available(iOS 26.0, *) {
+                    Color.clear.glassEffect(.regular, in: Rectangle())
+                } else {
+                    Rectangle().fill(.regularMaterial)
+                }
+            }
+            .frame(height: 0)            // zero-height; ignoresSafeArea fills the inset
+            .ignoresSafeArea(edges: .top)
+            Spacer(minLength: 0)
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -102,6 +137,7 @@ private struct DetailHost: View {
     var body: some View {
         NavigationStack {
             destinationView
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {
@@ -158,6 +194,7 @@ private struct SidebarPanel: View {
             VStack(alignment: .leading, spacing: 0) {
                 brandHeader
 
+                sectionLabel("Onboarding")
                 SidebarRow("Setup", icon: "keyboard", selected: destination == .clink) {
                     select(.clink)
                 }
@@ -185,8 +222,11 @@ private struct SidebarPanel: View {
             Button { showExtensionPicker = true } label: {
                 Image(systemName: "gearshape")
                     .font(.caption).fontWeight(.semibold).foregroundStyle(.secondary)
+                    .padding(10)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .padding(.trailing, -10)   // keep glyph edge-aligned despite the larger hitbox
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
@@ -278,7 +318,7 @@ private struct ExtEntry: Identifiable {
 }
 
 private let allExtensions: [ExtEntry] = [
-    ExtEntry(id: .calculator, name: "Calculator", icon: "plus.slash.minus"),
+    ExtEntry(id: .calculator, name: "Calculator", icon: "numbers.rectangle"),
     ExtEntry(id: .clipboard,  name: "Clipboard",  icon: "clipboard"),
     ExtEntry(id: .emoji,      name: "Emoji",      icon: "face.smiling"),
     ExtEntry(id: .notepad,    name: "Notepad",    icon: "note.text"),
@@ -294,7 +334,7 @@ private struct ExtensionPickerSheet: View {
         @Bindable var m = model
         NavigationStack {
             List {
-                Toggle(isOn: $m.settings.calculatorEnabled) { Label("Calculator", systemImage: "calculator") }
+                Toggle(isOn: $m.settings.calculatorEnabled) { Label("Calculator", systemImage: "numbers.rectangle") }
                 Toggle(isOn: $m.settings.clipboardEnabled)  { Label("Clipboard",  systemImage: "clipboard")  }
                 Toggle(isOn: $m.settings.emojiEnabled)      { Label("Emoji",      systemImage: "face.smiling") }
                 Toggle(isOn: $m.settings.notepadEnabled)    { Label("Notepad",    systemImage: "note.text")   }

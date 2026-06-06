@@ -48,7 +48,7 @@ public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
         case .clipboard:  return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
         case .notepad:    return active ? "note.text.badge.plus" : "note.text"
         case .emoji:      return active ? "face.smiling.fill" : "face.smiling"
-        case .calculator: return active ? "calculator.fill" : "calculator"
+        case .calculator: return active ? "numbers.rectangle.fill" : "numbers.rectangle"
         }
     }
 }

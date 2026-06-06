@@ -78,7 +78,7 @@ struct CalculatorPanel: View {
 
     private var headerBar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "calculator")
+            Image(systemName: "numbers.rectangle")
                 .font(.system(size: 16))
                 .foregroundStyle(theme.accent.color)
                 .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
