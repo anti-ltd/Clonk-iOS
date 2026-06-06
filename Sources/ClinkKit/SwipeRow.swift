@@ -315,12 +315,13 @@ public struct SwipeRow<Content: View, Background: View>: View {
         if glass {
             let g = glow(slid: slid)
             RadialGradient(
-            gradient: Gradient(colors: [g.color.opacity(0.8), g.color.opacity(0)]),
-            center: .trailing, startRadius: 0, endRadius: 80
-        )
-        .opacity(g.strength)
-        .blendMode(.plusLighter)
-        .allowsHitTesting(false)
+                gradient: Gradient(colors: [g.color.opacity(0.8), g.color.opacity(0)]),
+                center: .trailing, startRadius: 0, endRadius: 80
+            )
+            .opacity(g.strength)
+            .blendMode(.plusLighter)
+            .allowsHitTesting(false)
+        }
     }
 
     /// Glow colour + strength for the current slide. `g = slid / slotWidth` runs
