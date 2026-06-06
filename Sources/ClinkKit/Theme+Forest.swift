@@ -1,4 +1,8 @@
+/**
+ Deep green canopy with a vivid spring-green accent.
+ */
 extension Theme {
+    /// Deep forest green with pale foliage text and a bright spring-green accent.
     static let forest = Theme(
         id: "forest", name: "Forest",
         background: RGBA(hex: 0x12241B),

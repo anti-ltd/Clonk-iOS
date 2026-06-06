@@ -1,3 +1,8 @@
+/**
+ Multitouch routing for the key grid. `KeyTouchRouter` / `KeyGridTouchView` maps
+ raw `UITouch` events onto key IDs and callbacks. Also defines `MultiTouchSurface`
+ (UIViewRepresentable bridge) and the `KeyFrameKey` / `BarHitboxKey` preference keys.
+ */
 import SwiftUI
 import UIKit
 

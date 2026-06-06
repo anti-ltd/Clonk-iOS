@@ -1,4 +1,8 @@
+/**
+ Cool light grey background with crisp white keys. The default light preset.
+ */
 extension Theme {
+    /// Silver-grey background with crisp white keys and a system-blue accent.
     static let snow = Theme(
         id: "snow", name: "Snow",
         background: RGBA(hex: 0xD1D3D9),

@@ -1,3 +1,7 @@
+/**
+ `SoundPack`: a named set of key-click audio samples bundled in the keyboard
+ extension. Ships with built-in presets; custom packs require Full Access.
+ */
 import Foundation
 
 /// A "clink" key-sound pack. Each pack maps to a set of short audio samples

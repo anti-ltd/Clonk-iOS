@@ -1,4 +1,8 @@
+/**
+ Soft minty green with a teal accent. The solid counterpart to Liquid Mint.
+ */
 extension Theme {
+    /// Minty green background with near-white keys and a teal accent.
     static let mint = Theme(
         id: "mint", name: "Mint",
         background: RGBA(hex: 0xD6EFE2),

@@ -1,4 +1,8 @@
+/**
+ Dark warm brown with ivory text and a golden accent — vintage keycap feel.
+ */
 extension Theme {
+    /// Warm dark brown with ivory lettering and an amber-gold accent.
     static let mechanical = Theme(
         id: "mechanical", name: "Mechanical",
         background: RGBA(hex: 0x2B2622),

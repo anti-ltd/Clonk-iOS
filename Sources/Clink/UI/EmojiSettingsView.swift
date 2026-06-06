@@ -1,3 +1,7 @@
+/**
+ Emoji settings: scroll direction, recent-emoji toggle, global skin tone default,
+ and the per-emoji skin-tone reset.
+ */
 import SwiftUI
 import iUXiOS
 

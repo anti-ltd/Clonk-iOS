@@ -1,3 +1,7 @@
+/**
+ `TrackpadPanel`: the trackpad-mode overlay shown while the space bar is held in
+ trackpad cursor mode. Purely visual — a centered move glyph tinted the theme accent.
+ */
 import SwiftUI
 
 /// The full-keyboard trackpad shown while the space bar is held in trackpad

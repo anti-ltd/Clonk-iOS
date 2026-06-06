@@ -1,7 +1,12 @@
+/**
+ Clipboard settings and history browser. Shows the on/off toggle, style picker,
+ and the list of saved entries with swipe-to-pin / copy / delete actions.
+ */
 import SwiftUI
 import UIKit
 import iUXiOS
 
+/// Clipboard history settings and entry list.
 struct ClipboardHistoryView: View {
     @Environment(AppModel.self) private var model
     @State private var copiedIndex: Int? = nil

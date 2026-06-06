@@ -1,3 +1,9 @@
+/**
+ All user-configurable keyboard settings in one `Codable` struct. Shared between
+ the container app (writes) and the keyboard extension (reads) via the App Group.
+ Also defines the settings enums: `KeyPopupStyle`, `ClipboardStyle`,
+ `NotepadMode`, `PanelPickerStyle`, `EmojiScrollDirection`, `CursorMovementType`.
+ */
 import Foundation
 
 /// The shape/behaviour of the magnified key popup.

@@ -1,4 +1,8 @@
+/**
+ Dark warm black with parchment text and a gold accent.
+ */
 extension Theme {
+    /// Near-black warm base with parchment text and a gold accent.
     static let royal = Theme(
         id: "royal", name: "Royal",
         background: RGBA(hex: 0x12100A),

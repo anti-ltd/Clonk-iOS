@@ -1,3 +1,9 @@
+/**
+ `KeyboardLiveState`: per-keystroke output from the suggestion engine —
+ predictions, the pending auto-correction, and emoji suggestions — flowing from
+ the extension into the `SuggestionBar` and vice-versa. Also defines `ActionPanel`
+ and `Autocorrection`.
+ */
 import SwiftUI
 
 /// One of the optional "action panels" the keyboard can surface from the

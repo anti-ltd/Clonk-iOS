@@ -1,3 +1,8 @@
+/**
+ Supporting types for `Theme`: gradient model (`ThemeGradient`, `GradientStop`,
+ `GradientType`), font options (`ThemeFontDesign`, `ThemeFontWeight`), key
+ material (`KeyMaterial`), and glass variant (`GlassVariant`).
+ */
 import SwiftUI
 
 // MARK: - Gradient types

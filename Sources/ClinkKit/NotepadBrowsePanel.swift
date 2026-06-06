@@ -1,3 +1,7 @@
+/**
+ `NotepadBrowsePanel`: full-keyboard overlay for the saved-notes archive.
+ Swipeable note cards with insert, load-into-buffer, and delete actions.
+ */
 import SwiftUI
 
 /// Full-keyboard overlay listing the saved notes archive (notes mode). Mirrors

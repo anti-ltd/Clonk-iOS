@@ -1,4 +1,8 @@
+/**
+ Pure black with near-invisible dark keys and a vivid red accent.
+ */
 extension Theme {
+    /// Pure black background with near-invisible keys and a vivid red accent.
     static let carbon = Theme(
         id: "carbon", name: "Carbon",
         background: RGBA(hex: 0x000000),

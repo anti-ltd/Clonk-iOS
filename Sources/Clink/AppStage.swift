@@ -1,3 +1,7 @@
+/**
+ `AppStage`: launch-argument wiring for the `appstage` marketing screenshot
+ pipeline. DEBUG-only — not compiled into Release builds.
+ */
 import SwiftUI
 
 // AppStage marketing-capture support.

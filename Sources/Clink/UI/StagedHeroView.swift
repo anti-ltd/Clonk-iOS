@@ -1,12 +1,13 @@
-// Staged "hero" marketing shot — the dark Liquid Glass keyboard caught mid-type
-// on a subtle dark gradient, for the App Store / README hero. The WOW shot.
-//
-// DEBUG-only, reached via `--appstage glass` (see AppStage / StagedRoot). It's a
-// deterministic STILL, not the live typing simulator: a phrase part-typed into a
-// glass bubble, the next key held down so its popup balloons, and a live
-// suggestion bar — composed so every capture is byte-for-byte identical. Reuses
-// the real `KeyboardCanvas` (the exact view the extension renders), so what you
-// see is what ships. Never compiled into Release.
+/**
+ Staged hero marketing shot: the dark Liquid Glass keyboard caught mid-type on a
+ dark gradient, for the App Store / README hero.
+
+ DEBUG-only, reached via `--appstage glass` (see `AppStage` / `StagedRoot`).
+ A deterministic still — not the live typing simulator: a phrase part-typed into
+ a glass bubble, the next key held down so its popup balloons, and a live
+ suggestion bar. Every capture is byte-for-byte identical. Reuses the real
+ `KeyboardCanvas`, so what you see is what ships. Never compiled into Release.
+ */
 #if DEBUG
 import SwiftUI
 

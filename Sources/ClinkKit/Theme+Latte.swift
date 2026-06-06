@@ -1,4 +1,8 @@
+/**
+ Warm tawny cream with tan function keys and a brown leather accent.
+ */
 extension Theme {
+    /// Warm tawny cream with pale-cream keys and a warm brown accent.
     static let latte = Theme(
         id: "latte", name: "Latte",
         background: RGBA(hex: 0xE6D9C8),

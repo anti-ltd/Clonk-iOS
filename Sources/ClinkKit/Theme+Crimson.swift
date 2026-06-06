@@ -1,4 +1,8 @@
+/**
+ Near-black burgundy with rose text and a vivid red accent.
+ */
 extension Theme {
+    /// Near-black burgundy with pale rose text and a vivid red accent.
     static let crimson = Theme(
         id: "crimson", name: "Crimson",
         background: RGBA(hex: 0x1F0A0D),

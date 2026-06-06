@@ -1,3 +1,8 @@
+/**
+ `KeyboardController`: observable transient state for one keyboard session.
+ Tracks which symbol plane and shift state are shown, the currently pressed key
+ ID, and the emoji mode toggle. Also provides key-ID resolution helpers.
+ */
 import SwiftUI
 
 /// The keyboard's transient UI state — which symbol plane is showing, the shift

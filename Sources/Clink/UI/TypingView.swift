@@ -1,3 +1,6 @@
+/**
+ Smart-text settings screen: autocorrect, suggestions, capitalization, and auto-punctuation.
+ */
 import SwiftUI
 import iUXiOS
 

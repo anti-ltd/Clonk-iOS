@@ -1,3 +1,7 @@
+/**
+ `NotepadBar`: the inline notepad strip shown above the keys when the notepad
+ panel is open. Keys type into the buffer; actions insert or save the text.
+ */
 import SwiftUI
 
 /// The notepad's inline compose strip — the keys type into `text` while this is

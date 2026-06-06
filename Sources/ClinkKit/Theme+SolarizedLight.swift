@@ -1,4 +1,8 @@
+/**
+ Solarized Light: warm cream background with slate text, following the Solarized palette.
+ */
 extension Theme {
+    /// Warm cream background with the canonical Solarized slate text and an orange-red accent.
     static let solarizedLight = Theme(
         id: "solarized-light", name: "Solarized Light",
         background: RGBA(hex: 0xEEE8D5),

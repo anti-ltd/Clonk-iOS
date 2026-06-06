@@ -1,3 +1,9 @@
+/**
+ `KeyboardViewController`: the keyboard extension's principal class. Hosts
+ `KeyboardCanvas` and `EmojiCanvas` inside `UIInputViewController`, wires the
+ document proxy, suggestion engine, clipboard, sound, and cross-process change
+ notifications.
+ */
 import SwiftUI
 import UIKit
 

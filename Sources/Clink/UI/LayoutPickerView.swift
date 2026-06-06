@@ -1,6 +1,11 @@
+/**
+ Layout and key-shape editor. Four tabs — Layout, Size, Popups, Feel — all with a
+ live keyboard preview pinned above the controls.
+ */
 import SwiftUI
 import iUXiOS
 
+/// Layout, key size, popups, and press-feel settings behind a tabbed preview layout.
 struct LayoutPickerView: View {
     @Environment(AppModel.self) private var model
 

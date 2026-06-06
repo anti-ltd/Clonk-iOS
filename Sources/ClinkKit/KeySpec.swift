@@ -1,3 +1,7 @@
+/**
+ `KeySpec`: a single key's identity, label, and action — the value type rebuilt
+ cheaply on every shift/plane change.
+ */
 import SwiftUI
 
 /// A single key's appearance + behaviour. Value type so rows can be rebuilt

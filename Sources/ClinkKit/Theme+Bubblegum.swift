@@ -1,4 +1,8 @@
+/**
+ Bright pink-white background with rose function keys and a magenta accent.
+ */
 extension Theme {
+    /// Pink-white background with rose function keys and a vivid magenta accent.
     static let bubblegum = Theme(
         id: "bubblegum", name: "Bubblegum",
         background: RGBA(hex: 0xFCE1F0),

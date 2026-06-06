@@ -1,3 +1,8 @@
+/**
+ Smart-punctuation rules applied after each insertion: curly-quote substitution,
+ double-space to period, and contraction apostrophes. Mirrors the native
+ keyboard's typographic niceties that iOS won't expose to third-party keyboards.
+ */
 import Foundation
 
 /// Smart-punctuation rules that mirror the native keyboard's typographic touches:

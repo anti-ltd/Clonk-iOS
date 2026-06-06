@@ -1,4 +1,8 @@
+/**
+ Classic Dracula palette: charcoal background, lavender function keys, pink accent.
+ */
 extension Theme {
+    /// Charcoal-purple background with lavender function-key text and hot-pink accent.
     static let dracula = Theme(
         id: "dracula", name: "Dracula",
         background: RGBA(hex: 0x282A36),

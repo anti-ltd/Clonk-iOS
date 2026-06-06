@@ -1,3 +1,8 @@
+/**
+ `SoundPlayer`: plays a key-click audio sample and haptic on each key press.
+ Requires Full Access for custom sound packs; falls back to `AudioServicesPlaySystemSound`
+ for the standard click when Full Access is absent.
+ */
 import AVFoundation
 import AudioToolbox
 import UIKit

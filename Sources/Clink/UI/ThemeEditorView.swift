@@ -1,3 +1,7 @@
+/**
+ Theme picker with a live preview. Handles the preset grid, custom theme CRUD,
+ and `.clink` file export / import. Also defines `ThemeSwatch` and `ShareSheet`.
+ */
 import SwiftUI
 import iUXiOS
 import UniformTypeIdentifiers

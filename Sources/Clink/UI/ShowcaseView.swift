@@ -1,19 +1,20 @@
-// Device showcase — a typing simulator for capturing demo footage.
-//
-// Built ONLY into the `make device-showcase` build (gated on the SHOWCASE
-// compilation condition), never into the App Store product. It boots straight
-// into this screen instead of RootView.
-//
-// The layout, top → bottom:
-//   • a control panel  — configure the script, speed, backgrounds (CROP THIS OUT)
-//   • a bubble styled like the keys — text auto-types into it, centered
-//   • the real ClinkKeyboard — and it ANIMATES: the right keys depress, shift
-//     toggles for capitals, planes switch for numbers/symbols — all in lockstep
-//     with the text, so it reads as a real hand typing.
-//
-// So a screen recording cropped just below the controls shows the bubble filling
-// itself in above a keyboard that's visibly being typed on — no human hands, no
-// fat-fingering, the same phrase every take.
+/**
+ Device showcase — a typing simulator for capturing demo footage.
+
+ Built ONLY into the `make device-showcase` build (SHOWCASE compilation
+ condition), never into the App Store product. Boots straight into this screen
+ instead of RootView.
+
+ Layout, top to bottom:
+   - Control panel: configure script, speed, and backgrounds (CROP THIS OUT)
+   - A bubble styled like the keys: text auto-types into it, centered
+   - The real KeyboardCanvas: right keys depress, shift toggles for capitals,
+     planes switch for numbers/symbols, all in lockstep with the text
+
+ A screen recording cropped below the controls shows the bubble filling above a
+ keyboard that visibly types — no human hands, no fat-fingering, same phrase
+ every take.
+ */
 #if SHOWCASE
 import SwiftUI
 import iUXiOS

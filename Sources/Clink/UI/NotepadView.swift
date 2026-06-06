@@ -1,6 +1,11 @@
+/**
+ Notepad settings and note browser. Shows the on/off toggle, mode picker, a live
+ scratch editor, and the saved-notes archive with swipe-to-load / delete actions.
+ */
 import SwiftUI
 import iUXiOS
 
+/// Notepad settings, scratch buffer, and saved-note archive.
 struct NotepadView: View {
     @Environment(AppModel.self) private var model
     @State private var openRow: Int? = nil

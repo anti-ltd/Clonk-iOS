@@ -1,4 +1,8 @@
+/**
+ Solarized Dark: deep teal base with warm grey text, following the Solarized palette.
+ */
 extension Theme {
+    /// Deep teal background with the canonical Solarized warm-grey text and cyan accent.
     static let solarizedDark = Theme(
         id: "solarized-dark", name: "Solarized Dark",
         background: RGBA(hex: 0x002B36),

@@ -1,3 +1,7 @@
+/**
+ Custom theme editor sheet. Also houses `GradientEditorView`, a nested sheet for
+ building multi-stop background and key-background gradients.
+ */
 import SwiftUI
 import iUXiOS
 import PhotosUI

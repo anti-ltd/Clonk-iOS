@@ -1,4 +1,8 @@
+/**
+ Deep charred red with warm ivory text and a bright orange accent.
+ */
 extension Theme {
+    /// Charred dark red with warm ivory text and a vivid orange accent.
     static let ember = Theme(
         id: "ember", name: "Ember",
         background: RGBA(hex: 0x2A1410),

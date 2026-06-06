@@ -1,3 +1,7 @@
+/**
+ Touch and feel tuning screen. Three tabs — Touch, Spring, Timing — each with a
+ preset chip row above the raw sliders in a `TunedSection` disclosure group.
+ */
 import SwiftUI
 import iUXiOS
 

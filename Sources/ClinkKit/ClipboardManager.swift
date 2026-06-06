@@ -1,3 +1,8 @@
+/**
+ `ClipboardManager`: observable FIFO clipboard history, persisted to the App
+ Group container so both the container app and keyboard extension see the same
+ entries. Handles pin, delete, and clear operations.
+ */
 import SwiftUI
 import UIKit
 

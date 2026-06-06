@@ -1,4 +1,8 @@
+/**
+ Liquid Glass over a deep charred-red backdrop with an orange accent.
+ */
 extension Theme {
+    /// Glass preset tinted deep red with a vivid orange accent.
     static let liquidEmber = Theme(
         id: "liquid-ember", name: "Liquid Ember",
         background: RGBA(hex: 0x2A1410, a: 0.30),

@@ -1,3 +1,7 @@
+/**
+ Core `Theme` value type: every color slot, material, font options, and optional
+ background/gradient IDs that fully describe how the keyboard looks.
+ */
 import SwiftUI
 
 public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {

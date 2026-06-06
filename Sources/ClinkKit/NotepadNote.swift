@@ -1,3 +1,6 @@
+/**
+ `NotepadNote`: a single saved entry in the notepad archive.
+ */
 import Foundation
 
 /// A saved note in the quick-notepad archive (`NotepadMode.notes`). The compose

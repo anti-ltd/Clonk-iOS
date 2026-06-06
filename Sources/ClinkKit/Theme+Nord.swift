@@ -1,4 +1,8 @@
+/**
+ Arctic blue-grey palette based on the Nord color scheme.
+ */
 extension Theme {
+    /// Arctic blue-grey with a muted teal accent, following the Nord palette.
     static let nord = Theme(
         id: "nord", name: "Nord",
         background: RGBA(hex: 0x2E3440),

@@ -1,4 +1,8 @@
+/**
+ Light Liquid Glass with vivid lavender-purple keys. Cheerful glass preset.
+ */
 extension Theme {
+    /// Light glass preset with vivid lavender keys and a purple accent.
     static let dobble = Theme(
         id: "dobble", name: "Dobble",
         background: RGBA(0.10980392156862745, 0.10980392156862745, 0.11764705882352941, 1),

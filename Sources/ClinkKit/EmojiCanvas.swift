@@ -1,3 +1,8 @@
+/**
+ `EmojiCanvas`: the emoji keyboard — a sibling of `KeyboardCanvas` that reads
+ the same `KeyboardSettings`. Hosts the scrollable emoji grid, category tab bar,
+ skin-tone picker, and delete tile.
+ */
 import SwiftUI
 
 /// The Clink emoji keyboard — a sibling of `KeyboardCanvas` that reads the very

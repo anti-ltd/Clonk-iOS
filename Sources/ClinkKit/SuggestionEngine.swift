@@ -1,3 +1,9 @@
+/**
+ Offline suggestion engine: autocomplete predictions, auto-correction, and emoji
+ suggestions. Uses `UITextChecker` for spell/correction data and a custom
+ Damerau-Levenshtein + bigram ranker for predictions. Shared between the keyboard
+ extension and the in-app showcase typer.
+ */
 import Foundation
 import UIKit
 

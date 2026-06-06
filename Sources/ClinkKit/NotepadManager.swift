@@ -1,3 +1,7 @@
+/**
+ `NotepadManager`: observable backing store for the quick notepad. Holds the
+ compose buffer and the saved-notes archive, persisted to the App Group container.
+ */
 import SwiftUI
 
 /// Backing store for the quick notepad. Holds one always-on compose buffer

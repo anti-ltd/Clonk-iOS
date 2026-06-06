@@ -1,4 +1,8 @@
+/**
+ Dark warm near-black with serif key labels and a coral-red accent. Dark twin to Coral.
+ */
 extension Theme {
+    /// Warm near-black with serif lettering and a coral-red accent.
     static let cinder = Theme(
         id: "cinder", name: "Cinder",
         background: RGBA(hex: 0x1A1512),

@@ -1,4 +1,8 @@
+/**
+ Liquid Glass over a mint-tinted backdrop with a teal accent.
+ */
 extension Theme {
+    /// Glass preset tinted mint-green with a teal accent.
     static let liquidMint = Theme(
         id: "liquid-mint", name: "Liquid Mint",
         background: RGBA(hex: 0xD6EFE2, a: 0.20),

@@ -1,5 +1,9 @@
+/**
+ Canonical dark Liquid Glass preset. Translucent tinted keys refract any background.
+ */
 extension Theme {
     // Colors act as tints; translucent backdrop so the keys refract the system keyboard background.
+    /// Dark glass preset: barely-there translucent keys with a system-blue accent.
     static let liquidDark = Theme(
         id: "liquid-dark", name: "Liquid Dark",
         background: RGBA(hex: 0x1C1C1E, a: 0.28),

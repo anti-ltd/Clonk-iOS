@@ -1,3 +1,7 @@
+/**
+ UIKit tap surface for the scrollable emoji category tab bar. Handles taps on
+ the tab strip independently of SwiftUI's gesture stack to avoid scroll conflicts.
+ */
 import SwiftUI
 import UIKit
 

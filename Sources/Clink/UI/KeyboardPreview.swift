@@ -1,3 +1,8 @@
+/**
+ Reusable layout containers for settings screens with a live keyboard preview, and
+ the `KeyboardPreview` widget itself — a fully interactive `KeyboardCanvas` inside
+ the app for real-time theme and layout feedback.
+ */
 import SwiftUI
 import iUXiOS
 

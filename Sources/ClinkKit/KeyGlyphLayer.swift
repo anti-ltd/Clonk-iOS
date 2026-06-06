@@ -1,3 +1,8 @@
+/**
+ Glyph-layer preference key plumbing. Each key publishes its glyph info and
+ bloom transform via `KeyGlyphKey`; the canvas collects them and draws a single
+ unified glyph pass above all key backgrounds.
+ */
 import SwiftUI
 
 // MARK: - Glyph layer plumbing

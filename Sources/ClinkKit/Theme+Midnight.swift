@@ -1,4 +1,8 @@
+/**
+ Navy-black background with periwinkle keys and a cobalt-blue accent.
+ */
 extension Theme {
+    /// Near-black navy with soft periwinkle keys and a cobalt-blue accent.
     static let midnight = Theme(
         id: "midnight", name: "Midnight",
         background: RGBA(hex: 0x0B1026),

@@ -1,3 +1,8 @@
+/**
+ `ActionPanelButton`: the top-left icon in the suggestion bar that opens the
+ active action panel (clipboard, notepad, or the panel picker). Also defines
+ `barDivider`, the thin vertical rule between the icon and the bar content.
+ */
 import SwiftUI
 
 // Shared thin vertical rule used between the clipboard icon and bar content.

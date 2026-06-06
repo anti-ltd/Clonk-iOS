@@ -1,3 +1,7 @@
+/**
+ `KeyView`: a single key rendered with its fill, text, bloom animation, and
+ optional glass effect. Also defines `TapPulse` (the additive press-flash animation).
+ */
 import SwiftUI
 
 // MARK: - Tap pulse

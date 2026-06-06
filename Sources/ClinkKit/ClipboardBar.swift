@@ -1,3 +1,8 @@
+/**
+ `ClipboardBar`: the inline clipboard strip shown in the suggestion bar area
+ when the clipboard panel is in bar mode. Horizontally scrollable saved clips
+ plus save and clear actions.
+ */
 import SwiftUI
 
 /// The clipboard-mode content of the suggestion bar: a horizontally scrollable

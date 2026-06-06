@@ -1,3 +1,8 @@
+/**
+ `PanelSwitcherPanel`: full-keyboard panel picker shown when
+ `panelPickerStyle == .cards` and 2+ panels are enabled. One card per panel —
+ icon, label, and one-line summary.
+ */
 import SwiftUI
 
 /// Full-keyboard switcher shown when `panelPickerStyle == .cards` and 2+ panels

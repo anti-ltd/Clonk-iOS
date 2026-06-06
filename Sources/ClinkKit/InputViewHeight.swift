@@ -1,3 +1,9 @@
+/**
+ Keyboard height management. `UIInputViewController.logHeightState` traces the
+ height-jump bug; `UIView.tameEncapsulatedHeightConstraint` drops the priority
+ of the system's `UIView-Encapsulated-Layout-Height` constraint so the extension
+ can set its own height without fighting the system layout engine.
+ */
 import UIKit
 import os
 

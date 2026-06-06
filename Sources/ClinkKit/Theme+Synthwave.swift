@@ -1,4 +1,8 @@
+/**
+ Deep indigo base with neon cyan and hot-pink accents. Retro 80s palette.
+ */
 extension Theme {
+    /// Deep indigo with neon cyan accent and hot-pink function-key text.
     static let synthwave = Theme(
         id: "synthwave", name: "Synthwave",
         background: RGBA(hex: 0x1A1033),

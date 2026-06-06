@@ -1,4 +1,8 @@
+/**
+ Warm off-white background with cream keys and a terracotta accent.
+ */
 extension Theme {
+    /// Warm parchment tones with a burnt-orange accent.
     static let paper = Theme(
         id: "paper", name: "Paper",
         background: RGBA(hex: 0xE8E2D4),

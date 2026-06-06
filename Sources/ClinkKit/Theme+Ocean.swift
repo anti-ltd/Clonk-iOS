@@ -1,4 +1,8 @@
+/**
+ Deep ocean teal with aquamarine keys and a vivid cyan accent.
+ */
 extension Theme {
+    /// Dark teal background with aquamarine keys and a bright cyan accent.
     static let ocean = Theme(
         id: "ocean", name: "Ocean",
         background: RGBA(hex: 0x0A1F2B),

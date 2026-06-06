@@ -1,3 +1,7 @@
+/**
+ `EmojiCell`: one tappable emoji in the grid. Handles the insert tap, the
+ long-press for skin-tone picking, and the glass bloom flash on press.
+ */
 import SwiftUI
 
 // MARK: - Emoji cell

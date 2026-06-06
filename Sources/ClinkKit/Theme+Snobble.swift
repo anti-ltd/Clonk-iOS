@@ -1,4 +1,8 @@
+/**
+ Dark Liquid Glass in deep purple. Moody glass preset.
+ */
 extension Theme {
+    /// Dark glass preset in deep purple with a vivid purple accent.
     static let snobble = Theme(
         id: "snobble", name: "Snobble",
         background: RGBA(0.10980392156862745, 0.10980392156862745, 0.11764705882352941, 1),

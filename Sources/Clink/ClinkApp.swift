@@ -1,3 +1,7 @@
+/**
+ App entry point. Boots into `RootView` in production, with debug hooks for the
+ `appstage` marketing pipeline and the `SHOWCASE` typing simulator.
+ */
 import SwiftUI
 
 @main

@@ -1,6 +1,11 @@
+/**
+ Sound and haptics settings. Toggle, volume slider, haptics switch, and the
+ sound-pack list — with a Full Access nudge when a pack requires it.
+ */
 import SwiftUI
 import iUXiOS
 
+/// Sound and haptics picker.
 struct SoundPickerView: View {
     @Environment(AppModel.self) private var model
 

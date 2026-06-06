@@ -1,4 +1,8 @@
+/**
+ Soft lilac background with near-white keys and a violet accent.
+ */
 extension Theme {
+    /// Lilac background with near-white keys and a vivid violet accent.
     static let lavender = Theme(
         id: "lavender", name: "Lavender",
         background: RGBA(hex: 0xE5DFF5),

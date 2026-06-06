@@ -1,4 +1,8 @@
+/**
+ Near-black slate with blue-grey keys. The default dark preset.
+ */
 extension Theme {
+    /// Near-black slate with blue-grey keys and a system-blue accent.
     static let graphite = Theme(
         id: "graphite", name: "Graphite",
         background: RGBA(hex: 0x1C1C1E),

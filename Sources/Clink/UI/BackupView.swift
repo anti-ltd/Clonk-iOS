@@ -1,3 +1,7 @@
+/**
+ Backup and restore screen. Exports / imports `KeyboardSettings` as a
+ `.clinkconfig` file and surfaces the reset-to-defaults actions.
+ */
 import SwiftUI
 import iUXiOS
 import UniformTypeIdentifiers

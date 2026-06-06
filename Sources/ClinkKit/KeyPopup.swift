@@ -1,3 +1,8 @@
+/**
+ Key-press popup bubble. Uses a `PreferenceKey` (`KeyPopupKey`) to pass key
+ bounds from deep inside the grid up to the canvas, which then renders
+ `KeyPopup` / `BalloonPopup` floating above all other content.
+ */
 import SwiftUI
 
 // MARK: - Key-popup plumbing

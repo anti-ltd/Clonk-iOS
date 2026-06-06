@@ -1,3 +1,7 @@
+/**
+ `ClipboardEntry`: one saved item in the clipboard history. Also defines
+ `Date.clipboardRelative` — the relative-time label shown in the UI.
+ */
 import Foundation
 
 public struct ClipboardEntry: Codable, Equatable, Sendable {

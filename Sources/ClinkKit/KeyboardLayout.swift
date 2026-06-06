@@ -1,3 +1,8 @@
+/**
+ `KeyboardLayout`: the letter-plane key arrangement for one locale. Ships with
+ four built-in presets (QWERTY, AZERTY, QWERTZ, Dvorak) plus the shared
+ number-row and symbol-row definitions used by every layout.
+ */
 import Foundation
 
 /// A keyboard's letter-plane arrangement. Clink lays out the number/symbol

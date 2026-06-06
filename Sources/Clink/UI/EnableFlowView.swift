@@ -1,3 +1,7 @@
+/**
+ Step-by-step keyboard setup guide: how to add Clink and the honest pitch for
+ Full Access. Also shows live enable / Full Access status.
+ */
 import SwiftUI
 import iUXiOS
 

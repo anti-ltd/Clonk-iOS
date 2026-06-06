@@ -1,3 +1,7 @@
+/**
+ `SkinTone` enum (Fitzpatrick scale) and `EmojiSkinTone` utility for applying a
+ tone modifier to a base emoji string.
+ */
 import Foundation
 
 /// A Fitzpatrick skin-tone choice for an emoji. `none` is the neutral (yellow)

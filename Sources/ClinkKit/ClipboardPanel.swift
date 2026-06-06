@@ -1,3 +1,7 @@
+/**
+ `ClipboardPanel`: full-keyboard overlay for clipboard history when
+ `clipboardStyle == .overlay`. Swipeable entry cards with copy / pin / delete.
+ */
 import SwiftUI
 
 /// Full-keyboard replacement shown when `clipboardStyle == .overlay` and the

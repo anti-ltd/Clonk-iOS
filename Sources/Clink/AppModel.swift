@@ -1,3 +1,8 @@
+/**
+ `AppModel`: app-wide observable state. Owns `KeyboardSettings`, persisting every
+ change to the App Group so the keyboard extension picks it up instantly. Also
+ exposes enable / Full Access status, clipboard, and notepad managers.
+ */
 import SwiftUI
 
 /// App-wide state for the Clink container app. Owns the editable

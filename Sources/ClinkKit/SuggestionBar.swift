@@ -1,3 +1,8 @@
+/**
+ `SuggestionBar`: the autocomplete / correction strip above the keys. Shows
+ the pending correction (tap-to-keep vs accept) and up to three predictions,
+ plus emoji suggestions when available.
+ */
 import SwiftUI
 
 /// The autocomplete strip above the keys, à la the native iOS predictive bar.

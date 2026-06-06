@@ -1,3 +1,8 @@
+/**
+ Named setting presets and the UI components that surface them: `PresetChips`
+ (a horizontal chip row) and `TunedSection` (a card with presets + a Fine-tune
+ disclosure wrapping the raw sliders).
+ */
 import SwiftUI
 import iUXiOS
 

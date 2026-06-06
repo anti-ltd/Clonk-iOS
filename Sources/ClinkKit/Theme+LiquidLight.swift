@@ -1,4 +1,8 @@
+/**
+ Canonical light Liquid Glass preset. Frosted white keys refract any background.
+ */
 extension Theme {
+    /// Light glass preset: frosted near-white keys with a system-blue accent.
     static let liquidLight = Theme(
         id: "liquid-light", name: "Liquid Light",
         background: RGBA(hex: 0xF5F5F7, a: 0.22),

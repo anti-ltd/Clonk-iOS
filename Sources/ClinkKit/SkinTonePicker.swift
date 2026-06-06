@@ -1,3 +1,9 @@
+/**
+ Skin-tone picker sheet: long-pressing a tone-capable emoji in the grid reveals
+ a row of six tone variants. Defined here alongside the `EmojiHoldGesture`
+ UIViewRepresentable that detects the long-press and `EmojiCellFramesKey` /
+ `EmojiGridFrameKey` preference keys used to position the picker.
+ */
 import SwiftUI
 import UIKit
 

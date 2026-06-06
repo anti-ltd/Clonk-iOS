@@ -1,4 +1,8 @@
+/**
+ Clean off-white with serif key labels and a coral-red accent. Light twin to Cinder.
+ */
 extension Theme {
+    /// Off-white with serif lettering and a coral-red accent.
     static let coral = Theme(
         id: "coral", name: "Coral",
         background: RGBA(hex: 0xF9F5EF),

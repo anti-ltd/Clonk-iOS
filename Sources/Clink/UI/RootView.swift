@@ -1,3 +1,7 @@
+/**
+ Root tab container. Four tabs — Style, Typing, Feel, Setup — each hosting a
+ self-contained navigation stack for its settings group.
+ */
 import SwiftUI
 import iUXiOS
 

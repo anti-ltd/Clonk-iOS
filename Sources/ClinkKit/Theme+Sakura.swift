@@ -1,4 +1,8 @@
+/**
+ Cherry-blossom pink background with rose function keys and a vivid pink accent.
+ */
 extension Theme {
+    /// Blossom pink background with near-white keys and a vivid rose accent.
     static let sakura = Theme(
         id: "sakura", name: "Sakura",
         background: RGBA(hex: 0xF6DCE3),
