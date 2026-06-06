@@ -1,0 +1,12 @@
+extension Theme {
+    static let carbon = Theme(
+        id: "carbon", name: "Carbon",
+        background: RGBA(hex: 0x000000),
+        keyFill: RGBA(hex: 0x141414),
+        keyText: RGBA(hex: 0xFFFFFF),
+        specialKeyFill: RGBA(hex: 0x0A0A0A),
+        specialKeyText: RGBA(hex: 0xBFBFBF),
+        accent: RGBA(hex: 0xFF453A),
+        isDark: true
+    )
+}

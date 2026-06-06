@@ -1,0 +1,30 @@
+import SwiftUI
+
+// MARK: - Glyph layer plumbing
+//
+// Each key publishes its glyph + bounds + bloom transform; the canvas draws them
+// all in one layer ABOVE the glass container, so the container's morph (which
+// blends a bloomed key into its neighbours) never displaces the letter.
+
+struct KeyGlyphInfo: Identifiable, Equatable {
+    let id: String
+    let anchor: Anchor<CGRect>
+    let isSystem: Bool
+    let glyph: String
+    let color: Color
+    let scaleX: CGFloat
+    let scaleY: CGFloat
+    let offsetX: CGFloat
+    let hidden: Bool
+    let deleteTick: Int
+    let multiChar: Bool
+    /// Override glyph point size (number row); nil = default sizing.
+    var fontSize: CGFloat? = nil
+}
+
+struct KeyGlyphKey: PreferenceKey {
+    static let defaultValue: [KeyGlyphInfo] = []
+    static func reduce(value: inout [KeyGlyphInfo], nextValue: () -> [KeyGlyphInfo]) {
+        value.append(contentsOf: nextValue())
+    }
+}

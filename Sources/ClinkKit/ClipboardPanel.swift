@@ -1,0 +1,163 @@
+import SwiftUI
+
+/// Full-keyboard replacement shown when `clipboardStyle == .overlay` and the
+/// user opens the clipboard panel. Takes over the full keyboard frame (bar +
+/// keys area). Sets NO background — the keyboard's `backgroundLayer` renders
+/// behind it exactly as it does behind the keys.
+struct ClipboardPanel: View {
+    let entries: [ClipboardEntry]
+    let theme: Theme
+    let cornerRadius: CGFloat
+    let onTap: (String) -> Void
+    let onSave: () -> Void
+    let onDismiss: () -> Void
+    let onCopy: (Int) -> Void
+    let onTogglePin: (Int) -> Void
+    let onDelete: (Int) -> Void
+    let onClear: () -> Void
+
+    @State private var openRow: Int? = nil
+
+    private let scrollSpace = "clipScroll"
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header — same height and icon positioning as the suggestion bar.
+            HStack(spacing: 0) {
+                Image(systemName: "doc.on.clipboard.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(theme.accent.color)
+                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                divider
+                Spacer()
+                divider
+                headerButton("square.and.arrow.down", action: onSave)
+                divider
+                headerButton("trash", action: onClear)
+                divider
+                headerButton("xmark", action: onDismiss)
+            }
+            .frame(height: KeyboardCanvas.Metrics.suggestionBarHeight)
+
+            // Content area
+            if entries.isEmpty {
+                Text("Nothing saved yet")
+                    .font(.system(size: 15))
+                    .foregroundStyle(theme.keyText.color.opacity(0.35))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                GeometryReader { vp in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        cardList(viewportHeight: vp.size.height)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                    }
+                    // Soft fade at the scrolling edges, like the emoji grid.
+                    .mask(
+                        LinearGradient(stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.06),
+                            .init(color: .black, location: 0.94),
+                            .init(color: .clear, location: 1),
+                        ], startPoint: .top, endPoint: .bottom)
+                    )
+                }
+                // Name the *non-scrolling* viewport so each row's frame in this
+                // space reflects scrolling (on the ScrollView it'd be content
+                // space — constant — and rows would never close on scroll).
+                .coordinateSpace(name: scrollSpace)
+            }
+        }
+    }
+
+    /// The swipeable cards. The card's glass surface and the action circles share
+    /// one per-row `GlassEffectContainer` (see `SwipeRow.glassWrap`) so they morph
+    /// into a gooey bridge as the card is dragged; the card text rides above the
+    /// glass as a `SwipeRow` overlay so the material never frosts it.
+    @ViewBuilder private func cardList(viewportHeight: CGFloat) -> some View {
+        VStack(spacing: 6) {
+            ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                SwipeRow(id: index, cornerRadius: cornerRadius, actions: [
+                    SwipeAction(icon: "doc.on.doc.fill", label: "Copy",
+                                tint: .gray) { onCopy(index) },
+                    SwipeAction(icon: entry.pinned ? "pin.slash.fill" : "pin.fill",
+                                label: entry.pinned ? "Unpin" : "Pin",
+                                tint: theme.accent.color) { onTogglePin(index) },
+                    SwipeAction(icon: "trash.fill", label: "Delete",
+                                tint: .red) { onDelete(index) },
+                ], glass: theme.material == .liquidGlass,
+                   openID: $openRow, scrollSpace: scrollSpace, viewportHeight: viewportHeight,
+                   onTap: { onTap(entry.text) },
+                   cardBackground: { cardSurface }) {
+                    entryText(entry)
+                }
+            }
+        }
+    }
+
+    private func entryText(_ entry: ClipboardEntry) -> some View {
+        HStack(spacing: 10) {
+            if entry.pinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(theme.accent.color)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.text)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(theme.keyText.color)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if entry.date != .distantPast {
+                    Text(entry.date.clipboardRelative)
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.keyText.color.opacity(0.45))
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Card surface that tracks the keyboard's material: a theme-tinted liquid
+    /// glass lens (so swiped-under action circles refract through it) when the
+    /// keyboard is glass, an opaque key-fill otherwise.
+    @ViewBuilder private var cardSurface: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        switch theme.material {
+        case .liquidGlass:
+            if #available(iOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular.tint(theme.keyFill.color.opacity(theme.glassTintStrength)), in: shape)
+            } else {
+                shape.fill(.ultraThinMaterial)
+                    .overlay(shape.fill(theme.keyFill.color.opacity(theme.glassTintStrength)))
+            }
+        case .solid:
+            shape.fill(theme.keyFill.color)
+        }
+    }
+
+    private func headerButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button { action() } label: {
+            // Fixed square glyph box, centered, so every icon shares the same
+            // optical center regardless of its intrinsic shape.
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(theme.keyText.color.opacity(0.5))
+                .frame(width: 22, height: 22)
+                .frame(width: 52, height: KeyboardCanvas.Metrics.suggestionBarHeight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(theme.keyText.color.opacity(0.15))
+            .frame(width: 0.5)
+            .padding(.vertical, 11)
+    }
+}
