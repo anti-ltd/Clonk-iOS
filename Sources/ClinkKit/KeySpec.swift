@@ -25,6 +25,12 @@ struct KeySpec: Identifiable {
     /// 123→emoji gesture). When it fires, the key's normal tap `action` is
     /// suppressed for that touch. nil for keys with no drag-up behaviour.
     let onDragUp: (() -> Void)?
+    /// After `onDragUp` has fired, each subsequent move reports the finger's
+    /// window-coordinate position — used to drag onto a panel-picker row.
+    let onDragUpMove: ((CGPoint) -> Void)?
+    /// Fired on release after a drag-up, with the finger's window position, so the
+    /// canvas can select the row under it (or dismiss).
+    let onDragUpEnd: ((CGPoint) -> Void)?
     /// The shift key — it has its own glass + symbol animation, so it opts out
     /// of the generic press-warp bloom (which would double up and look janky).
     let isShift: Bool
@@ -41,13 +47,17 @@ struct KeySpec: Identifiable {
          isDestructive: Bool = false, isSpace: Bool = false, isRepeatable: Bool = false,
          isShift: Bool = false, isNextKeyboard: Bool = false,
          onCursorMove: ((Int) -> Void)? = nil,
-         onDragUp: (() -> Void)? = nil, fontSize: CGFloat? = nil,
+         onDragUp: (() -> Void)? = nil,
+         onDragUpMove: ((CGPoint) -> Void)? = nil,
+         onDragUpEnd: ((CGPoint) -> Void)? = nil,
+         fontSize: CGFloat? = nil,
          action: @escaping () -> Void) {
         self.kind = kind; self.label = label; self.weight = weight
         self.highlighted = highlighted; self.isDestructive = isDestructive
         self.isSpace = isSpace; self.isRepeatable = isRepeatable; self.isShift = isShift
         self.isNextKeyboard = isNextKeyboard
         self.onCursorMove = onCursorMove; self.onDragUp = onDragUp
+        self.onDragUpMove = onDragUpMove; self.onDragUpEnd = onDragUpEnd
         self.fontSize = fontSize; self.action = action
     }
 }

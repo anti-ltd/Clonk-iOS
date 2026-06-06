@@ -322,6 +322,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var emojiSkinTones: [String: SkinTone]
     /// Which way the emoji grid scrolls — vertical (default) or horizontal.
     public var emojiScrollDirection: EmojiScrollDirection
+    /// Number of columns in the emoji grid when `emojiScrollDirection` is `.vertical`.
+    public var emojiColumnCount: Int
+    /// Number of rows in the emoji grid when `emojiScrollDirection` is `.horizontal`.
+    public var emojiRowCount: Int
     /// Show a "Recently used" tab (the leading clock category) on the emoji
     /// keyboard, populated from `recentEmoji`.
     public var showRecentEmoji: Bool
@@ -406,6 +410,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         defaultSkinTone: SkinTone = .none,
         emojiSkinTones: [String: SkinTone] = [:],
         emojiScrollDirection: EmojiScrollDirection = .vertical,
+        emojiColumnCount: Int = 8,
+        emojiRowCount: Int = 5,
         showRecentEmoji: Bool = true,
         recentEmoji: [String] = []
     ) {
@@ -480,6 +486,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.defaultSkinTone = defaultSkinTone
         self.emojiSkinTones = emojiSkinTones
         self.emojiScrollDirection = emojiScrollDirection
+        self.emojiColumnCount = emojiColumnCount
+        self.emojiRowCount = emojiRowCount
         self.showRecentEmoji = showRecentEmoji
         self.recentEmoji = recentEmoji
     }
@@ -564,6 +572,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         defaultSkinTone = (try? c.decodeIfPresent(SkinTone.self, forKey: .defaultSkinTone)) ?? .none
         emojiSkinTones = (try? c.decodeIfPresent([String: SkinTone].self, forKey: .emojiSkinTones)) ?? [:]
         emojiScrollDirection = (try? c.decodeIfPresent(EmojiScrollDirection.self, forKey: .emojiScrollDirection)) ?? .vertical
+        emojiColumnCount = try c.decodeIfPresent(Int.self, forKey: .emojiColumnCount) ?? 8
+        emojiRowCount = try c.decodeIfPresent(Int.self, forKey: .emojiRowCount) ?? 5
         showRecentEmoji = try c.decodeIfPresent(Bool.self, forKey: .showRecentEmoji) ?? true
         recentEmoji = try c.decodeIfPresent([String].self, forKey: .recentEmoji) ?? []
     }

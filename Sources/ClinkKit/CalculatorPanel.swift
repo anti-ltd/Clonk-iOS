@@ -11,6 +11,8 @@ struct CalculatorPanel: View {
     let theme: Theme
     let cornerRadius: CGFloat
     let onInsert: (String) -> Void
+    let onCopy: (String) -> Void
+    let onSaveToClipboard: (String) -> Void
     let onDismiss: () -> Void
 
     @State private var display = "0"
@@ -28,7 +30,7 @@ struct CalculatorPanel: View {
     ]
 
     private var isGlass: Bool { theme.material == .liquidGlass }
-    /// Spacing between cells — glass uses real gaps so adjacent cells can merge/round;
+    /// Spacing between cells — glass uses real gaps so adjacent cells merge/round;
     /// solid uses 0 so the pixel-border grid reads flush.
     private var cellSpacing: CGFloat { isGlass ? 6 : 0 }
 
@@ -36,10 +38,14 @@ struct CalculatorPanel: View {
         VStack(spacing: 0) {
             headerBar
             GeometryReader { geo in
-                let cw = (geo.size.width - cellSpacing * 3) / 4
-                let rh = (geo.size.height - cellSpacing * 4) / 5
+                // Account for the edge inset so cells don't overflow the container.
+                let edgePad: CGFloat = isGlass ? cellSpacing / 2 : 0
+                let innerW = geo.size.width - edgePad * 2
+                let innerH = geo.size.height - edgePad * 2
+                let cw = (innerW - cellSpacing * 3) / 4
+                let rh = (innerH - cellSpacing * 4) / 5
                 gridContent(cw: cw, rh: rh)
-                    .padding(isGlass ? cellSpacing / 2 : 0)
+                    .padding(edgePad)
             }
         }
     }
@@ -85,23 +91,33 @@ struct CalculatorPanel: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.trailing, 12)
             headerDivider
-            headerButton("return") {
+            headerButton("return", tooltip: "Insert") {
                 guard display != "Error" else { return }
                 onInsert(display)
             }
             headerDivider
-            headerButton("xmark", action: onDismiss)
+            headerButton("doc.on.doc", tooltip: "Copy") {
+                guard display != "Error" else { return }
+                onCopy(display)
+            }
+            headerDivider
+            headerButton("tray.and.arrow.down", tooltip: "Save to history") {
+                guard display != "Error" else { return }
+                onSaveToClipboard(display)
+            }
+            headerDivider
+            headerButton("xmark", tooltip: "Dismiss", action: onDismiss)
         }
         .frame(height: KeyboardCanvas.Metrics.suggestionBarHeight)
     }
 
-    private func headerButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+    private func headerButton(_ symbol: String, tooltip: String, action: @escaping () -> Void) -> some View {
         Button { action() } label: {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(theme.keyText.color.opacity(0.5))
                 .frame(width: 22, height: 22)
-                .frame(width: 52, height: KeyboardCanvas.Metrics.suggestionBarHeight)
+                .frame(width: 44, height: KeyboardCanvas.Metrics.suggestionBarHeight)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

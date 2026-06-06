@@ -37,6 +37,32 @@ struct EmojiSettingsView: View {
                         .pickerStyle(.segmented)
                     }
                     .padding(.vertical, UX.rowVPadding)
+                    if model.settings.emojiScrollDirection == .vertical {
+                        Divider()
+                        Stepper(value: $model.settings.emojiColumnCount, in: 4...12) {
+                            HStack {
+                                Text("Columns")
+                                Spacer()
+                                Text("\(model.settings.emojiColumnCount)")
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                            .padding(.vertical, UX.rowVPadding)
+                        }
+                    }
+                    if model.settings.emojiScrollDirection == .horizontal {
+                        Divider()
+                        Stepper(value: $model.settings.emojiRowCount, in: 2...8) {
+                            HStack {
+                                Text("Rows")
+                                Spacer()
+                                Text("\(model.settings.emojiRowCount)")
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                            .padding(.vertical, UX.rowVPadding)
+                        }
+                    }
                     Divider()
                     ToggleRow("Show recent emoji",
                               subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",

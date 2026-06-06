@@ -170,7 +170,12 @@ public struct EmojiCanvas: View {
             + KeyboardCanvas.preferredHeight(for: searchKeyboardSettings(settings))
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 40), spacing: 4)]
+    private var gridItems: [GridItem] {
+        let count = settings.emojiScrollDirection == .horizontal
+            ? settings.emojiRowCount
+            : settings.emojiColumnCount
+        return Array(repeating: GridItem(.flexible(), spacing: 4), count: max(1, count))
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -294,10 +299,10 @@ public struct EmojiCanvas: View {
                 Group {
                     if horizontal {
                         // Columns fill top-to-bottom, then scroll sideways for more.
-                        LazyHGrid(rows: columns, spacing: 4) { cells(emoji) }
+                        LazyHGrid(rows: gridItems, spacing: 4) { cells(emoji) }
                     } else {
                         // Rows wrap downward, then scroll down for more.
-                        LazyVGrid(columns: columns, spacing: 4) { cells(emoji) }
+                        LazyVGrid(columns: gridItems, spacing: 4) { cells(emoji) }
                     }
                 }
                 .padding(.horizontal, 6)

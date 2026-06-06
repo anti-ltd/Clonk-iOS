@@ -210,21 +210,31 @@ public final class KeyTouchRouter {
         }
     }
 
-    fileprivate func touchMoved(id: String, translationX: CGFloat, translationY: CGFloat) {
+    fileprivate func touchMoved(id: String, translationX: CGFloat, translationY: CGFloat,
+                                windowPoint: CGPoint) {
         guard let spec = resolveSpec(id) else { return }
 
-        // Drag-up keys (the 123→emoji gesture): once the finger has travelled far
-        // enough upward, fire once and mark the touch consumed so `touchUp` skips
-        // the normal tap action. Mirrors the space-bar trackpad's tap-vs-drag split.
+        // Drag-up keys (the 123 → panel-picker gesture): once the finger has
+        // travelled far enough upward, fire once and mark the touch consumed so
+        // `touchUp` skips the normal tap action. Mirrors the space-bar trackpad's
+        // tap-vs-drag split.
         if spec.onDragUp != nil, !dragUpFired.contains(id),
            translationY < -Self.dragUpThreshold {
             dragUpFired.insert(id)
-            // The canvas swaps out from under this touch, so it never gets a
-            // touchUp/cancel — clear the key's press now or it sticks "pressed"
-            // (the 123 key stayed blue after returning to letters).
+            // The key's press is cleared so it doesn't stick "pressed" while the
+            // picker is up. (We do NOT clear it via canvas swap-out anymore — the
+            // keys stay on screen behind a popover, so the touch keeps flowing.)
             clearPress(id)
             dragHaptic.impactOccurred()
             spec.onDragUp?()
+            spec.onDragUpMove?(windowPoint)
+            return
+        }
+
+        // After a drag-up fired, keep reporting the finger so the canvas can track
+        // which picker row it's over.
+        if dragUpFired.contains(id) {
+            spec.onDragUpMove?(windowPoint)
             return
         }
 
@@ -278,13 +288,17 @@ public final class KeyTouchRouter {
         }
     }
 
-    fileprivate func touchUp(id: String) {
+    fileprivate func touchUp(id: String, windowPoint: CGPoint) {
         releaseHold(id)
         guard let spec = resolveSpec(id) else { return }
 
         // A drag-up gesture already fired and consumed this touch — don't also run
-        // the key's tap action (e.g. don't switch to numbers after opening emoji).
-        if dragUpFired.remove(id) != nil { return }
+        // the key's tap action (e.g. don't switch to numbers after opening the
+        // picker). Report the release so the canvas selects/dismisses.
+        if dragUpFired.remove(id) != nil {
+            spec.onDragUpEnd?(windowPoint)
+            return
+        }
 
         switch spec.kind {
         case .character:
@@ -319,8 +333,10 @@ public final class KeyTouchRouter {
 
     fileprivate func touchCancelled(id: String) {
         releaseHold(id)
-        dragUpFired.remove(id)
+        let wasDragUp = dragUpFired.remove(id) != nil
         guard let spec = resolveSpec(id) else { return }
+        // Cancelled mid drag-up → dismiss the picker (off-screen point = no row).
+        if wasDragUp { spec.onDragUpEnd?(CGPoint(x: -1, y: -1)) }
         if spec.isRepeatable { stopRepeating() }
         if spec.isSpace {
             spaceCursorReadyTask?.cancel()
@@ -520,14 +536,15 @@ final class KeyGridTouchView: UIView {
             guard let b = bindings[ObjectIdentifier(t)] else { continue }
             let p = t.location(in: self)
             router.touchMoved(id: b.id, translationX: p.x - b.start.x,
-                              translationY: p.y - b.start.y)
+                              translationY: p.y - b.start.y,
+                              windowPoint: t.location(in: nil))
         }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches {
             guard let b = bindings.removeValue(forKey: ObjectIdentifier(t)) else { continue }
-            router.touchUp(id: b.id)
+            router.touchUp(id: b.id, windowPoint: t.location(in: nil))
         }
     }
 

@@ -30,8 +30,8 @@ struct KeyPressPhysics {
     var popupSpringDamping: Double   = 0.62
 }
 
-/// Collects each popover-picker row's frame (in the shared `panelSpace`) so the
-/// button's drag gesture can hit-test the finger against options.
+/// Collects each popover-picker row's frame (in global/window coords) so both the
+/// button drag and the 123 slide-up drag can hit-test the finger against options.
 private struct PanelRowFrameKey: PreferenceKey {
     static let defaultValue: [ActionPanel: CGRect] = [:]
     static func reduce(value: inout [ActionPanel: CGRect],
@@ -154,8 +154,8 @@ public struct KeyboardCanvas: View {
     // gesture opens the menu on press, highlights the row under the finger, and
     // on release selects (over a row) or dismisses (off-menu). A plain tap (no
     // movement) just toggles the menu open/closed.
-    /// Each popover row's frame in the `panelSpace` coordinate space, for
-    /// hit-testing the finger against options during a drag.
+    /// Each popover row's frame in global/window coords, for hit-testing the
+    /// finger against options during a button or 123 slide-up drag.
     @State private var panelRowFrames: [ActionPanel: CGRect] = [:]
     /// The row the finger is currently over during a drag (highlighted).
     @State private var pickerDragHover: ActionPanel? = nil
@@ -166,10 +166,6 @@ public struct KeyboardCanvas: View {
     @State private var pickerWasOpenAtStart = false
     /// Whether a press sequence is currently in flight.
     @State private var pickerDragActive = false
-
-    /// Shared coordinate space so the button's drag location and the popover
-    /// rows' frames are measured against the same origin.
-    private static let panelSpace = "actionPanelSpace"
 
     // Proxy the canvas's existing `plane` / `shift` reads & writes onto the
     // controller, so the rest of the view is untouched. `nonmutating set` works
@@ -351,6 +347,25 @@ public struct KeyboardCanvas: View {
         }
     }
 
+    /// While dragging up from the 123 key with the popover open, highlight the row
+    /// under the finger. `windowPoint` is in window coords, matching the rows'
+    /// `.global` frames. Only the popover picker supports drag-onto-row.
+    private func slideHoverUpdate(_ windowPoint: CGPoint) {
+        guard settings.panelPickerStyle == .popover, pickerOpen else { return }
+        pickerDragHover = panelRowFrames.first { $0.value.contains(windowPoint) }?.key
+    }
+
+    /// Release of a 123 drag-up: select the row under the finger, or leave the
+    /// popover open for a follow-up tap if released away from any row.
+    private func slideDragEnd(_ windowPoint: CGPoint) {
+        defer { pickerDragHover = nil }
+        guard settings.panelPickerStyle == .popover, pickerOpen else { return }
+        if let hover = panelRowFrames.first(where: { $0.value.contains(windowPoint) })?.key {
+            activate(hover)
+        }
+        // else: leave the popover open — user can tap a row or tap-away to dismiss.
+    }
+
     private func togglePanel(_ panel: ActionPanel) {
         // Emoji lives in its own canvas — there's no "open emoji panel" state to
         // toggle off from here (you return via the emoji ABC key), so just open.
@@ -424,7 +439,7 @@ public struct KeyboardCanvas: View {
     }
 
     private var panelDragGesture: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.panelSpace))
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { v in
                 if !pickerDragActive {
                     pickerDragActive = true
@@ -542,11 +557,12 @@ public struct KeyboardCanvas: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    // Report this row's frame so the drag gesture can hit-test it.
+                    // Report this row's frame (in window/global coords) so both the
+                    // button drag and the 123 slide-up drag can hit-test it.
                     .background(GeometryReader { proxy in
                         Color.clear.preference(
                             key: PanelRowFrameKey.self,
-                            value: [panel: proxy.frame(in: .named(Self.panelSpace))])
+                            value: [panel: proxy.frame(in: .global)])
                     })
                 }
             }
@@ -616,6 +632,8 @@ public struct KeyboardCanvas: View {
                         theme: theme,
                         cornerRadius: CGFloat(settings.keyCornerRadius),
                         onInsert: { text in onCalculatorInsert(text) },
+                        onCopy: { text in UIPasteboard.general.string = text },
+                        onSaveToClipboard: { text in clipboard.capture(string: text) },
                         onDismiss: { closePanel() }
                     )
                 }
@@ -782,10 +800,6 @@ public struct KeyboardCanvas: View {
                 panelPopover
             }
         }
-        // Shared coordinate space for the popover drag: the button's drag location
-        // and the popover rows' frames are both measured here. Applied last so it
-        // encloses both the bar button and the popover overlay.
-        .coordinateSpace(name: Self.panelSpace)
         .onChange(of: live.activePanel) { _, new in
             guard new == .clipboard, settings.autoCopyOnClipboardOpen, hasFullAccess else { return }
             clipboard.captureFromPasteboard()
@@ -1018,10 +1032,14 @@ public struct KeyboardCanvas: View {
         // preserving the old "drag up for emoji" feel by default. Gated on the
         // slide-up activation setting; a plain tap still switches to numbers.
         if plane == .letters {
-            let slideUp: (() -> Void)? =
-                (settings.activateWithSlideUp && !enabledPanels.isEmpty)
-                ? { slideUpActivate() } : nil
-            specs.append(planeKey("123", to: .numbers, weight: 1.4, onDragUp: slideUp))
+            let slideEnabled = settings.activateWithSlideUp && !enabledPanels.isEmpty
+            specs.append(planeKey(
+                "123", to: .numbers, weight: 1.4,
+                onDragUp: slideEnabled ? { slideUpActivate() } : nil,
+                // Continuous tracking only matters for the popover picker, where the
+                // finger can drag onto a row; inline/cards just open on the up-gesture.
+                onDragUpMove: slideEnabled ? { slideHoverUpdate($0) } : nil,
+                onDragUpEnd: slideEnabled ? { slideDragEnd($0) } : nil))
         } else {
             specs.append(planeKey("ABC", to: .letters, weight: 1.4))
         }
@@ -1141,9 +1159,11 @@ public struct KeyboardCanvas: View {
     ]
 
     private func planeKey(_ glyph: String, to target: Plane, weight: Double,
-                          onDragUp: (() -> Void)? = nil) -> KeySpec {
+                          onDragUp: (() -> Void)? = nil,
+                          onDragUpMove: ((CGPoint) -> Void)? = nil,
+                          onDragUpEnd: ((CGPoint) -> Void)? = nil) -> KeySpec {
         KeySpec(kind: .function, label: .text(glyph), weight: weight,
-                onDragUp: onDragUp) {
+                onDragUp: onDragUp, onDragUpMove: onDragUpMove, onDragUpEnd: onDragUpEnd) {
             plane = target
             lastKeyWasPunctuation = false
         }
