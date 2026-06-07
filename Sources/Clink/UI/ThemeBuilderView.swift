@@ -723,7 +723,7 @@ private struct ColorSwatchButton: View {
     }
 }
 
-// MARK: - Themed popup overlay
+// MARK: - Themed color picker overlay (wraps the general ThemedSheet)
 
 extension View {
     func themedColorPicker(_ presenter: ColorPickerPresenter) -> some View {
@@ -736,66 +736,18 @@ private struct ThemedColorPickerModifier: ViewModifier {
     let presenter: ColorPickerPresenter
 
     func body(content: Content) -> some View {
-        content.overlay(alignment: .bottom) {
+        content.overlay {
             if presenter.isPresented {
-                ZStack(alignment: .bottom) {
-                    Color.black.opacity(0.35)
-                        .ignoresSafeArea()
-                        .onTapGesture { withAnimation(.spring(response: 0.3)) { presenter.dismiss() } }
-
-                    ColorPickerPanel(presenter: presenter, cornerRadius: cardCornerRadius)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                ThemedSheetOverlay(
+                    cornerRadius: cardCornerRadius,
+                    title: "Color",
+                    onDismiss: { withAnimation(.spring(response: 0.35)) { presenter.dismiss() } }
+                ) {
+                    ColorPickerContent(presenter: presenter)
                 }
-                .animation(.spring(response: 0.3, dampingFraction: 0.85), value: presenter.isPresented)
             }
         }
-    }
-}
-
-private struct ColorPickerPanel: View {
-    @Environment(\.cardCornerRadius) private var cardCornerRadius
-    let presenter: ColorPickerPresenter
-    let cornerRadius: CGFloat
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Handle + title row
-            VStack(spacing: 10) {
-                Capsule()
-                    .fill(.secondary.opacity(0.4))
-                    .frame(width: 36, height: 4)
-                    .padding(.top, 10)
-
-                HStack {
-                    Text("Color")
-                        .font(.headline)
-                    Spacer()
-                    Button("Done") {
-                        withAnimation(.spring(response: 0.3)) { presenter.dismiss() }
-                    }
-                    .fontWeight(.semibold)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 4)
-            }
-
-            Divider().opacity(0.4)
-
-            ScrollView {
-                ColorPickerContent(presenter: presenter)
-                    .padding(20)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .themePageBackground()
-        .clipShape(UnevenRoundedRectangle(
-            topLeadingRadius: cornerRadius,
-            bottomLeadingRadius: 0,
-            bottomTrailingRadius: 0,
-            topTrailingRadius: cornerRadius,
-            style: .continuous
-        ))
-        .shadow(color: .black.opacity(0.2), radius: 24, y: -4)
+        .animation(.spring(response: 0.35, dampingFraction: 0.88), value: presenter.isPresented)
     }
 }
 

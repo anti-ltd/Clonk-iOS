@@ -13,7 +13,13 @@ struct ClinkApp: App {
         WindowGroup {
             rootView
                 .environment(model)
-                .onOpenURL { url in model.importTheme(from: url) }
+                .onOpenURL { url in
+                    if url.pathExtension == "clinkconfig" {
+                        model.importConfigurationFromURL(url)
+                    } else {
+                        model.importTheme(from: url)
+                    }
+                }
                 .onChange(of: scenePhase) { _, phase in
                     // Re-read enable / Full Access status when returning from
                     // the Settings app, where the user toggles the keyboard on.

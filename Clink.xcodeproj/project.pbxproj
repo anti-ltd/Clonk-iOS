@@ -35,6 +35,7 @@
 		26D0E059A96A1B87CF9AE0A6 /* NotepadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC337AC4FBF262FCDFD3A03 /* NotepadBar.swift */; };
 		26ED11A56D1A3533CE69847D /* Theme+Royal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F8C91666F857CFD1FDF518 /* Theme+Royal.swift */; };
 		28E95081DC7A6860561C8FC5 /* NotepadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3351629B8BC302520770F0F /* NotepadView.swift */; };
+		29D702669E97C788EAFD4519 /* ThemedSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3CF6C53B7A418EC448A5B8 /* ThemedSheet.swift */; };
 		29DEBD3A6D81B575CC28D279 /* KeyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13424011E93FB7103500DB64 /* KeyView.swift */; };
 		2AE7B4CA0B889018A3961762 /* Theme+Crimson.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C00D1D75534E13782BF5FFA /* Theme+Crimson.swift */; };
 		2D1FB5E1FF7C14C2198C873F /* TypingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5462C6538A73BD8117516CB5 /* TypingView.swift */; };
@@ -271,6 +272,7 @@
 		49FF9775427259E748BF57E4 /* Theme+SolarizedLight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+SolarizedLight.swift"; sourceTree = "<group>"; };
 		4A6C36E725FD0C97028F25F5 /* LogoMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoMark.swift; sourceTree = "<group>"; };
 		4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutPickerView.swift; sourceTree = "<group>"; };
+		4E3CF6C53B7A418EC448A5B8 /* ThemedSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedSheet.swift; sourceTree = "<group>"; };
 		4E513B9833103D8D833AB3D9 /* Theme+Midnight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Midnight.swift"; sourceTree = "<group>"; };
 		4F5560818524A3D75B31CF7C /* Theme+Dracula.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Dracula.swift"; sourceTree = "<group>"; };
 		50FFFE172039C44D7B2D4E80 /* Theme+Carbon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Carbon.swift"; sourceTree = "<group>"; };
@@ -569,6 +571,7 @@
 				5C04D6AA199C403FCC06DCF8 /* StagedHeroView.swift */,
 				20464616D5B71AF83D8F3340 /* SuggestionsView.swift */,
 				473E6FADCC90F3A24F2711AC /* ThemeBuilderView.swift */,
+				4E3CF6C53B7A418EC448A5B8 /* ThemedSheet.swift */,
 				D07CE5F41986DBEC496E6369 /* ThemeEditorView.swift */,
 				E91E48B211B55CCF9D4AF918 /* TuningPresets.swift */,
 				5462C6538A73BD8117516CB5 /* TypingView.swift */,
@@ -805,6 +808,7 @@
 				830D2A27F7DA7295AD15C0C5 /* ThemeEditorView.swift in Sources */,
 				6D0A167660A88C78F0A51A7C /* ThemePresets.swift in Sources */,
 				853C4D4E5C0D7DC51002BE7F /* ThemeTypes.swift in Sources */,
+				29D702669E97C788EAFD4519 /* ThemedSheet.swift in Sources */,
 				24A8813A458D296CD6EC7A29 /* TrackpadPanel.swift in Sources */,
 				DE8CCE9B5012754C8A6C7877 /* TuningPresets.swift in Sources */,
 				2D1FB5E1FF7C14C2198C873F /* TypingView.swift in Sources */,

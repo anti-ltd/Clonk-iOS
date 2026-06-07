@@ -738,6 +738,12 @@ public struct KeyboardCanvas: View {
                         .offset(x: g.offsetX)
                         .position(x: proxy[g.anchor].midX, y: proxy[g.anchor].midY)
                         .animation(.interactiveSpring(response: settings.keySpringResponse, dampingFraction: settings.keySpringDamping), value: g.scaleX)
+                        // GlassEffectContainer's implicit animation bleeds into this
+                        // ForEach, fading out removed items (e.g. delete glyph at its
+                        // old keyID) before the replacement fades in — leaving a gap.
+                        // Identity transition snaps glyphs in/out immediately so the
+                        // delete key never disappears during a plane switch.
+                        .transition(.identity)
                 }
             }
             .allowsHitTesting(false)

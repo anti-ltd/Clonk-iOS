@@ -442,11 +442,11 @@ private struct SidebarPanel: View {
         .animation(.easeInOut(duration: 0.2), value: canScrollUp)
         .animation(.easeInOut(duration: 0.2), value: canScrollDown)
         .foregroundColor(themeTextColor)
-        .sheet(isPresented: $showExtensionPicker) {
-            ExtensionPickerSheet()
+        .themedSheet(isPresented: $showExtensionPicker, title: "Extensions") {
+            ExtensionPickerContent()
         }
-        .sheet(isPresented: $showBackupSheet) {
-            BackupSheet()
+        .themedSheet(isPresented: $showBackupSheet, title: "Backup & Restore") {
+            BackupControls()
         }
     }
 
@@ -641,9 +641,8 @@ private let allExtensions: [ExtEntry] = [
 
 // MARK: - Extension picker sheet
 
-private struct ExtensionPickerSheet: View {
+private struct ExtensionPickerContent: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
 
     private var enabledPanelCount: Int {
         [model.settings.clipboardEnabled, model.settings.notepadEnabled,
@@ -652,19 +651,18 @@ private struct ExtensionPickerSheet: View {
 
     var body: some View {
         @Bindable var m = model
-        NavigationStack {
-            List {
-                Section("Panels") {
-                    ExtensionReorderList(order: $m.settings.extensionOrder)
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                }
+        VStack(spacing: UX.cardSpacing) {
+            ExtensionReorderList(order: $m.settings.extensionOrder)
 
-                Section {
-                    Toggle("Top-left icon", isOn: $m.settings.activateWithIcon)
-                    Toggle("Slide up on 123", isOn: $m.settings.activateWithSlideUp)
-                    if enabledPanelCount >= 2 {
+            CardSection("Panel access") {
+                Toggle("Top-left icon", isOn: $m.settings.activateWithIcon)
+                    .padding(.vertical, UX.rowVPadding)
+                Divider()
+                Toggle("Slide up on 123", isOn: $m.settings.activateWithSlideUp)
+                    .padding(.vertical, UX.rowVPadding)
+                if enabledPanelCount >= 2 {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 6) {
                         Picker("Picker style", selection: $m.settings.panelPickerStyle) {
                             ForEach(PanelPickerStyle.allCases) { style in
                                 Text(style.label).tag(style)
@@ -672,19 +670,14 @@ private struct ExtensionPickerSheet: View {
                         }
                         .pickerStyle(.segmented)
                     }
-                } header: {
-                    Text("Panel access")
-                } footer: {
-                    Text("Open panels from a button on the suggestion bar, or by dragging the 123 key upward. The picker style controls how you choose when more than one panel is on.")
+                    .padding(.vertical, UX.rowVPadding)
                 }
-            }
-            .navigationTitle("Extensions")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                Text("Open panels from the suggestion bar or by dragging the 123 key upward.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, UX.rowVPadding)
             }
         }
-        .presentationDetents([.medium, .large])
     }
 }
 
@@ -901,8 +894,8 @@ private struct ClinkContent: View {
         .navigationBarTitleDisplayMode(.inline)
         .navTrailingButton("ellipsis.circle") { showBackupSheet = true }
         .themePageBackground()
-        .sheet(isPresented: $showExtensionPicker) { ExtensionPickerSheet() }
-        .sheet(isPresented: $showBackupSheet) { BackupSheet() }
+        .themedSheet(isPresented: $showExtensionPicker, title: "Extensions") { ExtensionPickerContent() }
+        .themedSheet(isPresented: $showBackupSheet, title: "Backup & Restore") { BackupControls() }
     }
 
     @ViewBuilder

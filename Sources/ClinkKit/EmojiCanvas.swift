@@ -170,11 +170,17 @@ public struct EmojiCanvas: View {
             + KeyboardCanvas.preferredHeight(for: searchKeyboardSettings(settings))
     }
 
-    private var gridItems: [GridItem] {
+    /// The cross-axis grid tracks, each pinned to the measured square `side` (not
+    /// `.flexible()`): a horizontal `ScrollView` hugs its content on the vertical
+    /// axis, so flexible rows would collapse to glyph height and leave the bottom
+    /// of the keyboard empty. Fixed tracks make the grid span the full cross extent
+    /// for any row/column count.
+    private func gridItems(_ metrics: CellMetrics) -> [GridItem] {
         let count = settings.emojiScrollDirection == .horizontal
             ? settings.emojiRowCount
             : settings.emojiColumnCount
-        return Array(repeating: GridItem(.flexible(), spacing: settings.emojiCellSpacing), count: max(1, count))
+        return Array(repeating: GridItem(.fixed(metrics.side), spacing: settings.emojiCellSpacing),
+                     count: max(1, count))
     }
 
     public var body: some View {
@@ -272,14 +278,13 @@ public struct EmojiCanvas: View {
     /// The emoji cells shared by both scroll axes — each publishes its on-screen
     /// frame so the hold gesture can resolve which emoji a touch landed on.
     @ViewBuilder private func cells(_ emoji: [String], metrics: CellMetrics) -> some View {
-        let horizontal = settings.emojiScrollDirection == .horizontal
         ForEach(emoji, id: \.self) { e in
             EmojiCell(
                 glyph: displayGlyph(for: e),
                 simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
                 glyphSize: metrics.glyph,
-                fixedWidth: horizontal ? metrics.side : nil,
-                fixedHeight: horizontal ? nil : metrics.side,
+                fixedWidth: metrics.side,
+                fixedHeight: metrics.side,
                 action: { insertFromTap(e) }
             )
             .id(e)
@@ -332,10 +337,10 @@ public struct EmojiCanvas: View {
                 Group {
                     if horizontal {
                         // Columns fill top-to-bottom, then scroll sideways for more.
-                        LazyHGrid(rows: gridItems, spacing: settings.emojiCellSpacing) { cells(emoji, metrics: metrics) }
+                        LazyHGrid(rows: gridItems(metrics), spacing: settings.emojiCellSpacing) { cells(emoji, metrics: metrics) }
                     } else {
                         // Rows wrap downward, then scroll down for more.
-                        LazyVGrid(columns: gridItems, spacing: settings.emojiCellSpacing) { cells(emoji, metrics: metrics) }
+                        LazyVGrid(columns: gridItems(metrics), spacing: settings.emojiCellSpacing) { cells(emoji, metrics: metrics) }
                     }
                 }
                 .padding(.horizontal, 6)

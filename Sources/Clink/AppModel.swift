@@ -148,16 +148,38 @@ final class AppModel {
 
     // MARK: - Configuration export / import
 
-    /// The whole configuration encoded as JSON, for a `.clinkconfig` export.
+    // Theme identity fields are never written to or read from .clinkconfig files.
+    // Themes travel separately as .clinktheme; config covers everything else.
+    private static let themeConfigKeys: Set<String> = [
+        "themeID", "lightThemeID", "darkThemeID", "customThemes"
+    ]
+
+    /// Non-theme settings encoded as JSON, for a `.clinkconfig` export.
     func exportedConfiguration() -> Data? {
-        try? JSONEncoder().encode(settings)
+        guard let data = try? JSONEncoder().encode(settings),
+              var dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        Self.themeConfigKeys.forEach { dict.removeValue(forKey: $0) }
+        return try? JSONSerialization.data(withJSONObject: dict)
     }
 
-    /// Replace the entire configuration with an imported snapshot. A full
-    /// restore — the imported file's themes, mechanics, and tuning all take
-    /// over. The single assignment persists once via `didSet`.
-    func importConfiguration(_ imported: KeyboardSettings) {
-        settings = imported
+    /// Apply imported settings without touching the current theme state.
+    func importConfiguration(from data: Data) {
+        guard var importedDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let currentData = try? JSONEncoder().encode(settings),
+              let currentDict = try? JSONSerialization.jsonObject(with: currentData) as? [String: Any] else { return }
+        for key in Self.themeConfigKeys {
+            if let val = currentDict[key] { importedDict[key] = val }
+        }
+        guard let mergedData = try? JSONSerialization.data(withJSONObject: importedDict),
+              let merged = try? JSONDecoder().decode(KeyboardSettings.self, from: mergedData) else { return }
+        settings = merged
+    }
+
+    func importConfigurationFromURL(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return }
+        importConfiguration(from: data)
     }
 
     func refreshStatus() {
