@@ -174,7 +174,7 @@ public struct EmojiCanvas: View {
         let count = settings.emojiScrollDirection == .horizontal
             ? settings.emojiRowCount
             : settings.emojiColumnCount
-        return Array(repeating: GridItem(.flexible(), spacing: 4), count: max(1, count))
+        return Array(repeating: GridItem(.flexible(), spacing: settings.emojiCellSpacing), count: max(1, count))
     }
 
     public var body: some View {
@@ -271,11 +271,15 @@ public struct EmojiCanvas: View {
     /// commits it (the native press-slide-release flow, driven by `EmojiHoldGesture`).
     /// The emoji cells shared by both scroll axes — each publishes its on-screen
     /// frame so the hold gesture can resolve which emoji a touch landed on.
-    @ViewBuilder private func cells(_ emoji: [String]) -> some View {
+    @ViewBuilder private func cells(_ emoji: [String], metrics: CellMetrics) -> some View {
+        let horizontal = settings.emojiScrollDirection == .horizontal
         ForEach(emoji, id: \.self) { e in
             EmojiCell(
                 glyph: displayGlyph(for: e),
                 simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
+                glyphSize: metrics.glyph,
+                fixedWidth: horizontal ? metrics.side : nil,
+                fixedHeight: horizontal ? nil : metrics.side,
                 action: { insertFromTap(e) }
             )
             .id(e)
@@ -286,7 +290,31 @@ public struct EmojiCanvas: View {
         }
     }
 
+    /// Cell sizing for the current axis + count: the square side a cell occupies
+    /// on the scroll axis and the glyph point size that fits inside it.
+    private struct CellMetrics { var side: CGFloat; var glyph: CGFloat }
+
+    /// Fit `count` cells across the fixed cross-axis extent (`cross`), accounting
+    /// for the user's inter-cell spacing and the 6pt grid edge padding, then size
+    /// the glyph to the user's fraction of that square so more rows/columns (or a
+    /// wider gap) shrink emoji cleanly instead of overlapping.
+    private func cellMetrics(cross: CGFloat) -> CellMetrics {
+        let horizontal = settings.emojiScrollDirection == .horizontal
+        let count = max(1, horizontal ? settings.emojiRowCount : settings.emojiColumnCount)
+        let usable = cross - 12 - settings.emojiCellSpacing * CGFloat(count - 1)   // edge padding + gaps
+        let side = max(16, usable / CGFloat(count))
+        return CellMetrics(side: side, glyph: side * settings.emojiGlyphScale)
+    }
+
     private func grid(_ emoji: [String], scrollTarget: String?) -> some View {
+        GeometryReader { geo in
+            let horizontal = settings.emojiScrollDirection == .horizontal
+            let metrics = cellMetrics(cross: horizontal ? geo.size.height : geo.size.width)
+            gridBody(emoji, scrollTarget: scrollTarget, metrics: metrics)
+        }
+    }
+
+    private func gridBody(_ emoji: [String], scrollTarget: String?, metrics: CellMetrics) -> some View {
         let horizontal = settings.emojiScrollDirection == .horizontal
         return ScrollViewReader { proxy in
             ScrollView(horizontal ? .horizontal : .vertical) {
@@ -299,17 +327,18 @@ public struct EmojiCanvas: View {
                 Group {
                     if horizontal {
                         // Columns fill top-to-bottom, then scroll sideways for more.
-                        LazyHGrid(rows: gridItems, spacing: 4) { cells(emoji) }
+                        LazyHGrid(rows: gridItems, spacing: settings.emojiCellSpacing) { cells(emoji, metrics: metrics) }
                     } else {
                         // Rows wrap downward, then scroll down for more.
-                        LazyVGrid(columns: gridItems, spacing: 4) { cells(emoji) }
+                        LazyVGrid(columns: gridItems, spacing: settings.emojiCellSpacing) { cells(emoji, metrics: metrics) }
                     }
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 6)
                 .background(EmojiHoldGesture(onBegan: holdBegan,
                                              onChanged: holdMoved,
-                                             onEnded: holdEnded))
+                                             onEnded: holdEnded,
+                                             holdDelay: settings.emojiToneHoldDelay / 1000))
             }
             // Freeze scrolling while picking so sliding moves the selection, not
             // the grid.

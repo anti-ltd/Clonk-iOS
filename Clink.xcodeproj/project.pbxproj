@@ -25,6 +25,7 @@
 		19A5FFD9B7EECD9C7EECAF84 /* Theme+Snobble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B732123D36D8014D00EF75 /* Theme+Snobble.swift */; };
 		19F570798E632E414DD41A8F /* SuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733674465CD135FB292C0FF9 /* SuggestionBar.swift */; };
 		1AA0ADB52B9F181050148248 /* Theme+Midnight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E513B9833103D8D833AB3D9 /* Theme+Midnight.swift */; };
+		1E3B3CB33F53763C9A5B4A9B /* ResponseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533CC42392A2CF228BDDA184 /* ResponseView.swift */; };
 		222850E0E17BEC4AAAB0B4C3 /* Theme+Dobble.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB390E73F039F0D0C8883754 /* Theme+Dobble.swift */; };
 		246637A4A2D098C666F37469 /* Theme+Lavender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC95A8FEBDFF602C7F928DF /* Theme+Lavender.swift */; };
 		24A8813A458D296CD6EC7A29 /* TrackpadPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6E41338498DA588787103C /* TrackpadPanel.swift */; };
@@ -274,6 +275,7 @@
 		50FFFE172039C44D7B2D4E80 /* Theme+Carbon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Carbon.swift"; sourceTree = "<group>"; };
 		5181D0B09674CE8789540CEA /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		523F0B8535ED4C5D36CF9A23 /* Theme+Forest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Forest.swift"; sourceTree = "<group>"; };
+		533CC42392A2CF228BDDA184 /* ResponseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseView.swift; sourceTree = "<group>"; };
 		5462C6538A73BD8117516CB5 /* TypingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypingView.swift; sourceTree = "<group>"; };
 		550DB37AF0E30A5A41C1A9AC /* EmojiData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.swift; sourceTree = "<group>"; };
 		5512C30FD91A60E65459B1A7 /* Theme+Latte.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Latte.swift"; sourceTree = "<group>"; };
@@ -556,6 +558,7 @@
 				B3351629B8BC302520770F0F /* NotepadView.swift */,
 				0BAFE2A3EE0CAFE4F4E44E11 /* OverlaysView.swift */,
 				313DD89FF2119DDFF4996979 /* PopupsView.swift */,
+				533CC42392A2CF228BDDA184 /* ResponseView.swift */,
 				5181D0B09674CE8789540CEA /* RootView.swift */,
 				E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */,
 				7949529FFC551E295B024531 /* SoundPickerView.swift */,
@@ -747,6 +750,7 @@
 				A058B107ECEDBBA0DC84CE28 /* PanelSwitcherPanel.swift in Sources */,
 				D9FC557C711D3D686A906B22 /* PopupsView.swift in Sources */,
 				59BA1AB5BB285F1D73A04CFF /* RGBA.swift in Sources */,
+				1E3B3CB33F53763C9A5B4A9B /* ResponseView.swift in Sources */,
 				C576639078F73C5EF212D064 /* RootView.swift in Sources */,
 				EFB3F1685FF60E49ADF4DD07 /* SharedStore.swift in Sources */,
 				5EBF224AC395DD0579186B2D /* ShowcaseView.swift in Sources */,

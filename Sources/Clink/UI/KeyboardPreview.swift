@@ -84,15 +84,11 @@ struct TabbedPreviewLayout: View {
     /// Forces the preview AND its controls into a specific appearance, so a theme
     /// can be previewed dark even while the device is light (and vice versa).
     var previewColorScheme: ColorScheme? = nil
-    /// Draw the hitbox debug outlines on the pinned preview (the Hitboxes editor).
-    var showHitboxOverlay: Bool = false
     @State private var selection: String
 
-    init(settings: KeyboardSettings, previewColorScheme: ColorScheme? = nil,
-         showHitboxOverlay: Bool = false, tabs: [PreviewTab]) {
+    init(settings: KeyboardSettings, previewColorScheme: ColorScheme? = nil, tabs: [PreviewTab]) {
         self.settings = settings
         self.previewColorScheme = previewColorScheme
-        self.showHitboxOverlay = showHitboxOverlay
         self.tabs = tabs
         _selection = State(initialValue: tabs.first?.id ?? "")
     }
@@ -107,7 +103,7 @@ struct TabbedPreviewLayout: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            KeyboardPreview(settings: settings, showHitboxOverlay: showHitboxOverlay)
+            KeyboardPreview(settings: settings)
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.screenPadding)
                 .padding(.bottom, UX.cardSpacing)

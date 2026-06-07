@@ -76,7 +76,7 @@ struct RootView: View {
         // Customization placeholders (pages to be built out).
         case animation, automation, cursor, keys, sounds, haptics, suggestions, popups
         // Advanced placeholders.
-        case hitboxes, overlays
+        case hitboxes, overlays, response
         case clipboard, notepad, emoji, calculator
     }
 
@@ -292,6 +292,7 @@ private struct DetailHost: View {
         case .popups:      PopupsView()
         case .hitboxes:    HitboxView()
         case .overlays:    OverlaysView()
+        case .response:    ResponseView()
         }
     }
 }
@@ -385,6 +386,7 @@ private struct SidebarPanel: View {
         [
             NavItem(title: "Hitboxes", icon: "square.dashed",       dest: .hitboxes),
             NavItem(title: "Overlays", icon: "square.stack.3d.up",  dest: .overlays),
+            NavItem(title: "Response", icon: "timer",               dest: .response),
         ].sorted { $0.title < $1.title }
     }
 
@@ -853,6 +855,7 @@ private struct ClinkContent: View {
     private let advancedCards: [DestCard] = [
         DestCard(title: "Hitboxes", icon: "square.dashed",      description: "Touch target size and presets", dest: .hitboxes),
         DestCard(title: "Overlays", icon: "square.stack.3d.up", description: "Debug overlays",               dest: .overlays),
+        DestCard(title: "Response", icon: "timer",              description: "Long-press and slide-up timing", dest: .response),
     ]
 
     private var extensionCards: [DestCard] {

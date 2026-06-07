@@ -13,13 +13,23 @@ import SwiftUI
 struct EmojiCell: View {
     let glyph: String
     var simulatedPressed: Bool = false
+    /// Glyph point size — scaled by the grid to the cell it'll occupy, so more
+    /// rows/columns shrink the emoji instead of overlapping them.
+    var glyphSize: CGFloat = 30
+    /// Pins the cell's main-axis extent to a computed square side. The cross axis
+    /// fills its flexible grid track; only one of the two is set per scroll axis
+    /// (`fixedWidth` while scrolling horizontally, `fixedHeight` while vertical).
+    var fixedWidth: CGFloat? = nil
+    var fixedHeight: CGFloat? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(glyph)
-                .font(.system(size: 30))
-                .frame(maxWidth: .infinity, minHeight: 40)
+                .font(.system(size: glyphSize))
+                .frame(maxWidth: fixedWidth == nil ? .infinity : nil,
+                       maxHeight: fixedHeight == nil ? .infinity : nil)
+                .frame(width: fixedWidth, height: fixedHeight)
                 .scaleEffect(simulatedPressed ? 1.3 : 1)
                 .animation(.interactiveSpring(response: 0.22, dampingFraction: 0.6), value: simulatedPressed)
                 .contentShape(Rectangle())

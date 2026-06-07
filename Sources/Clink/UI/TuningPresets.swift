@@ -123,6 +123,31 @@ enum TuningPresets {
         }),
     ]
 
+    /// Gesture response — how eagerly long-press / slide-up gestures fire.
+    static let response: [Preset] = [
+        Preset(name: "Default", apply: { s in
+            s.accentHoldDelay = 500; s.emojiToneHoldDelay = 280
+            s.dragUpThreshold = 24; s.accentMoveCancel = 12
+        }, matches: { s in
+            aeq(s.accentHoldDelay, 500) && aeq(s.emojiToneHoldDelay, 280)
+            && aeq(s.dragUpThreshold, 24) && aeq(s.accentMoveCancel, 12)
+        }),
+        Preset(name: "Eager", apply: { s in
+            s.accentHoldDelay = 300; s.emojiToneHoldDelay = 180
+            s.dragUpThreshold = 16; s.accentMoveCancel = 18
+        }, matches: { s in
+            aeq(s.accentHoldDelay, 300) && aeq(s.emojiToneHoldDelay, 180)
+            && aeq(s.dragUpThreshold, 16) && aeq(s.accentMoveCancel, 18)
+        }),
+        Preset(name: "Deliberate", apply: { s in
+            s.accentHoldDelay = 700; s.emojiToneHoldDelay = 420
+            s.dragUpThreshold = 36; s.accentMoveCancel = 8
+        }, matches: { s in
+            aeq(s.accentHoldDelay, 700) && aeq(s.emojiToneHoldDelay, 420)
+            && aeq(s.dragUpThreshold, 36) && aeq(s.accentMoveCancel, 8)
+        }),
+    ]
+
     /// Overall key size & spacing.
     static let size: [Preset] = [
         Preset(name: "Compact", apply: { s in

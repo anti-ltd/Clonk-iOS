@@ -1,21 +1,34 @@
 /**
- Hitbox tuning screen — split into two tabs over a live preview with the hitbox
- overlay always on: "General" tunes the static key/bar/icon touch-target sizes,
- "Adaptive" tunes the next-letter-prediction sizing that flexes each key as you
- type (a replication of iOS's native adaptive hitboxes).
+ Hitbox tuning screen — General tab (static key/bar/icon touch-target sizes) and
+ Adaptive tab (next-letter-prediction sizing that flexes each key as you type, a
+ replication of iOS's native adaptive hitboxes). Live preview with the hitbox
+ overlay always on, so every change is visible.
  */
 import SwiftUI
 import iUXiOS
 
 struct HitboxView: View {
+    private enum Tab { case general, adaptive }
+
     @Environment(AppModel.self) private var model
+    @State private var selectedTab: Tab = .general
 
     var body: some View {
         @Bindable var model = model
-        TabbedPreviewLayout(settings: model.settings, showHitboxOverlay: true, tabs: [
-            PreviewTab("General") { GeneralHitboxControls() },
-            PreviewTab("Adaptive") { AdaptiveHitboxControls() },
-        ])
+        PinnedPreviewLayout(settings: model.settings,
+                            showHitboxOverlay: true,
+                            bottomBar: AnyView(
+                                ThemedTabPicker(
+                                    options: [("General", Tab.general), ("Adaptive", Tab.adaptive)],
+                                    selection: $selectedTab)
+                            )) {
+            switch selectedTab {
+            case .general:
+                GeneralHitboxControls()
+            case .adaptive:
+                AdaptiveHitboxControls()
+            }
+        }
         .navigationTitle("Hitboxes")
         .navigationBarTitleDisplayMode(.inline)
     }

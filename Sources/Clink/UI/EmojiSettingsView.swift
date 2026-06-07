@@ -112,6 +112,18 @@ struct EmojiSettingsView: View {
                     }
                 }
 
+                CardSection("Size & spacing") {
+                    sliderRow(title: "Emoji size",
+                              value: $model.settings.emojiGlyphScale,
+                              range: 0.4...0.85,
+                              display: "\(Int((model.settings.emojiGlyphScale * 100).rounded()))%")
+                    Divider()
+                    sliderRow(title: "Cell spacing",
+                              value: $model.settings.emojiCellSpacing,
+                              range: 0...14,
+                              display: "\(Int(model.settings.emojiCellSpacing.rounded()))")
+                }
+
                 CardSection("Default skin tone") {
                     Text("Applied to emoji that can take a skin tone, unless you’ve set one for that emoji by holding it down in the keyboard.")
                         .font(.caption)
@@ -143,6 +155,22 @@ struct EmojiSettingsView: View {
             }
             .padding(UX.screenPadding)
         }
+    }
+
+    /// A labelled slider row: title + live value on top, the slider beneath. Used
+    /// for the emoji size / spacing controls, tinted to the theme accent.
+    private func sliderRow<V: BinaryFloatingPoint>(
+        title: String, value: Binding<V>, range: ClosedRange<V>, display: String
+    ) -> some View where V.Stride: BinaryFloatingPoint {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(display).foregroundStyle(.secondary).monospacedDigit()
+            }
+            Slider(value: value, in: range).tint(themeAccent)
+        }
+        .padding(.vertical, UX.rowVPadding)
     }
 
     private var swatches: some View {

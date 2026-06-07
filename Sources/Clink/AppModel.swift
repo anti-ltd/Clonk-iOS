@@ -129,6 +129,10 @@ final class AppModel {
         settings.repeatInitialInterval = d.repeatInitialInterval
         settings.repeatMinInterval = d.repeatMinInterval
         settings.repeatAccelStep = d.repeatAccelStep
+        settings.accentHoldDelay = d.accentHoldDelay
+        settings.accentMoveCancel = d.accentMoveCancel
+        settings.emojiToneHoldDelay = d.emojiToneHoldDelay
+        settings.dragUpThreshold = d.dragUpThreshold
     }
 
     /// Reset everything to factory defaults, but KEEP user-created content — the

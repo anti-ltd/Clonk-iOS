@@ -343,6 +343,22 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var repeatMinInterval: Double
     /// How many ms to subtract from the repeat interval each step (acceleration).
     public var repeatAccelStep: Double
+    // Gesture response thresholds
+    /// How long (ms) a letter key must be held still before its accent/diacritic
+    /// bar appears. Lower = accents pop sooner; higher = fewer accidental popups
+    /// while typing fast. Only applies when `accentPopupsEnabled` is on.
+    public var accentHoldDelay: Double
+    /// How far (pt) the finger may drift during an accent hold before the pending
+    /// popup is cancelled (read as a swipe, not a steady press). Higher = more
+    /// forgiving of a shaky hold; lower = the slightest move cancels.
+    public var accentMoveCancel: Double
+    /// How long (ms) an emoji must be held before its skin-tone picker appears —
+    /// mirrors `accentHoldDelay` for the emoji grid.
+    public var emojiToneHoldDelay: Double
+    /// How far (pt) the 123 key must be dragged upward to open the action-panel
+    /// picker (the slide-up gesture). Lower = the panel opens with a short flick;
+    /// higher = a longer, deliberate drag. Only applies when `activateWithSlideUp`.
+    public var dragUpThreshold: Double
     // Emoji
     /// The skin tone applied to any tone-capable emoji that has no per-emoji
     /// choice in `emojiSkinTones`. `.none` = neutral (yellow).
@@ -357,6 +373,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var emojiColumnCount: Int
     /// Number of rows in the emoji grid when `emojiScrollDirection` is `.horizontal`.
     public var emojiRowCount: Int
+    /// Gap (points) between emoji cells, both axes. Default 4.
+    public var emojiCellSpacing: CGFloat
+    /// Emoji glyph size as a fraction of its cell square (0.4–0.85). Default 0.62.
+    public var emojiGlyphScale: Double
     /// Show a "Recently used" tab (the leading clock category) on the emoji
     /// keyboard, populated from `recentEmoji`.
     public var showRecentEmoji: Bool
@@ -447,11 +467,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         repeatInitialInterval: Double = 110,
         repeatMinInterval: Double = 40,
         repeatAccelStep: Double = 6,
+        accentHoldDelay: Double = 500,
+        accentMoveCancel: Double = 12,
+        emojiToneHoldDelay: Double = 280,
+        dragUpThreshold: Double = 24,
         defaultSkinTone: SkinTone = .none,
         emojiSkinTones: [String: SkinTone] = [:],
         emojiScrollDirection: EmojiScrollDirection = .vertical,
         emojiColumnCount: Int = 8,
         emojiRowCount: Int = 5,
+        emojiCellSpacing: CGFloat = 4,
+        emojiGlyphScale: Double = 0.62,
         showRecentEmoji: Bool = true,
         recentEmoji: [String] = []
     ) {
@@ -532,11 +558,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.repeatInitialInterval = repeatInitialInterval
         self.repeatMinInterval = repeatMinInterval
         self.repeatAccelStep = repeatAccelStep
+        self.accentHoldDelay = accentHoldDelay
+        self.accentMoveCancel = accentMoveCancel
+        self.emojiToneHoldDelay = emojiToneHoldDelay
+        self.dragUpThreshold = dragUpThreshold
         self.defaultSkinTone = defaultSkinTone
         self.emojiSkinTones = emojiSkinTones
         self.emojiScrollDirection = emojiScrollDirection
         self.emojiColumnCount = emojiColumnCount
         self.emojiRowCount = emojiRowCount
+        self.emojiCellSpacing = emojiCellSpacing
+        self.emojiGlyphScale = emojiGlyphScale
         self.showRecentEmoji = showRecentEmoji
         self.recentEmoji = recentEmoji
     }
@@ -626,12 +658,18 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         repeatInitialInterval = try c.decodeIfPresent(Double.self, forKey: .repeatInitialInterval) ?? 110
         repeatMinInterval = try c.decodeIfPresent(Double.self, forKey: .repeatMinInterval) ?? 40
         repeatAccelStep = try c.decodeIfPresent(Double.self, forKey: .repeatAccelStep) ?? 6
+        accentHoldDelay = try c.decodeIfPresent(Double.self, forKey: .accentHoldDelay) ?? 500
+        accentMoveCancel = try c.decodeIfPresent(Double.self, forKey: .accentMoveCancel) ?? 12
+        emojiToneHoldDelay = try c.decodeIfPresent(Double.self, forKey: .emojiToneHoldDelay) ?? 280
+        dragUpThreshold = try c.decodeIfPresent(Double.self, forKey: .dragUpThreshold) ?? 24
         // `try?`: a future-retired tone case shouldn't fail the whole decode.
         defaultSkinTone = (try? c.decodeIfPresent(SkinTone.self, forKey: .defaultSkinTone)) ?? .none
         emojiSkinTones = (try? c.decodeIfPresent([String: SkinTone].self, forKey: .emojiSkinTones)) ?? [:]
         emojiScrollDirection = (try? c.decodeIfPresent(EmojiScrollDirection.self, forKey: .emojiScrollDirection)) ?? .vertical
         emojiColumnCount = try c.decodeIfPresent(Int.self, forKey: .emojiColumnCount) ?? 8
         emojiRowCount = try c.decodeIfPresent(Int.self, forKey: .emojiRowCount) ?? 5
+        emojiCellSpacing = try c.decodeIfPresent(CGFloat.self, forKey: .emojiCellSpacing) ?? 4
+        emojiGlyphScale = try c.decodeIfPresent(Double.self, forKey: .emojiGlyphScale) ?? 0.62
         showRecentEmoji = try c.decodeIfPresent(Bool.self, forKey: .showRecentEmoji) ?? true
         recentEmoji = try c.decodeIfPresent([String].self, forKey: .recentEmoji) ?? []
     }

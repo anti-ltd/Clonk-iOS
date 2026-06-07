@@ -703,6 +703,9 @@ public struct KeyboardCanvas: View {
                                 repeatMinInterval: Int(settings.repeatMinInterval),
                                 repeatAccelStep: Int(settings.repeatAccelStep),
                                 accentsEnabled: settings.accentPopupsEnabled,
+                                accentHoldDelay: settings.accentHoldDelay / 1000,
+                                accentMoveCancel: CGFloat(settings.accentMoveCancel),
+                                dragUpThreshold: CGFloat(settings.dragUpThreshold),
                                 surfaceWidth: proxy.size.width)
                         }
                     }

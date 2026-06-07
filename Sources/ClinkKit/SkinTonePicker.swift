@@ -129,10 +129,13 @@ struct EmojiHoldGesture: UIViewRepresentable {
     var onBegan: (CGPoint) -> Void
     var onChanged: (CGPoint) -> Void
     var onEnded: (CGPoint) -> Void
+    /// Seconds the emoji must be held before its skin-tone bar appears.
+    var holdDelay: Double = 0.28
 
     func makeUIView(context: Context) -> HoldHostView {
         let v = HoldHostView()
         v.coordinator = context.coordinator
+        v.holdDelay = holdDelay
         return v
     }
 
@@ -140,6 +143,10 @@ struct EmojiHoldGesture: UIViewRepresentable {
         context.coordinator.onBegan = onBegan
         context.coordinator.onChanged = onChanged
         context.coordinator.onEnded = onEnded
+        uiView.holdDelay = holdDelay
+        // Live-update an already-attached recogniser so the setting takes effect
+        // without re-creating the gesture.
+        context.coordinator.recognizer?.minimumPressDuration = holdDelay
     }
 
     static func dismantleUIView(_ uiView: HoldHostView, coordinator: Coordinator) {
@@ -155,6 +162,8 @@ struct EmojiHoldGesture: UIViewRepresentable {
     @MainActor
     final class HoldHostView: UIView {
         weak var coordinator: Coordinator?
+        /// Seconds before the hold recogniser fires (set from the live setting).
+        var holdDelay: Double = 0.28
 
         init() {
             super.init(frame: .zero)

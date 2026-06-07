@@ -133,7 +133,12 @@ public final class KeyTouchRouter {
     /// on-screen identically to the canvas renderer.
     fileprivate var surfaceWidth: CGFloat = 0
     /// How long a letter must be held (still) before its accent bar appears.
-    private let accentHoldDelay: TimeInterval = 0.5
+    fileprivate var accentHoldDelay: TimeInterval = 0.5
+    /// Finger travel (pt) that cancels a pending accent hold — past this it's a
+    /// swipe, not a still press.
+    fileprivate var accentMoveCancel: CGFloat = 12
+    /// Upward travel (pt) before a drag-up key (123→panel) fires.
+    fileprivate var dragUpThreshold: CGFloat = 24
 
     fileprivate func update(frames: [String: CGRect],
                             resolveSpec: @escaping (String) -> KeySpec?,
@@ -154,6 +159,9 @@ public final class KeyTouchRouter {
                             repeatMinInterval: Int,
                             repeatAccelStep: Int,
                             accentsEnabled: Bool,
+                            accentHoldDelay: TimeInterval,
+                            accentMoveCancel: CGFloat,
+                            dragUpThreshold: CGFloat,
                             surfaceWidth: CGFloat) {
         self.frames = frames
         self.resolveSpec = resolveSpec
@@ -174,6 +182,9 @@ public final class KeyTouchRouter {
         self.repeatMinInterval = repeatMinInterval
         self.repeatAccelStep = repeatAccelStep
         self.accentsEnabled = accentsEnabled
+        self.accentHoldDelay = accentHoldDelay
+        self.accentMoveCancel = accentMoveCancel
+        self.dragUpThreshold = dragUpThreshold
         self.surfaceWidth = surfaceWidth
     }
 
@@ -323,7 +334,7 @@ public final class KeyTouchRouter {
         // Still waiting on the hold for this key: a real drag means the user isn't
         // holding still — cancel the pending bar so it never pops mid-swipe.
         if accentPendingID == id,
-           hypot(translationX, translationY) > Self.accentMoveCancel {
+           hypot(translationX, translationY) > accentMoveCancel {
             cancelAccentHold()
         }
 
@@ -334,7 +345,7 @@ public final class KeyTouchRouter {
         // `touchUp` skips the normal tap action. Mirrors the space-bar trackpad's
         // tap-vs-drag split.
         if spec.onDragUp != nil, !dragUpFired.contains(id),
-           translationY < -Self.dragUpThreshold {
+           translationY < -dragUpThreshold {
             dragUpFired.insert(id)
             // The key's press is cleared so it doesn't stick "pressed" while the
             // picker is up. (We do NOT clear it via canvas swap-out anymore — the
@@ -553,9 +564,6 @@ public final class KeyTouchRouter {
     private var accentPendingID: String?
     private var accentPendingOptions: [String] = []
     private var accentHoldTask: Task<Void, Never>?
-    /// Finger travel (pt) that cancels a pending accent hold — past this it's a
-    /// swipe, not a still press.
-    private static let accentMoveCancel: CGFloat = 12
 
     private func scheduleAccentHold(id: String, options: [String]) {
         cancelAccentHold()
@@ -627,8 +635,6 @@ public final class KeyTouchRouter {
     /// Always true when `cursorActivationDelay` is 0 (instant mode).
     private var spaceCursorReady = true
     private var spaceCursorReadyTask: Task<Void, Never>?
-    /// Upward travel (pt) before a drag-up key (123→emoji) fires.
-    private static let dragUpThreshold: CGFloat = 24
     /// Keys whose `onDragUp` has fired for the current touch, so `touchUp` skips
     /// their tap action. Cleared on up/cancel.
     private var dragUpFired: Set<String> = []
@@ -777,6 +783,9 @@ struct MultiTouchSurface: UIViewRepresentable {
     let repeatMinInterval: Int
     let repeatAccelStep: Int
     let accentsEnabled: Bool
+    let accentHoldDelay: TimeInterval
+    let accentMoveCancel: CGFloat
+    let dragUpThreshold: CGFloat
     let surfaceWidth: CGFloat
 
     func makeUIView(context: Context) -> KeyGridTouchView {
@@ -796,6 +805,9 @@ struct MultiTouchSurface: UIViewRepresentable {
                       repeatMinInterval: repeatMinInterval,
                       repeatAccelStep: repeatAccelStep,
                       accentsEnabled: accentsEnabled,
+                      accentHoldDelay: accentHoldDelay,
+                      accentMoveCancel: accentMoveCancel,
+                      dragUpThreshold: dragUpThreshold,
                       surfaceWidth: surfaceWidth)
         return v
     }
@@ -816,6 +828,9 @@ struct MultiTouchSurface: UIViewRepresentable {
                       repeatMinInterval: repeatMinInterval,
                       repeatAccelStep: repeatAccelStep,
                       accentsEnabled: accentsEnabled,
+                      accentHoldDelay: accentHoldDelay,
+                      accentMoveCancel: accentMoveCancel,
+                      dragUpThreshold: dragUpThreshold,
                       surfaceWidth: surfaceWidth)
     }
 }
