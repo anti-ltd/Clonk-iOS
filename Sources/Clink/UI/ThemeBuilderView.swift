@@ -12,6 +12,7 @@ import PhotosUI
 struct ThemeBuilderView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
 
     @State private var draft: Theme
     /// The background Photos pick in flight, if any.
@@ -64,22 +65,37 @@ struct ThemeBuilderView: View {
         NavigationStack {
             // Pinned preview + segmented tabs, just like the Layout/Keys editor:
             // the keyboard stays put while the fields scroll under it.
-            TabbedPreviewLayout(settings: previewSettings, tabs: [
-                PreviewTab("Style") {
+            TabbedPreviewLayout(settings: previewSettings,
+                                previewColorScheme: draft.isDark ? .dark : .light, tabs: [
+                PreviewTab("General") {
                     styleCard
-                    fontCard
                     if draft.material == .liquidGlass { glassCard }
-                    if isExisting { deleteButton }
                 },
-                PreviewTab("Colors") {
-                    backgroundCard
+                PreviewTab("Font") {
+                    fontCard
+                },
+                PreviewTab("Keys") {
                     colorsCard
                     if draft.material == .liquidGlass {
                         keyImageCard
                         glassHint
                     }
                 },
+                PreviewTab("Background") {
+                    backgroundCard
+                },
             ])
+            // Drive the whole editor's chrome from the theme under edit — so the
+            // cards, nav tint, pickers and swatches preview the draft's colours
+            // and rounding the moment the sheet opens and on every change, even
+            // when this theme isn't the active one.
+            .tint(draft.accent.color)
+            .fontDesign(draft.keyFontDesign.fontDesign)
+            .environment(\.resolvedKeyboardTheme, draft)
+            .environment(\.cardTint, draft.keyFill.color)
+            .environment(\.specialKeyTint, draft.specialKeyFill.color)
+            .environment(\.cardCornerRadius, previewSettings.keyCornerRadius)
+            .environment(\.useGlassCards, draft.material == .liquidGlass)
             .navigationTitle(isExisting ? "Edit Theme" : "New Theme")
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: photoItem) { _, item in importPhoto(item) }
@@ -109,11 +125,11 @@ struct ThemeBuilderView: View {
         CardSection("Style") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Material").foregroundStyle(.secondary).font(.subheadline)
-                Picker("Material", selection: $draft.material) {
-                    Text("Solid").tag(KeyMaterial.solid)
-                    Text("Liquid Glass").tag(KeyMaterial.liquidGlass)
-                }
-                .pickerStyle(.segmented)
+                ThemedChipPicker(
+                    options: [("Solid", KeyMaterial.solid), ("Liquid Glass", KeyMaterial.liquidGlass)],
+                    selection: $draft.material,
+                    accent: draft.accent.color,
+                    inactive: draft.specialKeyFill.color)
             }
             .padding(.vertical, UX.rowVPadding)
             Divider()
@@ -127,17 +143,24 @@ struct ThemeBuilderView: View {
         CardSection("Font") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Design").foregroundStyle(.secondary).font(.subheadline)
-                Picker("Design", selection: $draft.keyFontDesign) {
-                    ForEach(ThemeFontDesign.allCases) { d in Text(d.label).tag(d) }
-                }
-                .pickerStyle(.segmented)
+                ThemedChipPicker(
+                    options: ThemeFontDesign.allCases.map { ($0.label, $0) },
+                    selection: $draft.keyFontDesign,
+                    accent: draft.accent.color,
+                    inactive: draft.specialKeyFill.color)
             }
             .padding(.vertical, UX.rowVPadding)
             Divider()
-            Picker("Weight", selection: $draft.keyFontWeight) {
-                ForEach(ThemeFontWeight.allCases) { w in Text(w.label).tag(w) }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Weight").foregroundStyle(.secondary).font(.subheadline)
+                ThemedChipPicker(
+                    options: ThemeFontWeight.allCases.map { ($0.label, $0) },
+                    selection: $draft.keyFontWeight,
+                    accent: draft.accent.color,
+                    inactive: draft.specialKeyFill.color,
+                    fillWidth: false)
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, UX.rowVPadding)
         }
     }
 
@@ -147,10 +170,11 @@ struct ThemeBuilderView: View {
         CardSection("Glass") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Variant").foregroundStyle(.secondary).font(.subheadline)
-                Picker("Variant", selection: $draft.glassVariant) {
-                    ForEach(GlassVariant.allCases) { v in Text(v.label).tag(v) }
-                }
-                .pickerStyle(.segmented)
+                ThemedChipPicker(
+                    options: GlassVariant.allCases.map { ($0.label, $0) },
+                    selection: $draft.glassVariant,
+                    accent: draft.accent.color,
+                    inactive: draft.specialKeyFill.color)
             }
             .padding(.vertical, UX.rowVPadding)
             Divider()
@@ -201,13 +225,12 @@ struct ThemeBuilderView: View {
                           systemImage: "paintpalette")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(ThemedFillButtonStyle(fill: draft.accent.color, corner: cardCornerRadius))
                 if draft.backgroundGradient != nil {
                     Button(role: .destructive) { draft.backgroundGradient = nil } label: {
                         Label("Remove", systemImage: "trash").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                    .buttonStyle(ThemedFillButtonStyle(fill: .red, corner: cardCornerRadius))
                 }
             }
         }
@@ -247,13 +270,12 @@ struct ThemeBuilderView: View {
                           systemImage: "photo.on.rectangle")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(ThemedFillButtonStyle(fill: draft.accent.color, corner: cardCornerRadius))
                 if draft.backgroundImageID != nil {
                     Button(role: .destructive) { removePhoto() } label: {
                         Label("Remove", systemImage: "trash").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                    .buttonStyle(ThemedFillButtonStyle(fill: .red, corner: cardCornerRadius))
                 }
             }
         }
@@ -312,13 +334,12 @@ struct ThemeBuilderView: View {
                           systemImage: "paintpalette")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(ThemedFillButtonStyle(fill: draft.accent.color, corner: cardCornerRadius))
                 if draft.keyGradient != nil {
                     Button(role: .destructive) { draft.keyGradient = nil } label: {
                         Label("Remove", systemImage: "trash").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                    .buttonStyle(ThemedFillButtonStyle(fill: .red, corner: cardCornerRadius))
                 }
             }
         }
@@ -358,13 +379,12 @@ struct ThemeBuilderView: View {
                           systemImage: "square.grid.3x3.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(ThemedFillButtonStyle(fill: draft.accent.color, corner: cardCornerRadius))
                 if draft.keyImageID != nil {
                     Button(role: .destructive) { removeKeyPhoto() } label: {
                         Label("Remove", systemImage: "trash").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
+                    .buttonStyle(ThemedFillButtonStyle(fill: .red, corner: cardCornerRadius))
                 }
             }
         }
@@ -408,28 +428,36 @@ struct ThemeBuilderView: View {
             .padding(.horizontal, 4)
     }
 
-    private var deleteButton: some View {
-        Button(role: .destructive) {
-            model.deleteCustomTheme(id: draft.id)
-            dismiss()
-        } label: {
-            Text("Delete Theme").frame(maxWidth: .infinity)
+    private func colorRow(_ label: String, _ keyPath: WritableKeyPath<Theme, RGBA>) -> some View {
+        let binding = Binding(
+            get: { draft[keyPath: keyPath].color },
+            set: { draft[keyPath: keyPath] = RGBA($0) }
+        )
+        return HStack {
+            Text(label)
+            Spacer(minLength: 12)
+            colorSwatch(binding)
         }
-        .buttonStyle(.bordered)
-        .tint(.red)
-        .padding(.top, 4)
+        .padding(.vertical, 2)
     }
 
-    private func colorRow(_ label: String, _ keyPath: WritableKeyPath<Theme, RGBA>) -> some View {
-        ColorPicker(
-            label,
-            selection: Binding(
-                get: { draft[keyPath: keyPath].color },
-                set: { draft[keyPath: keyPath] = RGBA($0) }
-            ),
-            supportsOpacity: true
-        )
-        .padding(.vertical, 2)
+    /// A color well drawn as a rounded-rect swatch that follows the theme's key
+    /// rounding — the native `ColorPicker` only offers a fixed circular well, so
+    /// a hidden, scaled-up picker sits over the swatch as its tap target.
+    private func colorSwatch(_ binding: Binding<Color>) -> some View {
+        let shape = RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous)
+        return shape.fill(binding.wrappedValue)
+            .frame(width: 56, height: 30)
+            .overlay {
+                // Scaled so the circular well covers the whole swatch, making the
+                // full rounded rect the tap target; near-zero opacity hides it.
+                ColorPicker("", selection: binding, supportsOpacity: true)
+                    .labelsHidden()
+                    .scaleEffect(8)
+                    .opacity(0.02)
+            }
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(.secondary.opacity(0.35), lineWidth: 0.5))
     }
 
     /// Load the picked photo, downscale it to a keyboard-sized JPEG, store it in
@@ -514,6 +542,7 @@ struct ThemeBuilderView: View {
 struct GradientEditorView: View {
     let onSave: (ThemeGradient) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
     @State private var draft: ThemeGradient
 
     init(initial: ThemeGradient, onSave: @escaping (ThemeGradient) -> Void) {
@@ -533,7 +562,7 @@ struct GradientEditorView: View {
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.vertical, UX.cardSpacing)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(.clear)
             .navigationTitle("Gradient")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -595,12 +624,10 @@ struct GradientEditorView: View {
 
     @ViewBuilder private func stopRow(stop: Binding<GradientStop>) -> some View {
         HStack(spacing: 12) {
-            ColorPicker("Color", selection: Binding(
+            stopSwatch(Binding(
                 get: { stop.wrappedValue.color.color },
                 set: { stop.color.wrappedValue = RGBA($0) }
-            ), supportsOpacity: true)
-            .labelsHidden()
-            .frame(width: 36, height: 36)
+            ))
 
             Slider(value: stop.position, in: 0...1, step: 0.01)
 
@@ -622,6 +649,22 @@ struct GradientEditorView: View {
             }
         }
         .padding(.vertical, UX.rowVPadding)
+    }
+
+    /// A rounded color well for a gradient stop — follows the theme's key
+    /// rounding via the same scaled-hidden-picker trick as the theme editor.
+    private func stopSwatch(_ binding: Binding<Color>) -> some View {
+        let shape = RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous)
+        return shape.fill(binding.wrappedValue)
+            .frame(width: 36, height: 36)
+            .overlay {
+                ColorPicker("", selection: binding, supportsOpacity: true)
+                    .labelsHidden()
+                    .scaleEffect(8)
+                    .opacity(0.02)
+            }
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(.secondary.opacity(0.35), lineWidth: 0.5))
     }
 
     /// Position for a new stop: midpoint of the largest gap between existing stops.

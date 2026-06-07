@@ -95,7 +95,12 @@ struct SuggestionBar: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
             if theme.material == .liquidGlass, #available(iOS 26.0, *) {
-                pill.glassEffect(.regular.tint(theme.accent.color.opacity(0.55)).interactive(),
+                // No `.interactive()` here: that makes the glass layer respond to
+                // touches itself, which swallows the tap before the enclosing
+                // `Button` sees it — the highlighted correction chip then looks
+                // tappable but does nothing. Plain (non-interactive) glass lets the
+                // Button receive the tap and apply the correction.
+                pill.glassEffect(.regular.tint(theme.accent.color.opacity(0.55)),
                                  in: Capsule())
             } else {
                 pill.background(theme.accent.color.opacity(0.22), in: Capsule())

@@ -9,6 +9,9 @@ import iUXiOS
 /// Full Access (off by default — it's only needed for custom sounds/haptics).
 struct EnableFlowView: View {
     @Environment(AppModel.self) private var model
+    /// Navigation title — "Setup" when pushed from the Setup page, "Permissions"
+    /// when shown as the onboarding Permissions page.
+    var title: String = "Setup"
 
     var body: some View {
         ScrollView {
@@ -47,9 +50,9 @@ struct EnableFlowView: View {
             }
             .padding(UX.screenPadding)
         }
-        .navigationTitle("Setup")
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.systemGroupedBackground))
+        .themePageBackground()
     }
 
     private var statusCard: some View {

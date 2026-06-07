@@ -42,6 +42,23 @@ public final class KeyTouchRouter {
     /// Bumped on every backspace auto-repeat so the delete glyph bounces.
     public private(set) var deleteTick = 0
 
+    // MARK: - Accent long-press session
+    //
+    // Holding a letter key (when accent popups are on) raises a bar of diacritic
+    // variants; sliding highlights one, releasing commits it — the same
+    // interaction model as the emoji skin-tone picker. While a session is live no
+    // other key types. `accentKeyID` names the held key (the canvas anchors the
+    // bar over it and `KeyView` publishes that key's frame); `accentOptions` is
+    // the base glyph + its variants; `accentIndex` is the highlighted swatch.
+
+    /// The key whose accent bar is currently showing, or nil when no session is
+    /// live. `KeyView` publishes this key's frame so the canvas can anchor the bar.
+    public private(set) var accentKeyID: String?
+    /// The bar's options: base glyph first, then its diacritic variants.
+    public private(set) var accentOptions: [String] = []
+    /// The highlighted (and on-release committed) option index.
+    public private(set) var accentIndex: Int = 0
+
     /// Per-key counter bumped on *every* touch-down. Drives the additive "tap
     /// pulse" each `KeyView` plays to confirm a press.
     ///
@@ -98,6 +115,13 @@ public final class KeyTouchRouter {
     fileprivate var repeatInitialInterval: Int = 110
     fileprivate var repeatMinInterval: Int = 40
     fileprivate var repeatAccelStep: Int = 6
+    /// Whether holding a letter key reveals its accent variants.
+    fileprivate var accentsEnabled: Bool = false
+    /// Width of the touch surface (≈ keyboard width), for clamping the accent bar
+    /// on-screen identically to the canvas renderer.
+    fileprivate var surfaceWidth: CGFloat = 0
+    /// How long a letter must be held (still) before its accent bar appears.
+    private let accentHoldDelay: TimeInterval = 0.5
 
     fileprivate func update(frames: [String: CGRect],
                             resolveSpec: @escaping (String) -> KeySpec?,
@@ -111,7 +135,9 @@ public final class KeyTouchRouter {
                             repeatHoldDelay: TimeInterval,
                             repeatInitialInterval: Int,
                             repeatMinInterval: Int,
-                            repeatAccelStep: Int) {
+                            repeatAccelStep: Int,
+                            accentsEnabled: Bool,
+                            surfaceWidth: CGFloat) {
         self.frames = frames
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
@@ -125,6 +151,8 @@ public final class KeyTouchRouter {
         self.repeatInitialInterval = repeatInitialInterval
         self.repeatMinInterval = repeatMinInterval
         self.repeatAccelStep = repeatAccelStep
+        self.accentsEnabled = accentsEnabled
+        self.surfaceWidth = surfaceWidth
     }
 
     // MARK: - Hit testing
@@ -166,12 +194,19 @@ public final class KeyTouchRouter {
     // Each touch is bound to the key it lands on for its whole life — exactly how
     // the old per-key gesture behaved, just now genuinely multitouch.
 
-    fileprivate func touchDown(id: String) {
+    fileprivate func touchDown(id: String, localPoint: CGPoint = .zero, windowPoint: CGPoint = .zero) {
         guard let spec = resolveSpec(id) else { return }
+        // An accent bar is up — lock out every other key so a stray finger can't
+        // type while picking a diacritic (matches the skin-tone picker).
+        if accentKeyID != nil { return }
         // Combined cursor mode: once the space cursor is engaged, every other key
         // goes inert — a stray second finger can't type mid-drag. The keyboard is
         // fully normal otherwise (and until the drag engages).
         if cursorCombined, spaceCursorActive, !spec.isSpace { return }
+        // Window↔surface offset, recomputed each touch-down (constant for the
+        // life of a touch): used to map the dragging finger's window point back
+        // into the touch surface's local space for accent-swatch hit-testing.
+        viewOrigin = CGPoint(x: windowPoint.x - localPoint.x, y: windowPoint.y - localPoint.y)
         heldCounts[id, default: 0] += 1
         cancelLinger(id)            // pressed again → stop any pending fade-out
         recomputePressed()
@@ -200,6 +235,12 @@ public final class KeyTouchRouter {
                 }
             } else {
                 spec.action()
+                // Schedule the accent bar if this key has variants and the
+                // feature is on. The base is already typed (above); a hold then
+                // raises the bar, and releasing on a variant replaces it.
+                if accentsEnabled, !spec.accents.isEmpty {
+                    scheduleAccentHold(id: id, options: spec.accents)
+                }
             }
         case .function:
             if spec.isRepeatable {
@@ -212,6 +253,19 @@ public final class KeyTouchRouter {
 
     fileprivate func touchMoved(id: String, translationX: CGFloat, translationY: CGFloat,
                                 windowPoint: CGPoint) {
+        // Accent bar is up for this key: slide highlights a swatch (no other key
+        // behaviour applies). Independent of which `spec` is current.
+        if accentKeyID == id {
+            accentIndex = accentSwatchIndex(forWindowX: windowPoint.x)
+            return
+        }
+        // Still waiting on the hold for this key: a real drag means the user isn't
+        // holding still — cancel the pending bar so it never pops mid-swipe.
+        if accentPendingID == id,
+           hypot(translationX, translationY) > Self.accentMoveCancel {
+            cancelAccentHold()
+        }
+
         guard let spec = resolveSpec(id) else { return }
 
         // Drag-up keys (the 123 → panel-picker gesture): once the finger has
@@ -290,6 +344,19 @@ public final class KeyTouchRouter {
 
     fileprivate func touchUp(id: String, windowPoint: CGPoint) {
         releaseHold(id)
+        // Pending accent hold that never fired (a quick tap) — drop it.
+        if accentPendingID == id { cancelAccentHold() }
+        // An accent bar is up for this key: commit the highlighted variant and
+        // tear the session down. `onAccentCommit` replaces the base only when the
+        // pick differs from it (releasing on the base is a no-op — already typed).
+        if accentKeyID == id {
+            let spec = resolveSpec(id)
+            if accentOptions.indices.contains(accentIndex) {
+                spec?.onAccentCommit?(accentOptions[accentIndex])
+            }
+            endAccentSession()
+            return
+        }
         guard let spec = resolveSpec(id) else { return }
 
         // A drag-up gesture already fired and consumed this touch — don't also run
@@ -333,6 +400,8 @@ public final class KeyTouchRouter {
 
     fileprivate func touchCancelled(id: String) {
         releaseHold(id)
+        if accentPendingID == id { cancelAccentHold() }
+        if accentKeyID == id { endAccentSession() }   // abandon the pick, type nothing extra
         let wasDragUp = dragUpFired.remove(id) != nil
         guard let spec = resolveSpec(id) else { return }
         // Cancelled mid drag-up → dismiss the picker (off-screen point = no row).
@@ -411,6 +480,75 @@ public final class KeyTouchRouter {
         lingerTasks[id]?.cancel()
         lingerTasks[id] = nil
         lingering.remove(id)
+    }
+
+    // MARK: - Accent long-press
+
+    /// Window→surface offset captured at touch-down, so a window-space finger
+    /// point can be mapped back into the touch surface's local space (where the
+    /// key `frames` live) for accent-swatch hit-testing.
+    private var viewOrigin: CGPoint = .zero
+    /// The key whose accent hold is pending (timer running, bar not yet shown).
+    private var accentPendingID: String?
+    private var accentPendingOptions: [String] = []
+    private var accentHoldTask: Task<Void, Never>?
+    /// Finger travel (pt) that cancels a pending accent hold — past this it's a
+    /// swipe, not a still press.
+    private static let accentMoveCancel: CGFloat = 12
+
+    private func scheduleAccentHold(id: String, options: [String]) {
+        cancelAccentHold()
+        accentPendingID = id
+        accentPendingOptions = options
+        let delay = accentHoldDelay
+        accentHoldTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(delay))
+            if Task.isCancelled { return }
+            engageAccent()
+        }
+    }
+
+    /// Raise the accent bar for the pending key once the still-hold elapses.
+    private func engageAccent() {
+        guard let id = accentPendingID else { return }
+        accentKeyID = id
+        accentOptions = accentPendingOptions
+        accentIndex = 0
+        accentPendingID = nil
+        accentPendingOptions = []
+        accentHoldTask = nil
+        dragHaptic.impactOccurred()      // a light buzz as the bar appears
+    }
+
+    private func cancelAccentHold() {
+        accentHoldTask?.cancel()
+        accentHoldTask = nil
+        accentPendingID = nil
+        accentPendingOptions = []
+    }
+
+    /// Tear down a live accent session, dropping the held key's press so it
+    /// doesn't linger-bloom after the bar dismisses.
+    private func endAccentSession() {
+        if let id = accentKeyID { clearPress(id) }
+        accentKeyID = nil
+        accentOptions = []
+        accentIndex = 0
+    }
+
+    /// Which swatch the finger is over, mapping a window-space x back to the
+    /// bar laid out (centred over the held key) in the touch surface's local
+    /// space — the same centring the canvas renders, so the highlight under the
+    /// finger matches what commits.
+    private func accentSwatchIndex(forWindowX windowX: CGFloat) -> Int {
+        let count = accentOptions.count
+        guard count > 0, let id = accentKeyID, let frame = frames[id] else { return accentIndex }
+        let localX = windowX - viewOrigin.x
+        // Same anchoring/clamping the canvas renders with, so the highlighted
+        // swatch is exactly the one under the finger.
+        let left = AccentPicker.barLeft(keyMidX: frame.midX, count: count, containerWidth: surfaceWidth)
+        let i = Int(((localX - left - AccentPicker.hPadding) / AccentPicker.swatch).rounded(.down))
+        return min(max(i, 0), count - 1)
     }
 
     // MARK: - Backspace auto-repeat
@@ -527,7 +665,7 @@ final class KeyGridTouchView: UIView {
             let p = t.location(in: self)
             guard let id = router.key(at: p) else { continue }
             bindings[ObjectIdentifier(t)] = (id, p)
-            router.touchDown(id: id)
+            router.touchDown(id: id, localPoint: p, windowPoint: t.location(in: nil))
         }
     }
 
@@ -572,6 +710,8 @@ struct MultiTouchSurface: UIViewRepresentable {
     let repeatInitialInterval: Int
     let repeatMinInterval: Int
     let repeatAccelStep: Int
+    let accentsEnabled: Bool
+    let surfaceWidth: CGFloat
 
     func makeUIView(context: Context) -> KeyGridTouchView {
         let v = KeyGridTouchView(router: router)
@@ -584,7 +724,9 @@ struct MultiTouchSurface: UIViewRepresentable {
                       repeatHoldDelay: repeatHoldDelay,
                       repeatInitialInterval: repeatInitialInterval,
                       repeatMinInterval: repeatMinInterval,
-                      repeatAccelStep: repeatAccelStep)
+                      repeatAccelStep: repeatAccelStep,
+                      accentsEnabled: accentsEnabled,
+                      surfaceWidth: surfaceWidth)
         return v
     }
 
@@ -598,6 +740,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       repeatHoldDelay: repeatHoldDelay,
                       repeatInitialInterval: repeatInitialInterval,
                       repeatMinInterval: repeatMinInterval,
-                      repeatAccelStep: repeatAccelStep)
+                      repeatAccelStep: repeatAccelStep,
+                      accentsEnabled: accentsEnabled,
+                      surfaceWidth: surfaceWidth)
     }
 }

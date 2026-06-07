@@ -13,7 +13,13 @@ import iUXiOS
 
 struct LocalizationView: View {
     @Environment(AppModel.self) private var model
+    @Environment(SidebarState.self) private var sidebar
+    @Environment(\.colorScheme) private var colorScheme
     @State private var search = ""
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
 
     /// One selectable language: the `UITextChecker` identifier plus a
     /// human-readable name resolved against the user's current locale.
@@ -49,13 +55,24 @@ struct LocalizationView: View {
     }
 
     var body: some View {
-        List {
+        @Bindable var model = model
+        return List {
             Section {
-                Text("Choose the language your typing suggestions, autocomplete, and auto-correction use. Only languages your device can spell-check are listed.")
+                Text("Choose the language your typing suggestions, autocomplete, and auto-correction use. Only languages your device can spell-check are listed. Picking a language also switches the key layout to match (e.g. French → AZERTY, Russian → ЙЦУКЕН).")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            }
+
+            Section("Input") {
+                Toggle(isOn: $model.settings.accentPopupsEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Accent popups")
+                        Text("Hold a letter for accents (é, ü, ñ …).")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
 
             Section("Current") {
@@ -73,12 +90,15 @@ struct LocalizationView: View {
                     prompt: "Search languages")
         .navigationTitle("Localization")
         .navigationBarTitleDisplayMode(.inline)
+        .navTrailingButton("textformat.abc") { sidebar.navigate?(.layout) }
     }
 
     @ViewBuilder
     private func row(_ lang: Language) -> some View {
         Button {
             model.settings.keyboardLanguage = lang.id
+            // Auto-pair the physical key layout to the language.
+            model.settings.layoutID = KeyboardLayout.defaultLayoutID(forLanguage: lang.id)
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -89,7 +109,7 @@ struct LocalizationView: View {
                 if lang.id == selected {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(themeAccent)
                 }
             }
             .contentShape(Rectangle())

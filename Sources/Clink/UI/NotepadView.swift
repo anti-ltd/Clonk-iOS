@@ -126,7 +126,7 @@ struct NotepadView: View {
         }
         .navigationTitle("Notepad")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.systemGroupedBackground))
+        .themePageBackground()
     }
 
     @ViewBuilder private var modeCaption: some View {

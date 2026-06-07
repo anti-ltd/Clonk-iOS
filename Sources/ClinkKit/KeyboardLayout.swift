@@ -28,6 +28,37 @@ public extension KeyboardLayout {
             ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
             ["z", "x", "c", "v", "b", "n", "m"],
         ]),
+        // Spanish QWERTY — adds the dedicated Ñ key after L, like the native
+        // Spanish keyboard (11 keys on the home row).
+        KeyboardLayout(id: "spanish", name: "Spanish (QWERTY)", rows: [
+            ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+            ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ñ"],
+            ["z", "x", "c", "v", "b", "n", "m"],
+        ]),
+        // Portuguese QWERTY — dedicated Ç on the home row.
+        KeyboardLayout(id: "portuguese", name: "Portuguese (QWERTY)", rows: [
+            ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+            ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ç"],
+            ["z", "x", "c", "v", "b", "n", "m"],
+        ]),
+        // Turkish Q-keyboard — its own letters (ı ğ ü ş ö ç) in their native slots.
+        KeyboardLayout(id: "turkish", name: "Turkish (Q)", rows: [
+            ["q", "w", "e", "r", "t", "y", "u", "ı", "o", "p", "ğ", "ü"],
+            ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ş", "i"],
+            ["z", "x", "c", "v", "b", "n", "m", "ö", "ç"],
+        ]),
+        // Swedish / Finnish — å ö ä on the right edge.
+        KeyboardLayout(id: "swedish", name: "Swedish / Finnish", rows: [
+            ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "å"],
+            ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ö", "ä"],
+            ["z", "x", "c", "v", "b", "n", "m"],
+        ]),
+        // Norwegian / Danish — å ø æ on the right edge.
+        KeyboardLayout(id: "norwegian", name: "Norwegian / Danish", rows: [
+            ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "å"],
+            ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ø", "æ"],
+            ["z", "x", "c", "v", "b", "n", "m"],
+        ]),
         KeyboardLayout(id: "azerty", name: "AZERTY", rows: [
             ["a", "z", "e", "r", "t", "y", "u", "i", "o", "p"],
             ["q", "s", "d", "f", "g", "h", "j", "k", "l", "m"],
@@ -43,7 +74,47 @@ public extension KeyboardLayout {
             ["a", "o", "e", "u", "i", "d", "h", "t", "n", "s"],
             ["q", "j", "k", "x", "b", "m", "w", "v", "z"],
         ]),
+        // Russian ЙЦУКЕН — the standard Cyrillic arrangement. Wider top rows than
+        // Latin (12 / 11 keys), which the proportional row renderer handles.
+        KeyboardLayout(id: "russian", name: "Russian (ЙЦУКЕН)", rows: [
+            ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"],
+            ["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"],
+            ["я", "ч", "с", "м", "и", "т", "ь", "б", "ю"],
+        ]),
+        // Ukrainian ЙЦУКЕН — its own Cyrillic set (і ї є, no ы/э/ъ).
+        KeyboardLayout(id: "ukrainian", name: "Ukrainian (ЙЦУКЕН)", rows: [
+            ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ї"],
+            ["ф", "і", "в", "а", "п", "р", "о", "л", "д", "ж", "є"],
+            ["я", "ч", "с", "м", "и", "т", "ь", "б", "ю"],
+        ]),
+        // Greek — the standard layout mapped onto QWERTY positions.
+        KeyboardLayout(id: "greek", name: "Greek", rows: [
+            ["ς", "ε", "ρ", "τ", "υ", "θ", "ι", "ο", "π"],
+            ["α", "σ", "δ", "φ", "γ", "η", "ξ", "κ", "λ"],
+            ["ζ", "χ", "ψ", "ω", "β", "ν", "μ"],
+        ]),
     ]
+
+    /// The layout that best matches a `UITextChecker` language identifier
+    /// (e.g. "fr_FR" → AZERTY, "ru_RU" → Russian). Used to auto-pair the physical
+    /// keys with a newly chosen language; everything Latin-but-unlisted falls back
+    /// to QWERTY.
+    static func defaultLayoutID(forLanguage identifier: String) -> String {
+        let lang = identifier.split(whereSeparator: { $0 == "_" || $0 == "-" }).first.map(String.init)?.lowercased() ?? identifier.lowercased()
+        switch lang {
+        case "es":                     return "spanish"
+        case "pt":                     return "portuguese"
+        case "tr":                     return "turkish"
+        case "sv", "fi":               return "swedish"
+        case "nb", "nn", "no", "da":   return "norwegian"
+        case "fr":                     return "azerty"
+        case "de":                     return "qwertz"
+        case "uk":                     return "ukrainian"
+        case "ru", "be", "bg":         return "russian"
+        case "el":                     return "greek"
+        default:                       return "qwerty"
+        }
+    }
 
     /// The shared number plane (page 1 of the symbol view).
     static let numberRows: [[String]] = [

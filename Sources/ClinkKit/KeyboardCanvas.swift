@@ -272,15 +272,18 @@ public struct KeyboardCanvas: View {
 
     // MARK: - Action panels (clipboard / notepad)
 
-    /// The panels available right now, in display order. Clipboard needs Full
-    /// Access (it reads the pasteboard); notepad and emoji do not.
+    /// The panels available right now, in user-defined display order. Clipboard
+    /// needs Full Access (it reads the pasteboard); notepad and emoji do not.
     private var enabledPanels: [ActionPanel] {
-        var panels: [ActionPanel] = []
-        if settings.clipboardEnabled && hasFullAccess { panels.append(.clipboard) }
-        if settings.notepadEnabled { panels.append(.notepad) }
-        if settings.emojiEnabled { panels.append(.emoji) }
-        if settings.calculatorEnabled { panels.append(.calculator) }
-        return panels
+        settings.extensionOrder.compactMap { id -> ActionPanel? in
+            guard let panel = ActionPanel(rawValue: id) else { return nil }
+            switch panel {
+            case .clipboard:  return (settings.clipboardEnabled && hasFullAccess) ? panel : nil
+            case .notepad:    return settings.notepadEnabled    ? panel : nil
+            case .emoji:      return settings.emojiEnabled      ? panel : nil
+            case .calculator: return settings.calculatorEnabled ? panel : nil
+            }
+        }
     }
 
     /// Whether a panel takes over the whole keyboard (true overlay) rather than
@@ -569,12 +572,16 @@ public struct KeyboardCanvas: View {
             .onPreferenceChange(PanelRowFrameKey.self) { panelRowFrames = $0 }
             .frame(width: 168)
             .background {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(theme.keyFill.color.opacity(0.35)))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(theme.keyText.color.opacity(0.12), lineWidth: 0.5))
+                let r = CGFloat(settings.keyCornerRadius)
+                let shape = RoundedRectangle(cornerRadius: r, style: .continuous)
+                if theme.material == .liquidGlass {
+                    shape.fill(.ultraThinMaterial)
+                        .overlay(shape.fill(theme.keyFill.color.opacity(0.35)))
+                        .overlay(shape.strokeBorder(theme.keyText.color.opacity(0.12), lineWidth: 0.5))
+                } else {
+                    shape.fill(theme.keyFill.color)
+                        .overlay(shape.strokeBorder(theme.keyText.color.opacity(0.15), lineWidth: 0.5))
+                }
             }
             .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
             .padding(.leading, 6)
@@ -689,7 +696,9 @@ public struct KeyboardCanvas: View {
                                 repeatHoldDelay: settings.repeatHoldDelay / 1000,
                                 repeatInitialInterval: Int(settings.repeatInitialInterval),
                                 repeatMinInterval: Int(settings.repeatMinInterval),
-                                repeatAccelStep: Int(settings.repeatAccelStep))
+                                repeatAccelStep: Int(settings.repeatAccelStep),
+                                accentsEnabled: settings.accentPopupsEnabled,
+                                surfaceWidth: proxy.size.width)
                         }
                     }
             }
@@ -737,6 +746,23 @@ public struct KeyboardCanvas: View {
             }
             .allowsHitTesting(false)
             .opacity(trackpadActive ? 0 : 1)
+        }
+        // Accent long-press bar: floats above the held key, options + highlight
+        // driven live by the router (slide to choose, release to commit).
+        .overlayPreferenceValue(AccentPopupKey.self) { anchor in
+            GeometryReader { proxy in
+                if let anchor, !touch.accentOptions.isEmpty {
+                    let keyRect = proxy[anchor]
+                    let count = touch.accentOptions.count
+                    let w = AccentPicker.width(count: count)
+                    let left = AccentPicker.barLeft(keyMidX: keyRect.midX, count: count,
+                                                    containerWidth: proxy.size.width)
+                    AccentPicker(options: touch.accentOptions, selected: touch.accentIndex, theme: theme)
+                        .position(x: left + w / 2,
+                                  y: max(AccentPicker.height / 2 + 2, keyRect.minY - AccentPicker.height / 2 - 6))
+                }
+            }
+            .allowsHitTesting(false)
         }
         // Hitbox debug overlay: outlines each key's touch area. Only visible in
         // the Advanced settings view (showHitboxOverlay = true).
@@ -1118,7 +1144,18 @@ public struct KeyboardCanvas: View {
     private func letterKey(_ base: String) -> KeySpec {
         let shifted = shift != .off
         let glyph = shifted ? base.uppercased() : base
-        return KeySpec(kind: .character, label: .text(glyph), weight: 1) {
+        // Accent options (base + its diacritics, cased to match) for the
+        // long-press bar; empty disables the bar on this key.
+        let accents = settings.accentPopupsEnabled ? AccentMap.options(forCasedGlyph: glyph) : []
+        return KeySpec(kind: .character, label: .text(glyph), weight: 1,
+                       accents: accents,
+                       onAccentCommit: accents.isEmpty ? nil : { [self] chosen in
+                           // The base was already inserted on touch-down; only
+                           // replace it when a different variant was picked.
+                           guard chosen != glyph else { return }
+                           backspace()
+                           insert(chosen)
+                       }) {
             insert(glyph)
             if shift == .on { shift = .off }  // sticky shift releases after one key
         }

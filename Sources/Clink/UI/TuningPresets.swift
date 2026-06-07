@@ -33,6 +33,13 @@ enum TuningPresets {
         Preset(name: "Forgiving", apply: { $0.hitboxScale = 1.08 }, matches: { aeq($0.hitboxScale, 1.08) }),
     ]
 
+    /// Cursor movement mode — how the space bar activates cursor control.
+    static let cursorMovementType: [Preset] = [
+        Preset(name: "Spacebar",  apply: { $0.cursorMovementType = .spacebar  }, matches: { $0.cursorMovementType == .spacebar  }),
+        Preset(name: "Trackpad",  apply: { $0.cursorMovementType = .trackpad  }, matches: { $0.cursorMovementType == .trackpad  }),
+        Preset(name: "Combined",  apply: { $0.cursorMovementType = .combined  }, matches: { $0.cursorMovementType == .combined  }),
+    ]
+
     /// Cursor engagement — how eager the space-bar cursor is to activate.
     static let cursor: [Preset] = [
         Preset(name: "Default",    apply: { $0.spaceCursorActivationDelay = 0;   $0.spaceCursorStride = 10 },
@@ -149,7 +156,14 @@ enum TuningPresets {
 /// instead so the state is never ambiguous.
 struct PresetChips: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(\.useGlassCards) private var useGlassCards
     let presets: [Preset]
+
+    private var theme: Theme { model.settings.resolvedTheme(dark: colorScheme == .dark) }
+    private var inactiveFill: Color { theme.specialKeyFill.color }
+    private var accentFill: Color { theme.accent.color }
 
     var body: some View {
         let active = presets.first { $0.matches(model.settings) }?.name
@@ -163,7 +177,7 @@ struct PresetChips: View {
                     }
                 }
                 if active == nil {
-                    chip("Custom", selected: true, tinted: true, action: nil)
+                    chip("Custom", selected: true, action: nil)
                 }
             }
             .padding(.horizontal, 2)
@@ -171,21 +185,31 @@ struct PresetChips: View {
     }
 
     @ViewBuilder
-    private func chip(_ title: String, selected: Bool, tinted: Bool = false, action: (() -> Void)?) -> some View {
-        let label = Text(title)
+    private func chip(_ title: String, selected: Bool, action: (() -> Void)?) -> some View {
+        if let action {
+            Button(action: action) { chipLabel(title, selected: selected) }.buttonStyle(.plain)
+        } else {
+            chipLabel(title, selected: selected)
+        }
+    }
+
+    @ViewBuilder
+    private func chipLabel(_ title: String, selected: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+        let text = Text(title)
             .font(.subheadline.weight(.medium))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(
-                selected
-                    ? (tinted ? AnyShapeStyle(.tint.opacity(0.18)) : AnyShapeStyle(.tint))
-                    : AnyShapeStyle(Color(.secondarySystemBackground)),
-                in: Capsule())
-            .foregroundStyle(selected ? (tinted ? AnyShapeStyle(.tint) : AnyShapeStyle(.white)) : AnyShapeStyle(.primary))
-        if let action {
-            Button(action: action) { label }.buttonStyle(.plain)
+            .foregroundStyle(selected ? Color.white : Color.primary)
+        if useGlassCards, #available(iOS 26.0, *) {
+            let glass: Glass = selected
+                ? Glass.regular.tint(accentFill).interactive()
+                : Glass.regular.tint(inactiveFill)
+            text.background { Color.clear.glassEffect(glass, in: shape) }
         } else {
-            label
+            text.background(
+                selected ? AnyShapeStyle(accentFill) : AnyShapeStyle(inactiveFill),
+                in: shape)
         }
     }
 }

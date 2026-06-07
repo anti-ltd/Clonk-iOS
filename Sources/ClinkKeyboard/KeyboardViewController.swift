@@ -415,6 +415,7 @@ final class KeyboardViewController: UIInputViewController {
             clipboard: clipboard,
             notepad: notepad,
             hasFullAccess: hasFullAccess,
+            showHitboxOverlay: settings.showHitboxOverlay,
             onInsert: { [weak self] text in
                 guard let self else { return }
                 self.isApplyingEdit = true

@@ -35,7 +35,7 @@ struct ShowcaseView: View {
                         .padding(UX.screenPadding)
                 }
                 .frame(maxHeight: .infinity)
-                .background(Color(.systemGroupedBackground))
+                .background(.clear)
 
                 // ---- The cropped showcase region: bubble + keyboard ----
                 ZStack(alignment: .bottom) {

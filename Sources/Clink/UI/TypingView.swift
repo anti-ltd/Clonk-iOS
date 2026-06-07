@@ -24,29 +24,7 @@ struct TypingView: View {
                               isOn: $model.settings.autocorrectEnabled)
                 }
 
-                CardSection("Text") {
-                    ToggleRow("Auto-capitalize",
-                              subtitle: "Capitalize the first letter of a sentence.",
-                              isOn: $model.settings.autoCapitalize)
-                    Divider()
-                    ToggleRow("Auto punctuation",
-                              subtitle: "Add apostrophes to contractions like “dont” → “don’t”.",
-                              isOn: $model.settings.autoPunctuationEnabled)
-                }
-
-                CardSection("Symbols") {
-                    ToggleRow("Return to letters",
-                              subtitle: "After typing punctuation on the symbols page, flip back to letters.",
-                              isOn: $model.settings.autoReturnToLetters)
-                    if model.settings.autoReturnToLetters {
-                        Divider()
-                        ToggleRow("Add a space",
-                                  subtitle: "After flipping back, insert a space so you can keep typing.",
-                                  isOn: $model.settings.autoSpaceAfterReturn)
-                    }
-                }
-
-        }
+}
         .navigationTitle("Typing")
         .navigationBarTitleDisplayMode(.inline)
     }

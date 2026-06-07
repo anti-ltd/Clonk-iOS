@@ -56,8 +56,8 @@ struct StagedRoot: View {
         switch slug {
         case "glass":  StagedHeroView()   // the WOW shot: glass keyboard mid-type
         case "themes": NavigationStack { ThemeEditorView() }
-        case "layout": NavigationStack { LayoutPickerView() }
-        case "sound":  NavigationStack { SoundPickerView() }
+        case "layout": NavigationStack { LayoutView() }
+        case "sound":  NavigationStack { SoundsView() }
         case "setup":  NavigationStack { EnableFlowView() }
         default:       RootView()   // hero — the full app with the live preview
         }

@@ -142,6 +142,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// completion/spelling dictionary; independent of the physical key `layoutID`.
     /// Falls back to "en_US" inside the engine if the device can't spell-check it.
     public var keyboardLanguage: String
+    /// Holding a letter key reveals a bar of accent/diacritic variants (hold "e"
+    /// → è é ê ë …), slide-to-pick like the system keyboard. Optional; off leaves
+    /// letter keys with no long-press behaviour.
+    public var accentPopupsEnabled: Bool
     public var showNumberRow: Bool
     public var autoCapitalize: Bool
     public var keyPopupEnabled: Bool
@@ -230,6 +234,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var activateWithSlideUp: Bool
     /// How the panel button / slide-up offers a choice when 2+ panels are enabled.
     public var panelPickerStyle: PanelPickerStyle
+    /// User-chosen display order for extension panels. Stored as lowercase
+    /// destination IDs ("calculator", "clipboard", "emoji", "notepad").
+    public var extensionOrder: [String]
     /// Show the autocomplete / suggestion bar above the keys.
     public var suggestionsEnabled: Bool
     /// Auto-correct the just-typed word when a space / punctuation is entered.
@@ -256,6 +263,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// matches the visual key exactly. Values above 1 make the hitbox larger
     /// (more forgiving); values below 1 shrink it (more precise, with wider
     /// dead zones between keys that still route to the nearest key).
+    public var showHitboxOverlay: Bool
     public var hitboxScale: Double
     /// Multiplier applied to the suggestion-bar chips' tap height before
     /// hit-testing — mirrors `hitboxScale` for the keys. Only takes effect while
@@ -352,6 +360,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         backgroundVisible: Bool = false,
         layoutID: String = KeyboardLayout.default.id,
         keyboardLanguage: String = "en_US",
+        accentPopupsEnabled: Bool = true,
         showNumberRow: Bool = false,
         autoCapitalize: Bool = true,
         keyPopupEnabled: Bool = false,
@@ -384,6 +393,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         activateWithIcon: Bool = true,
         activateWithSlideUp: Bool = true,
         panelPickerStyle: PanelPickerStyle = .popover,
+        extensionOrder: [String] = ["calculator", "clipboard", "emoji", "notepad"],
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
         autoPunctuationEnabled: Bool = true,
@@ -393,6 +403,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
         hapticsEnabled: Bool = false,
+        showHitboxOverlay: Bool = false,
         hitboxScale: Double = 0.90,
         suggestionHitboxScale: Double = 1.0,
         panelButtonHitboxScale: Double = 1.0,
@@ -429,6 +440,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.backgroundVisible = backgroundVisible
         self.layoutID = layoutID
         self.keyboardLanguage = keyboardLanguage
+        self.accentPopupsEnabled = accentPopupsEnabled
         self.showNumberRow = showNumberRow
         self.autoCapitalize = autoCapitalize
         self.keyPopupEnabled = keyPopupEnabled
@@ -461,6 +473,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.activateWithIcon = activateWithIcon
         self.activateWithSlideUp = activateWithSlideUp
         self.panelPickerStyle = panelPickerStyle
+        self.extensionOrder = extensionOrder
         self.suggestionsEnabled = suggestionsEnabled
         self.autocorrectEnabled = autocorrectEnabled
         self.autoPunctuationEnabled = autoPunctuationEnabled
@@ -470,6 +483,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
         self.hapticsEnabled = hapticsEnabled
+        self.showHitboxOverlay = showHitboxOverlay
         self.hitboxScale = hitboxScale
         self.suggestionHitboxScale = suggestionHitboxScale
         self.panelButtonHitboxScale = panelButtonHitboxScale
@@ -513,6 +527,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         backgroundVisible = try c.decodeIfPresent(Bool.self, forKey: .backgroundVisible) ?? false
         layoutID = try c.decodeIfPresent(String.self, forKey: .layoutID) ?? KeyboardLayout.default.id
         keyboardLanguage = try c.decodeIfPresent(String.self, forKey: .keyboardLanguage) ?? "en_US"
+        accentPopupsEnabled = try c.decodeIfPresent(Bool.self, forKey: .accentPopupsEnabled) ?? true
         showNumberRow = try c.decodeIfPresent(Bool.self, forKey: .showNumberRow) ?? false
         autoCapitalize = try c.decodeIfPresent(Bool.self, forKey: .autoCapitalize) ?? true
         keyPopupEnabled = try c.decodeIfPresent(Bool.self, forKey: .keyPopupEnabled) ?? true
@@ -547,6 +562,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
         activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
         panelPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
+        extensionOrder = try c.decodeIfPresent([String].self, forKey: .extensionOrder) ?? ["calculator", "clipboard", "emoji", "notepad"]
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
@@ -556,6 +572,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? false
+        showHitboxOverlay = try c.decodeIfPresent(Bool.self, forKey: .showHitboxOverlay) ?? false
         hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.90
         suggestionHitboxScale = try c.decodeIfPresent(Double.self, forKey: .suggestionHitboxScale) ?? 1.0
         panelButtonHitboxScale = try c.decodeIfPresent(Double.self, forKey: .panelButtonHitboxScale) ?? 1.0

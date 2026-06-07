@@ -138,7 +138,7 @@ struct ClipboardHistoryView: View {
         }
         .navigationTitle("Clipboard")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.systemGroupedBackground))
+        .themePageBackground()
     }
 
     @ViewBuilder private var styleCaption: some View {

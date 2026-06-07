@@ -186,10 +186,17 @@ struct KeyView: View {
             .anchorPreference(key: KeyPopupKey.self, value: .bounds) { anchor in
                 // Only magnify single-glyph keys (letters, numbers, symbols) —
                 // never multi-character keys like "space", which would just show
-                // a truncated "S…" bubble.
+                // a truncated "S…" bubble. Suppressed while THIS key's accent bar
+                // is up (the bar replaces the magnifier).
                 guard isPressed, popupEnabled, isCharacter,
+                      router.accentKeyID != keyID,
                       case let .text(g) = spec.label, g.count == 1 else { return nil }
                 return KeyPopup(glyph: g, anchor: anchor)
+            }
+            // Publish this key's bounds while its accent bar is up, so the canvas
+            // can anchor the accent picker over it.
+            .anchorPreference(key: AccentPopupKey.self, value: .bounds) { anchor in
+                router.accentKeyID == keyID ? anchor : nil
             }
             // Publish this key's frame so the multitouch surface can hit-test to
             // it. Every key (including shift / space / function) is touchable.

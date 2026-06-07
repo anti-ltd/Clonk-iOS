@@ -41,6 +41,14 @@ struct KeySpec: Identifiable {
     let onCursorMove: ((Int) -> Void)?
     /// Override glyph point size (the number row uses this); nil = default sizing.
     let fontSize: CGFloat?
+    /// Long-press accent options for this key: the base glyph first, then its
+    /// diacritic variants (e.g. "e" → ["e","è","é",…]). Empty for keys with no
+    /// accents — the router then shows no accent popup on hold.
+    let accents: [String]
+    /// Commit a chosen accent variant: the base was already inserted on
+    /// touch-down, so this replaces it (backspace + insert) when the picked glyph
+    /// differs from the base. nil for keys with no accents.
+    let onAccentCommit: ((String) -> Void)?
     let action: () -> Void
 
     init(kind: Kind, label: Label, weight: Double, highlighted: Bool = false,
@@ -51,6 +59,8 @@ struct KeySpec: Identifiable {
          onDragUpMove: ((CGPoint) -> Void)? = nil,
          onDragUpEnd: ((CGPoint) -> Void)? = nil,
          fontSize: CGFloat? = nil,
+         accents: [String] = [],
+         onAccentCommit: ((String) -> Void)? = nil,
          action: @escaping () -> Void) {
         self.kind = kind; self.label = label; self.weight = weight
         self.highlighted = highlighted; self.isDestructive = isDestructive
@@ -58,6 +68,8 @@ struct KeySpec: Identifiable {
         self.isNextKeyboard = isNextKeyboard
         self.onCursorMove = onCursorMove; self.onDragUp = onDragUp
         self.onDragUpMove = onDragUpMove; self.onDragUpEnd = onDragUpEnd
-        self.fontSize = fontSize; self.action = action
+        self.fontSize = fontSize
+        self.accents = accents; self.onAccentCommit = onAccentCommit
+        self.action = action
     }
 }

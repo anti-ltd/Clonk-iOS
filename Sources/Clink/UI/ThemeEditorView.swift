@@ -15,6 +15,7 @@ extension UTType {
 
 struct ThemeEditorView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Non-nil while the create/edit sheet is up. Set to a fresh draft to
     /// create, or to an existing custom theme to edit.
@@ -22,8 +23,13 @@ struct ThemeEditorView: View {
 
     /// The custom theme being exported — drives the share sheet.
     @State private var exportingTheme: Theme?
+    /// Whether the "export all custom themes" share sheet is up.
+    @State private var exportingAll = false
     /// Whether the `.clink` import file picker is up.
     @State private var importing = false
+
+    /// The top-right options popover (match-system, background, create, import).
+    @State private var showOptions = false
 
     /// Whether the "name your new theme" alert is up, and the dark flag the
     /// fresh theme should seed from once named.
@@ -39,7 +45,7 @@ struct ThemeEditorView: View {
     @State private var appearanceTab: Appearance = .light
     private enum Appearance: Hashable { case light, dark }
 
-    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     private var customThemes: [Theme] { model.settings.customThemes }
     private func isCustom(_ theme: Theme) -> Bool {
@@ -57,22 +63,29 @@ struct ThemeEditorView: View {
         return s
     }
 
+    /// Force the preview into the appearance of the selected tab so a dark theme
+    /// previews dark even on a light-mode device (and vice versa). Nil — follow
+    /// the device — unless matching the system, where the tab picks the mode.
+    private var previewColorScheme: ColorScheme? {
+        guard model.settings.matchSystemAppearance else { return nil }
+        return appearanceTab == .dark ? .dark : .light
+    }
+
+    /// The resolved theme for the current tab — drives the app-wide theming
+    /// override while this page is visible.
+    private var previewTheme: Theme {
+        if model.settings.matchSystemAppearance {
+            let id = appearanceTab == .light ? model.settings.lightThemeID : model.settings.darkThemeID
+            return model.settings.theme(withID: id)
+        }
+        return model.settings.theme(withID: model.settings.themeID)
+    }
+
     var body: some View {
-        @Bindable var model = model
-        PinnedPreviewLayout(settings: previewSettings) {
-                CardSection("Background") {
-                    ToggleRow("Show background",
-                              subtitle: "Paint the selected theme's background — a custom theme's photo, or its colour — behind the keys. Off keeps the keyboard transparent so it blends with the app.",
-                              isOn: $model.settings.backgroundVisible)
-                }
-
+        PinnedPreviewLayout(settings: previewSettings,
+                            previewColorScheme: previewColorScheme,
+                            bottomBar: appearanceBar) {
                 if model.settings.matchSystemAppearance {
-                    Picker("Appearance", selection: $appearanceTab) {
-                        Text("Light").tag(Appearance.light)
-                        Text("Dark").tag(Appearance.dark)
-                    }
-                    .pickerStyle(.segmented)
-
                     switch appearanceTab {
                     case .light:
                         grid(nil, themes: Theme.lightPresets + customThemes.filter { !$0.isDark },
@@ -85,11 +98,16 @@ struct ThemeEditorView: View {
                     grid(nil, themes: model.settings.allThemes,
                          selectedID: model.settings.themeID) { model.settings.themeID = $0 }
                 }
-
-                bottomBar
         }
+        .environment(\.resolvedKeyboardTheme, previewTheme)
+        .environment(\.cardTint, previewTheme.keyFill.color)
+        .environment(\.useGlassCards, previewTheme.material == .liquidGlass)
+        .themePopover(isPresented: $showOptions) { optionsPopover }
         .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            appearanceTab = colorScheme == .dark ? .dark : .light
+        }
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.clinkTheme, .json],
                       allowsMultipleSelection: false) { handleImport($0) }
@@ -100,19 +118,15 @@ struct ThemeEditorView: View {
                 Text("Couldn’t prepare this theme for export.").padding()
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    model.settings.matchSystemAppearance.toggle()
-                } label: {
-                    Image(systemName: "circle.lefthalf.filled")
-                        .foregroundStyle(model.settings.matchSystemAppearance
-                                         ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                }
-                .accessibilityLabel("Match system appearance")
-                .accessibilityValue(model.settings.matchSystemAppearance ? "On" : "Off")
+        .sheet(isPresented: $exportingAll) {
+            let urls = customThemes.compactMap { exportURL(for: $0) }
+            if urls.isEmpty {
+                Text("No custom themes to export.").padding()
+            } else {
+                ShareSheet(items: urls)
             }
         }
+        .navTrailingButton("ellipsis.circle") { showOptions = true }
         .sheet(item: $builderTheme) { theme in
             ThemeBuilderView(theme: theme)
         }
@@ -145,35 +159,38 @@ struct ThemeEditorView: View {
         }
     }
 
-    /// Two equal-width actions: make a fresh theme, or pull one in from a `.clink`
-    /// file someone shared.
-    private var bottomBar: some View {
-        HStack(spacing: UX.cardSpacing) {
-            actionButton("Create", systemImage: "plus.circle.fill") {
+    /// The Light/Dark tab, pinned to the bottom while themes scroll. Only shown
+    /// while matching the system appearance (the only time both modes are picked).
+    private var appearanceBar: AnyView? {
+        guard model.settings.matchSystemAppearance else { return nil }
+        return AnyView(
+            ThemedTabPicker(options: [("Light", Appearance.light), ("Dark", Appearance.dark)],
+                            selection: $appearanceTab)
+        )
+    }
+
+    /// The top-right options menu: appearance + background toggles and the
+    /// create / import / export-all theme actions. Actions close the popover, then
+    /// trigger the matching alert / file picker (which live on the main view).
+    private var optionsPopover: some View {
+        ThemeOptionsPopover(
+            hasCustomThemes: !customThemes.isEmpty,
+            onCreate: {
+                showOptions = false
                 // Name first via a dialog — the builder no longer carries a text
                 // field, which trapped the software keyboard in the pinned layout.
                 pendingDark = model.settings.theme.isDark
                 nameField = ""
                 creatingName = true
-            }
-            actionButton("Import", systemImage: "square.and.arrow.down") {
+            },
+            onImport: {
+                showOptions = false
                 importing = true
-            }
-        }
-    }
-
-    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                Text(title)
-            }
-            .font(.body.weight(.medium))
-            .padding(14)
-            .frame(maxWidth: .infinity)
-            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
+            },
+            onExportAll: {
+                showOptions = false
+                exportingAll = true
+            })
     }
 
     // MARK: - Export / import
@@ -225,7 +242,7 @@ struct ThemeEditorView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
             }
-            LazyVGrid(columns: columns, spacing: 12) {
+            LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(themes) { theme in
                     let custom = isCustom(theme)
                     let swatch = ThemeSwatch(theme: theme, selected: theme.id == selectedID, isCustom: custom)
@@ -251,6 +268,60 @@ struct ThemeEditorView: View {
     }
 }
 
+/// The Theme page's top-right options popover: the appearance + background
+/// toggles (moved off the page) and the create / import actions.
+private struct ThemeOptionsPopover: View {
+    @Environment(AppModel.self) private var model
+    var hasCustomThemes: Bool
+    var onCreate: () -> Void
+    var onImport: () -> Void
+    var onExportAll: () -> Void
+
+    var body: some View {
+        @Bindable var model = model
+        VStack(alignment: .leading, spacing: 0) {
+            Toggle("Match system appearance", isOn: $model.settings.matchSystemAppearance)
+                .padding(.vertical, 12)
+            Text("Switch theme automatically with the system's light / dark mode.")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 12)
+            Divider()
+            Toggle("Show background", isOn: $model.settings.backgroundVisible)
+                .padding(.vertical, 12)
+            Text("Paint the theme's background — a custom theme's photo, or its colour — behind the keys.")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 12)
+            Divider()
+            menuButton("Create theme", systemImage: "plus.circle.fill", action: onCreate)
+            Divider()
+            menuButton("Import theme", systemImage: "square.and.arrow.down", action: onImport)
+            Divider()
+            menuButton("Export all themes", systemImage: "square.and.arrow.up.on.square",
+                       action: onExportAll)
+                .disabled(!hasCustomThemes)
+                .opacity(hasCustomThemes ? 1 : 0.4)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(width: 300)
+    }
+
+    private func menuButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: systemImage).frame(width: 22)
+                Text(title)
+                Spacer()
+            }
+            .font(.body)
+            .foregroundStyle(.primary)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 /// A thin wrapper over `UIActivityViewController` so a custom theme can be shared
 /// as a `.clink` file (AirDrop, Files, Messages…).
 private struct ShareSheet: UIViewControllerRepresentable {
@@ -262,6 +333,9 @@ private struct ShareSheet: UIViewControllerRepresentable {
 }
 
 private struct ThemeSwatch: View {
+    @Environment(\.cardTint) private var cardTint
+    @Environment(\.useGlassCards) private var useGlassCards
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
     let theme: Theme
     let selected: Bool
     var isCustom: Bool = false
@@ -269,40 +343,42 @@ private struct ThemeSwatch: View {
     private var isGlass: Bool { theme.material == .liquidGlass }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Miniature keyboard: backdrop + three sample keys + an accent key.
-            HStack(spacing: 4) {
-                ForEach(0..<3, id: \.self) { _ in miniKey(accent: false) }
-                miniKey(accent: true).frame(width: 18)
+        VStack(alignment: .leading, spacing: 7) {
+            // Miniature keyboard: backdrop + two sample keys + an accent key.
+            HStack(spacing: 3) {
+                ForEach(0..<2, id: \.self) { _ in miniKey(accent: false) }
+                miniKey(accent: true).frame(width: 13)
             }
-            .padding(8)
+            .padding(6)
             .frame(maxWidth: .infinity)
             .background {
                 swatchBackdrop
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous))
             }
 
-            HStack(spacing: 5) {
-                Text(theme.name).font(.subheadline.weight(.medium)).lineLimit(1)
+            HStack(spacing: 3) {
+                Text(theme.name).font(.caption.weight(.medium)).lineLimit(1).minimumScaleFactor(0.8)
                 if isCustom {
                     Image(systemName: "pencil")
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.system(size: 8)).foregroundStyle(.secondary)
                 }
                 if isGlass {
                     Image(systemName: "circle.hexagongrid.fill")
-                        .font(.caption2).foregroundStyle(.secondary)
+                        .font(.system(size: 8)).foregroundStyle(.secondary)
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 if selected {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption).foregroundStyle(theme.accent.color)
                 }
             }
         }
-        .padding(10)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(8)
+        .background(cardTint ?? Color(.secondarySystemBackground),
+                    in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(selected ? AnyShapeStyle(.tint) : AnyShapeStyle(.clear), lineWidth: 2)
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(selected ? AnyShapeStyle(theme.accent.color) : AnyShapeStyle(.clear), lineWidth: 2)
         )
         .contentShape(Rectangle())
     }
@@ -310,15 +386,15 @@ private struct ThemeSwatch: View {
     /// One sample key in the swatch — glass themes render a translucent
     /// material key so the picker communicates the Liquid Glass look.
     @ViewBuilder private func miniKey(accent: Bool) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 4, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: max(1, cardCornerRadius - 8), style: .continuous)
         if isGlass {
             shape.fill(.ultraThinMaterial)
                 .overlay(accent ? shape.fill(theme.accent.color.opacity(0.55)) : nil)
                 .overlay(shape.strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
-                .frame(height: 26)
+                .frame(height: 22)
         } else {
             shape.fill(accent ? theme.accent.color : theme.keyFill.color)
-                .frame(height: 26)
+                .frame(height: 22)
         }
     }
 

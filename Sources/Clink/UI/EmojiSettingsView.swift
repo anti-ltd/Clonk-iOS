@@ -12,6 +12,11 @@ import iUXiOS
 /// default here applies; otherwise the neutral (yellow) base.
 struct EmojiSettingsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
 
     /// The emoji shown in the swatch picker — a tone-capable hand.
     private let sample = "👋"
@@ -120,7 +125,7 @@ struct EmojiSettingsView: View {
         }
         .navigationTitle("Emoji")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color(.systemGroupedBackground))
+        .themePageBackground()
     }
 
     private var swatches: some View {
@@ -135,11 +140,11 @@ struct EmojiSettingsView: View {
                         .frame(maxWidth: .infinity, minHeight: 46)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(selected ? Color.accentColor.opacity(0.18) : Color(.secondarySystemBackground))
+                                .fill(selected ? themeAccent.opacity(0.18) : Color(.secondarySystemBackground))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(selected ? Color.accentColor : .clear, lineWidth: 2)
+                                .strokeBorder(selected ? themeAccent : .clear, lineWidth: 2)
                         )
                         .contentShape(Rectangle())
                 }
