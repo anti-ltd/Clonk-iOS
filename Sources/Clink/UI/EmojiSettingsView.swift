@@ -115,7 +115,7 @@ struct EmojiSettingsView: View {
                 CardSection("Size & spacing") {
                     sliderRow(title: "Emoji size",
                               value: $model.settings.emojiGlyphScale,
-                              range: 0.4...0.85,
+                              range: 0.4...1.3,
                               display: "\(Int((model.settings.emojiGlyphScale * 100).rounded()))%")
                     Divider()
                     sliderRow(title: "Cell spacing",
