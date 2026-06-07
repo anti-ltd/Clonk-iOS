@@ -13,7 +13,15 @@ struct NotepadView: View {
     var body: some View {
         @Bindable var model = model
         @Bindable var notepad = model.notepad
-        ScrollView {
+        VStack(spacing: 0) {
+            if model.settings.notepadEnabled {
+                NotepadPreview(settings: model.settings)
+                    .padding(.horizontal, UX.screenPadding)
+                    .padding(.top, UX.screenPadding)
+                    .padding(.bottom, UX.cardSpacing)
+                    .overlay(alignment: .bottom) { Divider().opacity(0.4) }
+            }
+            ScrollView {
             VStack(spacing: UX.cardSpacing) {
                 CardSection("Settings") {
                     ToggleRow("Quick notepad",
@@ -123,6 +131,7 @@ struct NotepadView: View {
                 }
             }
             .padding(UX.screenPadding)
+            }
         }
         .navigationTitle("Notepad")
         .navigationBarTitleDisplayMode(.inline)

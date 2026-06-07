@@ -372,6 +372,101 @@ struct EmojiPreview: View {
     }
 }
 
+/// A live preview of the clipboard panel — a `ClipboardPanel` loaded with sample
+/// entries, pinned above the controls in `ClipboardHistoryView`. Only relevant for
+/// `clipboardStyle == .overlay`; bar style lives in the suggestion row.
+struct ClipboardPreview: View {
+    @Environment(\.resolvedKeyboardTheme) private var envTheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    let settings: KeyboardSettings
+
+    private static let sampleEntries: [ClipboardEntry] = [
+        ClipboardEntry(text: "Meeting at 3pm in the main conference room", date: Date(), pinned: true),
+        ClipboardEntry(text: "hey! can you send me that file?", date: Date()),
+        ClipboardEntry(text: "https://clink.app", date: Date()),
+    ]
+
+    private var backdropGradient: LinearGradient {
+        let ui = UIColor(envTheme.accent.color)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        let vs = max(0.5, min(1.0, s))
+        let vb = max(0.55, min(0.95, b))
+        let c1 = Color(UIColor(hue: h,                   saturation: vs,       brightness: vb,              alpha: 1))
+        let c2 = Color(UIColor(hue: fmod(h + 0.33, 1.0), saturation: vs * 0.9, brightness: min(1, vb * 1.1), alpha: 1))
+        let c3 = Color(UIColor(hue: fmod(h + 0.67, 1.0), saturation: vs * 0.8, brightness: vb * 0.85,       alpha: 1))
+        return LinearGradient(colors: [c1, c2, c3], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    var body: some View {
+        ClipboardPanel(
+            entries: Self.sampleEntries,
+            theme: envTheme,
+            cornerRadius: cardCornerRadius,
+            onTap: { _ in },
+            onSave: {},
+            onDismiss: {},
+            onCopy: { _ in },
+            onTogglePin: { _ in },
+            onDelete: { _ in },
+            onClear: {}
+        )
+        .frame(height: KeyboardCanvas.preferredHeight(for: settings))
+        .background { backdropGradient }
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(.separator, lineWidth: 0.5)
+        )
+    }
+}
+
+/// A live preview of the notepad browse panel — a `NotepadBrowsePanel` loaded with
+/// sample notes, pinned above the controls in `NotepadView`.
+struct NotepadPreview: View {
+    @Environment(\.resolvedKeyboardTheme) private var envTheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    let settings: KeyboardSettings
+
+    private static let sampleNotes: [NotepadNote] = [
+        NotepadNote(text: "Don't forget to pick up groceries", date: Date()),
+        NotepadNote(text: "Meeting notes:\n- Discussed roadmap\n- Q3 targets", date: Date()),
+        NotepadNote(text: "Wi-Fi: sunshine2024", date: Date()),
+    ]
+
+    private var backdropGradient: LinearGradient {
+        let ui = UIColor(envTheme.accent.color)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        let vs = max(0.5, min(1.0, s))
+        let vb = max(0.55, min(0.95, b))
+        let c1 = Color(UIColor(hue: h,                   saturation: vs,       brightness: vb,              alpha: 1))
+        let c2 = Color(UIColor(hue: fmod(h + 0.33, 1.0), saturation: vs * 0.9, brightness: min(1, vb * 1.1), alpha: 1))
+        let c3 = Color(UIColor(hue: fmod(h + 0.67, 1.0), saturation: vs * 0.8, brightness: vb * 0.85,       alpha: 1))
+        return LinearGradient(colors: [c1, c2, c3], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    var body: some View {
+        NotepadBrowsePanel(
+            notes: Self.sampleNotes,
+            theme: envTheme,
+            cornerRadius: cardCornerRadius,
+            onTap: { _ in },
+            onLoad: { _ in },
+            onDelete: { _ in },
+            onClear: {},
+            onDismiss: {}
+        )
+        .frame(height: KeyboardCanvas.preferredHeight(for: settings))
+        .background { backdropGradient }
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(.separator, lineWidth: 0.5)
+        )
+    }
+}
+
 /// A live, interactive preview of the calculator panel — the exact `CalculatorPanel`
 /// the extension renders, wired to a local buffer so the user can try arithmetic
 /// right inside the settings page. Mirrors `KeyboardPreview` and `EmojiPreview`.

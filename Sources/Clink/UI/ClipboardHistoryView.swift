@@ -14,7 +14,15 @@ struct ClipboardHistoryView: View {
 
     var body: some View {
         @Bindable var model = model
-        ScrollView {
+        VStack(spacing: 0) {
+            if model.settings.clipboardEnabled && model.settings.clipboardStyle == .overlay {
+                ClipboardPreview(settings: model.settings)
+                    .padding(.horizontal, UX.screenPadding)
+                    .padding(.top, UX.screenPadding)
+                    .padding(.bottom, UX.cardSpacing)
+                    .overlay(alignment: .bottom) { Divider().opacity(0.4) }
+            }
+            ScrollView {
             VStack(spacing: UX.cardSpacing) {
                 CardSection("Settings") {
                     ToggleRow("Clipboard history",
@@ -135,6 +143,7 @@ struct ClipboardHistoryView: View {
                 }
             }
             .padding(UX.screenPadding)
+            }
         }
         .navigationTitle("Clipboard")
         .navigationBarTitleDisplayMode(.inline)
