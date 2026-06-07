@@ -17,13 +17,15 @@ struct PanelsView: View {
         List {
             Section {
                 Toggle("Show in keyboard", isOn: $m.settings.customPanelsEnabled)
+                Toggle("Show alongside built-in panels", isOn: $m.settings.customPanelsStandalone)
+                    .disabled(!m.settings.customPanelsEnabled)
                 Button { importing = true } label: {
                     Label("Import panel…", systemImage: "square.and.arrow.down")
                 }
             } header: {
                 Text("Custom Panels")
             } footer: {
-                Text("Build full custom keyboard UIs in Python — calculators, snippet boards, pickers. Enabled panels appear behind the keyboard's panels button.")
+                Text("Build full custom keyboard UIs in Python — calculators, snippet boards, pickers. “Alongside built-in panels” gives each its own button in the panel picker instead of nesting them behind one Panels button; individual panels can override this in their editor.")
             }
 
             Section("Your panels") {

@@ -164,8 +164,11 @@ public struct CustomPanelView: View {
 }
 
 /// Keyboard chrome: lists the user's enabled panels; tapping one opens its UI.
+/// When `standalone` is set, it skips the list and shows just that panel (used
+/// when a custom panel has its own top-level picker entry).
 struct CustomPanelsContainer: View {
     let panels: [ClinkPanel]
+    let standalone: ClinkPanel?
     let theme: Theme
     let cornerRadius: CGFloat
     let onInsert: (String) -> Void
@@ -173,11 +176,14 @@ struct CustomPanelsContainer: View {
 
     @State private var selected: ClinkPanel?
 
+    /// The panel to show, if any: the fixed standalone one, or a list selection.
+    private var shown: ClinkPanel? { standalone ?? selected }
+
     var body: some View {
         VStack(spacing: 0) {
             header
-            if let selected {
-                CustomPanelView(source: selected.source, theme: theme,
+            if let shown {
+                CustomPanelView(source: shown.source, theme: theme,
                                 cornerRadius: cornerRadius, onInsert: onInsert)
             } else {
                 list
@@ -187,7 +193,8 @@ struct CustomPanelsContainer: View {
 
     private var header: some View {
         HStack(spacing: 0) {
-            if selected != nil {
+            // Show a back chevron only when there's a list to return to.
+            if selected != nil && standalone == nil {
                 Button { selected = nil } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .semibold))
@@ -201,7 +208,7 @@ struct CustomPanelsContainer: View {
                     .foregroundStyle(theme.accent.color)
                     .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
             }
-            Text(selected?.name ?? "Panels")
+            Text(shown?.name ?? "Panels")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(theme.keyText.color)
                 .frame(maxWidth: .infinity, alignment: .leading)

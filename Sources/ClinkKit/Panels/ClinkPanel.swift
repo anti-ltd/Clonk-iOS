@@ -7,6 +7,32 @@
  */
 import Foundation
 
+/// Where a custom panel appears in the keyboard's panel picker.
+public enum PanelPlacement: String, Codable, Sendable, CaseIterable, Identifiable {
+    /// Follow the global "show custom panels alongside built-ins" setting.
+    case `default`
+    /// Always its own top-level entry, next to Clipboard / Notepad / etc.
+    case standalone
+    /// Always grouped behind the single "Panels" entry.
+    case grouped
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .default:    return "Default"
+        case .standalone: return "Standalone"
+        case .grouped:    return "Grouped"
+        }
+    }
+    public var detail: String {
+        switch self {
+        case .default:    return "Follows the global setting above."
+        case .standalone: return "Its own button in the panel picker."
+        case .grouped:    return "Nested behind the Panels button."
+        }
+    }
+}
+
 public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
     public var id: String
     public var name: String
@@ -14,6 +40,8 @@ public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
     public var summary: String
     /// PyMini source — must define `view(state)`; may define `initial()`.
     public var source: String
+    /// Per-panel override of where it appears in the picker.
+    public var placement: PanelPlacement
     public var enabled: Bool
 
     public init(
@@ -22,6 +50,7 @@ public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
         icon: String = "square.grid.2x2",
         summary: String = "",
         source: String,
+        placement: PanelPlacement = .default,
         enabled: Bool = true
     ) {
         self.id = id
@@ -29,6 +58,7 @@ public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
         self.icon = icon
         self.summary = summary
         self.source = source
+        self.placement = placement
         self.enabled = enabled
     }
 
@@ -39,7 +69,17 @@ public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
         icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? "square.grid.2x2"
         summary = try c.decodeIfPresent(String.self, forKey: .summary) ?? ""
         source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
+        placement = (try? c.decodeIfPresent(PanelPlacement.self, forKey: .placement)) ?? .default
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+    }
+
+    /// Resolve whether this panel is standalone, given the global default.
+    public func isStandalone(globalDefault: Bool) -> Bool {
+        switch placement {
+        case .standalone: return true
+        case .grouped:    return false
+        case .default:    return globalDefault
+        }
     }
 }
 

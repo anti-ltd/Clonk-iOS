@@ -124,6 +124,15 @@ def view(state):
 Panels are solid-rendered (no per-cell glass, per the keyboard memory budget) and
 share as `.clinkpanel` files.
 
+### Placement in the picker
+
+By default all custom panels nest behind a single **Panels** button in the
+keyboard's panel picker. Turn on **Custom Panels → Show alongside built-in
+panels** to give each panel its own top-level entry next to Clipboard / Notepad /
+etc. Each panel can override the global default in its editor (**Placement**:
+Default / Standalone / Grouped). Backed by `settings.customPanelsStandalone`
+(global) and `ClinkPanel.placement` (per-panel).
+
 ## Sharing
 
 Each action exports as a `.clinkext` file (JSON) — share it via the editor's

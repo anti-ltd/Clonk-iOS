@@ -43,6 +43,7 @@ struct PanelEditorView: View {
             VStack(spacing: UX.cardSpacing) {
                 detailsCard
                 iconCard
+                placementCard
                 codeCard
                 previewCard
                 if !isNew { manageCard }
@@ -100,6 +101,20 @@ struct PanelEditorView: View {
                 }
                 .padding(.vertical, UX.rowVPadding)
             }
+        }
+    }
+
+    private var placementCard: some View {
+        CardSection("Placement") {
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("Placement", selection: $draft.placement) {
+                    ForEach(PanelPlacement.allCases) { p in Text(p.label).tag(p) }
+                }
+                .pickerStyle(.segmented)
+                Text(draft.placement.detail)
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(.vertical, UX.rowVPadding)
         }
     }
 

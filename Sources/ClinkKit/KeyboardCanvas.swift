@@ -294,25 +294,40 @@ public struct KeyboardCanvas: View {
     /// The panels available right now, in user-defined display order. Clipboard
     /// needs Full Access (it reads the pasteboard); notepad and emoji do not.
     private var enabledPanels: [ActionPanel] {
-        var panels = settings.extensionOrder.compactMap { id -> ActionPanel? in
+        var result = settings.extensionOrder.compactMap { id -> ActionPanel? in
             guard let panel = ActionPanel(rawValue: id) else { return nil }
-            switch panel {
+            switch panel.kind {
             case .clipboard:  return (settings.clipboardEnabled && hasFullAccess) ? panel : nil
             case .notepad:    return settings.notepadEnabled    ? panel : nil
             case .emoji:      return settings.emojiEnabled      ? panel : nil
             case .calculator: return settings.calculatorEnabled ? panel : nil
-            case .extensions, .customPanels: return nil   // appended below, not in extensionOrder
+            default:          return nil   // custom kinds appended below, not in extensionOrder
             }
         }
         // Custom actions / panels live outside `extensionOrder`; append when
         // enabled and the user has at least one enabled item.
         if settings.userExtensionsEnabled && !extensions.enabledItems.isEmpty {
-            panels.append(.extensions)
+            result.append(.extensions)
         }
-        if settings.customPanelsEnabled && !self.panels.enabledItems.isEmpty {
-            panels.append(.customPanels)
+        if settings.customPanelsEnabled {
+            // Standalone custom panels become their own entries; the rest are
+            // collapsed behind a single grouped "Panels" entry.
+            for p in standaloneCustomPanels {
+                result.append(.customPanel(id: p.id, name: p.name, icon: p.icon))
+            }
+            if !groupedCustomPanels.isEmpty { result.append(.customPanels) }
         }
-        return panels
+        return result
+    }
+
+    /// Enabled custom panels that resolve to standalone (own picker entry).
+    private var standaloneCustomPanels: [ClinkPanel] {
+        panels.enabledItems.filter { $0.isStandalone(globalDefault: settings.customPanelsStandalone) }
+    }
+
+    /// Enabled custom panels that resolve to grouped (behind the "Panels" entry).
+    private var groupedCustomPanels: [ClinkPanel] {
+        panels.enabledItems.filter { !$0.isStandalone(globalDefault: settings.customPanelsStandalone) }
     }
 
     /// Whether a panel takes over the whole keyboard (true overlay) rather than
@@ -321,13 +336,11 @@ public struct KeyboardCanvas: View {
     /// notes archive. Emoji never renders inside this canvas (it swaps to the
     /// separate `EmojiCanvas`), so it's never an in-canvas overlay.
     private func panelIsOverlay(_ panel: ActionPanel) -> Bool {
-        switch panel {
+        switch panel.kind {
         case .clipboard:   return settings.clipboardStyle == .overlay
         case .notepad:     return settings.notepadMode == .notes && notepadBrowsing
         case .emoji:       return false
-        case .calculator:   return true
-        case .extensions:   return true
-        case .customPanels: return true
+        case .calculator, .extensions, .customPanels, .customPanel: return true
         }
     }
 
@@ -403,19 +416,19 @@ public struct KeyboardCanvas: View {
     private func togglePanel(_ panel: ActionPanel) {
         // Emoji lives in its own canvas — there's no "open emoji panel" state to
         // toggle off from here (you return via the emoji ABC key), so just open.
-        if panel == .emoji { activate(.emoji); return }
+        if panel.kind == .emoji { activate(.emoji); return }
         if live.activePanel == panel { closePanel() }
         else { live.activePanel = panel; pickerOpen = false }
     }
 
     /// Route a panel selection. Emoji flips the shared controller to swap in the
-    /// emoji canvas; clipboard / notepad open in-place via `live.activePanel`.
+    /// emoji canvas; everything else opens in-place via `live.activePanel`.
     private func activate(_ panel: ActionPanel) {
         pickerOpen = false
-        switch panel {
+        switch panel.kind {
         case .emoji:
             withAnimation(.snappy(duration: 0.22)) { controller.showEmoji = true }
-        case .clipboard, .notepad, .calculator, .extensions, .customPanels:
+        case .clipboard, .notepad, .calculator, .extensions, .customPanels, .customPanel:
             live.activePanel = panel
         }
     }
@@ -634,7 +647,7 @@ public struct KeyboardCanvas: View {
             if let overlay = overlayPanel {
                 // Full-keyboard replacement: panel header + scrollable content.
                 // No background set here — backgroundLayer renders behind it normally.
-                switch overlay {
+                switch overlay.kind {
                 case .emoji:
                     // Never an in-canvas overlay (it swaps to EmojiCanvas).
                     EmptyView()
@@ -684,7 +697,18 @@ public struct KeyboardCanvas: View {
                     )
                 case .customPanels:
                     CustomPanelsContainer(
-                        panels: panels.enabledItems,
+                        panels: groupedCustomPanels,
+                        standalone: nil,
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onInsert: { text in onPanelInsert(text) },
+                        onDismiss: { closePanel() }
+                    )
+                case .customPanel:
+                    // A standalone custom panel — open straight to it.
+                    CustomPanelsContainer(
+                        panels: [],
+                        standalone: panels.items.first { $0.id == overlay.panelID },
                         theme: theme,
                         cornerRadius: CGFloat(settings.keyCornerRadius),
                         onInsert: { text in onPanelInsert(text) },

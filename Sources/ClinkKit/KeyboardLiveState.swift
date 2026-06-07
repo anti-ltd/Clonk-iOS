@@ -11,56 +11,103 @@ import SwiftUI
 /// Which ones are available is driven by `KeyboardSettings`; when more than one
 /// is enabled the button offers a picker, otherwise it toggles the only one
 /// directly. The active panel (if any) is held live in `KeyboardLiveState`.
-public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
-    case clipboard
-    case notepad
+public struct ActionPanel: Hashable, Identifiable, Sendable {
+    /// The fixed built-in panels, plus the two custom-SDK panel kinds. A
+    /// `.customPanel` carries the backing `ClinkPanel` id so individual custom
+    /// panels can appear as their own top-level picker entries; `.customPanels`
+    /// is the single grouped "Panels" entry.
+    public enum Kind: String, Sendable, Hashable {
+        case clipboard, notepad, emoji, calculator, extensions, customPanels, customPanel
+    }
+
+    public let kind: Kind
+    /// For `.customPanel`, the backing `ClinkPanel` id; nil otherwise.
+    public let panelID: String?
+    private let customLabel: String?
+    private let customIcon: String?
+
+    init(kind: Kind, panelID: String? = nil, customLabel: String? = nil, customIcon: String? = nil) {
+        self.kind = kind
+        self.panelID = panelID
+        self.customLabel = customLabel
+        self.customIcon = customIcon
+    }
+
+    public static let clipboard = ActionPanel(kind: .clipboard)
+    public static let notepad = ActionPanel(kind: .notepad)
     /// The emoji keyboard. Unlike the others it doesn't render inside
     /// `KeyboardCanvas` — selecting it flips the controller's `showEmoji` to swap
     /// in the separate `EmojiCanvas` — but it shares the same activation UI.
-    case emoji
-    case calculator
-    /// User-authored custom actions (the Python extension SDK). Lists the
-    /// enabled `ClinkExtension`s; appended after the built-in panels.
-    case extensions
-    /// User-authored custom panels — full custom UIs built from a PyMini script
-    /// (`ClinkPanel`). Lists the enabled panels; appended after the others.
-    case customPanels
+    public static let emoji = ActionPanel(kind: .emoji)
+    public static let calculator = ActionPanel(kind: .calculator)
+    /// User-authored custom actions (the Python extension SDK).
+    public static let extensions = ActionPanel(kind: .extensions)
+    /// The single grouped entry listing all "grouped" custom panels.
+    public static let customPanels = ActionPanel(kind: .customPanels)
+    /// A standalone custom panel that gets its own top-level picker entry.
+    public static func customPanel(id: String, name: String, icon: String) -> ActionPanel {
+        ActionPanel(kind: .customPanel, panelID: id, customLabel: name, customIcon: icon)
+    }
 
-    public var id: String { rawValue }
+    /// Resolve a built-in panel from its stored id (used by `extensionOrder`).
+    /// Returns nil for the custom kinds, which never live in `extensionOrder`.
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "clipboard":  self = .clipboard
+        case "notepad":    self = .notepad
+        case "emoji":      self = .emoji
+        case "calculator": self = .calculator
+        case "extensions": self = .extensions
+        case "customPanels": self = .customPanels
+        default: return nil
+        }
+    }
+
+    public var id: String { panelID.map { "\(kind.rawValue):\($0)" } ?? kind.rawValue }
+
+    // Identity is the `id` only — a custom panel's label/icon can change without
+    // changing which panel it is.
+    public static func == (lhs: ActionPanel, rhs: ActionPanel) -> Bool { lhs.id == rhs.id }
+    public func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     public var label: String {
-        switch self {
+        switch kind {
         case .clipboard:    return "Clipboard"
         case .notepad:      return "Notepad"
         case .emoji:        return "Emoji"
         case .calculator:   return "Calculator"
         case .extensions:   return "Actions"
         case .customPanels: return "Panels"
+        case .customPanel:  return customLabel ?? "Panel"
         }
     }
 
     /// One-line description shown under the label in the `cards` picker.
     public var summary: String {
-        switch self {
+        switch kind {
         case .clipboard:    return "Recent copied text"
         case .notepad:      return "Quick jotted notes"
         case .emoji:        return "Emoji keyboard"
         case .calculator:   return "Arithmetic calculator"
         case .extensions:   return "Your custom actions"
         case .customPanels: return "Your custom panels"
+        case .customPanel:  return "Custom panel"
         }
     }
 
     /// SF Symbol for the button / picker row. `active` swaps to the filled
     /// variant when the panel is open (matching the old clipboard toggle).
     public func icon(active: Bool) -> String {
-        switch self {
+        switch kind {
         case .clipboard:    return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
         case .notepad:      return active ? "note.text.badge.plus" : "note.text"
         case .emoji:        return active ? "face.smiling.fill" : "face.smiling"
         case .calculator:   return active ? "numbers.rectangle.fill" : "numbers.rectangle"
         case .extensions:   return active ? "puzzlepiece.extension.fill" : "puzzlepiece.extension"
         case .customPanels: return active ? "square.grid.2x2.fill" : "square.grid.2x2"
+        case .customPanel:
+            if let customIcon, !customIcon.isEmpty { return customIcon }
+            return "square.grid.2x2"
         }
     }
 }

@@ -234,6 +234,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Show the user's custom panels (full custom UIs) as an action panel.
     /// Appended after the built-in panels, like `userExtensionsEnabled`.
     public var customPanelsEnabled: Bool
+    /// Global default for whether custom panels appear as their own top-level
+    /// picker entries (alongside Clipboard / Notepad / …) rather than grouped
+    /// behind one "Panels" button. Individual panels can override via
+    /// `ClinkPanel.placement`.
+    public var customPanelsStandalone: Bool
     /// Reach the action panels from the top-left button on the suggestion bar.
     public var activateWithIcon: Bool
     /// Reach the action panels by dragging the 123 key upward (the gesture emoji
@@ -441,6 +446,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         calculatorEnabled: Bool = false,
         userExtensionsEnabled: Bool = true,
         customPanelsEnabled: Bool = true,
+        customPanelsStandalone: Bool = false,
         activateWithIcon: Bool = true,
         activateWithSlideUp: Bool = true,
         panelPickerStyle: PanelPickerStyle = .popover,
@@ -535,6 +541,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.calculatorEnabled = calculatorEnabled
         self.userExtensionsEnabled = userExtensionsEnabled
         self.customPanelsEnabled = customPanelsEnabled
+        self.customPanelsStandalone = customPanelsStandalone
         self.activateWithIcon = activateWithIcon
         self.activateWithSlideUp = activateWithSlideUp
         self.panelPickerStyle = panelPickerStyle
@@ -638,6 +645,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         calculatorEnabled = try c.decodeIfPresent(Bool.self, forKey: .calculatorEnabled) ?? false
         userExtensionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .userExtensionsEnabled) ?? true
         customPanelsEnabled = try c.decodeIfPresent(Bool.self, forKey: .customPanelsEnabled) ?? true
+        customPanelsStandalone = try c.decodeIfPresent(Bool.self, forKey: .customPanelsStandalone) ?? false
         activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
         activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
         panelPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
