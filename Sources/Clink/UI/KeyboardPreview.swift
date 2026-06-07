@@ -372,6 +372,65 @@ struct EmojiPreview: View {
     }
 }
 
+/// A live, interactive preview of the calculator panel — the exact `CalculatorPanel`
+/// the extension renders, wired to a local buffer so the user can try arithmetic
+/// right inside the settings page. Mirrors `KeyboardPreview` and `EmojiPreview`.
+struct CalculatorPreview: View {
+    @Environment(\.resolvedKeyboardTheme) private var envTheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    let settings: KeyboardSettings
+    @State private var typed: String = ""
+
+    private var backdropGradient: LinearGradient {
+        let ui = UIColor(envTheme.accent.color)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        let vs = max(0.5, min(1.0, s))
+        let vb = max(0.55, min(0.95, b))
+        let c1 = Color(UIColor(hue: h,                   saturation: vs,       brightness: vb,              alpha: 1))
+        let c2 = Color(UIColor(hue: fmod(h + 0.33, 1.0), saturation: vs * 0.9, brightness: min(1, vb * 1.1), alpha: 1))
+        let c3 = Color(UIColor(hue: fmod(h + 0.67, 1.0), saturation: vs * 0.8, brightness: vb * 0.85,       alpha: 1))
+        return LinearGradient(colors: [c1, c2, c3], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(typed.isEmpty ? "Try it out…" : typed)
+                    .foregroundStyle(typed.isEmpty ? .secondary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                Spacer(minLength: 0)
+                if !typed.isEmpty {
+                    Button { typed = "" } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .background(envTheme.keyFill.color)
+
+            CalculatorPanel(
+                theme: envTheme,
+                cornerRadius: cardCornerRadius,
+                onInsert: { typed = $0 },
+                onCopy: { _ in },
+                onSaveToClipboard: { _ in },
+                onDismiss: {}
+            )
+            .frame(height: KeyboardCanvas.preferredHeight(for: settings))
+            .background { backdropGradient }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(.separator, lineWidth: 0.5)
+        )
+    }
+}
+
 // MARK: - ThemedToolbarBackground
 
 /// Apply to the Image/label inside a toolbar Button (pair with `.buttonStyle(.plain)`)
