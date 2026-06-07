@@ -689,6 +689,11 @@ public struct KeyboardCanvas: View {
                                 onPressDown: { dismissPickerOnInput(); onAnyTap() },
                                 lingerDuration: settings.keyPressLinger,
                                 hitboxScale: settings.hitboxScale,
+            adaptiveEnabled: settings.adaptiveHitboxes,
+            adaptiveGrow: settings.adaptiveGrow,
+            adaptiveShrink: settings.adaptiveShrink,
+            adaptivePredictionWeight: settings.adaptivePredictionWeight,
+            adaptivePredictAtWordStart: settings.adaptivePredictAtWordStart,
                                 cursorStride: CGFloat(settings.spaceCursorStride),
                                 cursorActivationDelay: settings.spaceCursorActivationDelay / 1000,
                                 cursorLineStride: Int(settings.cursorLineStride),
@@ -769,13 +774,29 @@ public struct KeyboardCanvas: View {
         .overlayPreferenceValue(KeyFrameKey.self) { anchors in
             if showHitboxOverlay {
                 GeometryReader { proxy in
-                    let scale = CGFloat(settings.hitboxScale)
+                    let base = CGFloat(settings.hitboxScale)
+                    // Adaptive on: mirror the router's per-letter flex so the
+                    // outlines show the *real* hit regions (green grown, orange
+                    // shrunk) for the predicted next letter.
+                    let adaptive = settings.adaptiveHitboxes
+                        && (touch.predictedFrom != nil || settings.adaptivePredictAtWordStart)
+                    let specs = adaptive ? currentKeySpecs() : [:]
+                    let factors = adaptive
+                        ? AdaptiveHitbox.factorMap(prev: touch.predictedFrom,
+                                                   grow: settings.adaptiveGrow,
+                                                   shrink: settings.adaptiveShrink,
+                                                   predictionWeight: settings.adaptivePredictionWeight)
+                        : [:]
                     ForEach(anchors.sorted(by: { $0.key < $1.key }), id: \.key) { pair in
                         let f = proxy[pair.value]
+                        let letter = adaptive ? glyphLetter(specs[pair.key]) : nil
+                        let factor = letter.flatMap { factors[$0] } ?? 1.0
+                        let scale = base * CGFloat(factor)
                         let w = f.width * scale
                         let h = f.height * scale
+                        let color = adaptive ? AdaptiveHitbox.tint(factor) : Color.cyan
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .stroke(Color.cyan.opacity(0.75), lineWidth: 1.5)
+                            .stroke(color.opacity(0.75), lineWidth: 1.5)
                             .frame(width: w, height: h)
                             .position(x: f.midX, y: f.midY)
                     }
@@ -1118,6 +1139,15 @@ public struct KeyboardCanvas: View {
         for (idx, r) in currentRows.enumerated() { add(r, "r\(idx)") }
         add(bottomRowSpecs, "bottom")
         return map
+    }
+
+    /// The lowercased letter a key types, or nil for non-letter keys — used by the
+    /// adaptive hitbox overlay to size/tint each outline like the router does.
+    private func glyphLetter(_ spec: KeySpec?) -> Character? {
+        guard let spec, spec.kind == .character, !spec.isSpace,
+              case let .text(s) = spec.label, let ch = s.lowercased().first, ch.isLetter
+        else { return nil }
+        return ch
     }
 
     // MARK: - Key specs

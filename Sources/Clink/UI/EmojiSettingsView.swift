@@ -23,7 +23,27 @@ struct EmojiSettingsView: View {
 
     var body: some View {
         @Bindable var model = model
-        ScrollView {
+        VStack(spacing: 0) {
+            if model.settings.emojiEnabled {
+                EmojiPreview(
+                    settings: model.settings,
+                    onSetSkinTone: { base, tone in model.settings.emojiSkinTones[base] = tone }
+                )
+                .padding(.horizontal, UX.screenPadding)
+                .padding(.top, UX.screenPadding)
+                .padding(.bottom, UX.cardSpacing)
+                .overlay(alignment: .bottom) { Divider().opacity(0.4) }
+            }
+            controls
+        }
+        .navigationTitle("Emoji")
+        .navigationBarTitleDisplayMode(.inline)
+        .themePageBackground()
+    }
+
+    private var controls: some View {
+        @Bindable var model = model
+        return ScrollView {
             VStack(spacing: UX.cardSpacing) {
                 CardSection("Emoji panel") {
                     ToggleRow("Emoji keyboard",
@@ -123,9 +143,6 @@ struct EmojiSettingsView: View {
             }
             .padding(UX.screenPadding)
         }
-        .navigationTitle("Emoji")
-        .navigationBarTitleDisplayMode(.inline)
-        .themePageBackground()
     }
 
     private var swatches: some View {

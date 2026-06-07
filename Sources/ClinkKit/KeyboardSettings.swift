@@ -274,6 +274,24 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// hit-testing. Only takes effect while icon activation is on
     /// (`activateWithIcon` with at least one panel enabled).
     public var panelButtonHitboxScale: Double
+    /// Adaptive hitboxes: predict the next letter from what was just typed and
+    /// quietly grow the likely keys' touch targets (shrinking the unlikely ones)
+    /// without moving the visible keys — mirrors iOS's native behaviour. The
+    /// visual keys never move; only the hit regions flex (see `AdaptiveHitbox`).
+    public var adaptiveHitboxes: Bool
+    /// Adaptive: how large a *likely* next letter's hit region may grow (1.0 = no
+    /// growth). Higher = the keyboard leans harder toward the predicted key.
+    public var adaptiveGrow: Double
+    /// Adaptive: how small an *unlikely* next letter's hit region may shrink to
+    /// (1.0 = no shrink). Lower = unlikely keys give up more of their gap.
+    public var adaptiveShrink: Double
+    /// Adaptive: prediction strength (0...1). 0 = size by base letter frequency
+    /// only (ignore what you just typed); 1 = size purely by the bigram context.
+    public var adaptivePredictionWeight: Double
+    /// Adaptive: also flex the keys at the start of a word (before any letter is
+    /// typed), biasing toward common opening letters. Off = keys stay neutral
+    /// until there's a previous letter to predict from.
+    public var adaptivePredictAtWordStart: Bool
     /// How far (in points) a finger must slide across the space bar to move the
     /// text cursor by one character — also the threshold before a press flips
     /// from "tap to type a space" into cursor-trackpad mode. Smaller = more
@@ -407,6 +425,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         hitboxScale: Double = 0.90,
         suggestionHitboxScale: Double = 1.0,
         panelButtonHitboxScale: Double = 1.0,
+        adaptiveHitboxes: Bool = false,
+        adaptiveGrow: Double = AdaptiveHitbox.defaultGrow,
+        adaptiveShrink: Double = AdaptiveHitbox.defaultShrink,
+        adaptivePredictionWeight: Double = AdaptiveHitbox.defaultPredictionWeight,
+        adaptivePredictAtWordStart: Bool = true,
         spaceCursorStride: Double = 10,
         spaceCursorActivationDelay: Double = 0,
         cursorMovementType: CursorMovementType = .spacebar,
@@ -487,6 +510,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.hitboxScale = hitboxScale
         self.suggestionHitboxScale = suggestionHitboxScale
         self.panelButtonHitboxScale = panelButtonHitboxScale
+        self.adaptiveHitboxes = adaptiveHitboxes
+        self.adaptiveGrow = adaptiveGrow
+        self.adaptiveShrink = adaptiveShrink
+        self.adaptivePredictionWeight = adaptivePredictionWeight
+        self.adaptivePredictAtWordStart = adaptivePredictAtWordStart
         self.spaceCursorStride = spaceCursorStride
         self.spaceCursorActivationDelay = spaceCursorActivationDelay
         self.cursorMovementType = cursorMovementType
@@ -576,6 +604,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.90
         suggestionHitboxScale = try c.decodeIfPresent(Double.self, forKey: .suggestionHitboxScale) ?? 1.0
         panelButtonHitboxScale = try c.decodeIfPresent(Double.self, forKey: .panelButtonHitboxScale) ?? 1.0
+        adaptiveHitboxes = try c.decodeIfPresent(Bool.self, forKey: .adaptiveHitboxes) ?? false
+        adaptiveGrow = try c.decodeIfPresent(Double.self, forKey: .adaptiveGrow) ?? AdaptiveHitbox.defaultGrow
+        adaptiveShrink = try c.decodeIfPresent(Double.self, forKey: .adaptiveShrink) ?? AdaptiveHitbox.defaultShrink
+        adaptivePredictionWeight = try c.decodeIfPresent(Double.self, forKey: .adaptivePredictionWeight) ?? AdaptiveHitbox.defaultPredictionWeight
+        adaptivePredictAtWordStart = try c.decodeIfPresent(Bool.self, forKey: .adaptivePredictAtWordStart) ?? true
         spaceCursorStride = try c.decodeIfPresent(Double.self, forKey: .spaceCursorStride) ?? 10
         spaceCursorActivationDelay = try c.decodeIfPresent(Double.self, forKey: .spaceCursorActivationDelay) ?? 0
         cursorMovementType = (try? c.decodeIfPresent(CursorMovementType.self, forKey: .cursorMovementType)) ?? .spacebar

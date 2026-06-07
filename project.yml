@@ -64,7 +64,7 @@ targets:
       properties:
         CFBundleDisplayName: Clink
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "6"
+        CFBundleVersion: "7"
         # Export compliance: Clink runs fully offline and implements no
         # encryption of its own (only standard OS-exempt APIs). Declaring this
         # auto-clears App Store Connect's "Missing Compliance" prompt on every
@@ -74,6 +74,9 @@ targets:
           UIColorName: ""
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Portrait-only keyboard app. Opt out of iPad multitasking so the
+        # validator doesn't demand all 4 orientations (error 90474).
+        UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UISupportedInterfaceOrientations~ipad:
@@ -111,7 +114,7 @@ targets:
       properties:
         CFBundleDisplayName: Clink
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "6"
+        CFBundleVersion: "7"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           # The principal class is marked @objc(KeyboardViewController)

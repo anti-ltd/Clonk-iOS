@@ -84,11 +84,15 @@ struct TabbedPreviewLayout: View {
     /// Forces the preview AND its controls into a specific appearance, so a theme
     /// can be previewed dark even while the device is light (and vice versa).
     var previewColorScheme: ColorScheme? = nil
+    /// Draw the hitbox debug outlines on the pinned preview (the Hitboxes editor).
+    var showHitboxOverlay: Bool = false
     @State private var selection: String
 
-    init(settings: KeyboardSettings, previewColorScheme: ColorScheme? = nil, tabs: [PreviewTab]) {
+    init(settings: KeyboardSettings, previewColorScheme: ColorScheme? = nil,
+         showHitboxOverlay: Bool = false, tabs: [PreviewTab]) {
         self.settings = settings
         self.previewColorScheme = previewColorScheme
+        self.showHitboxOverlay = showHitboxOverlay
         self.tabs = tabs
         _selection = State(initialValue: tabs.first?.id ?? "")
     }
@@ -103,7 +107,7 @@ struct TabbedPreviewLayout: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            KeyboardPreview(settings: settings)
+            KeyboardPreview(settings: settings, showHitboxOverlay: showHitboxOverlay)
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.screenPadding)
                 .padding(.bottom, UX.cardSpacing)
@@ -299,6 +303,69 @@ struct KeyboardPreview: View {
             // Pin to the same content height the extension uses, so the preview
             // has no indefinite-height gap below the keys.
             .frame(height: KeyboardCanvas.preferredHeight(for: settings))
+            .background { backdropGradient }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(.separator, lineWidth: 0.5)
+        )
+    }
+}
+
+/// A live, interactive preview of the real emoji keyboard — the exact
+/// `EmojiCanvas` the extension renders, wired to a local buffer so the user can
+/// browse, tone, and search emoji right inside the settings page while tuning
+/// the layout controls beneath it. Mirrors `KeyboardPreview`.
+struct EmojiPreview: View {
+    @Environment(\.resolvedKeyboardTheme) private var envTheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    let settings: KeyboardSettings
+    /// Persist a per-emoji skin-tone pick made by holding in the preview.
+    var onSetSkinTone: (String, SkinTone) -> Void = { _, _ in }
+    @State private var typed: String = ""
+
+    /// Triadic gradient derived from the theme accent — same backdrop the letter
+    /// preview floats over so Liquid Glass themes have something to refract.
+    private var backdropGradient: LinearGradient {
+        let ui = UIColor(envTheme.accent.color)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        let vs = max(0.5, min(1.0, s))
+        let vb = max(0.55, min(0.95, b))
+        let c1 = Color(UIColor(hue: h,                   saturation: vs,       brightness: vb,              alpha: 1))
+        let c2 = Color(UIColor(hue: fmod(h + 0.33, 1.0), saturation: vs * 0.9, brightness: min(1, vb * 1.1), alpha: 1))
+        let c3 = Color(UIColor(hue: fmod(h + 0.67, 1.0), saturation: vs * 0.8, brightness: vb * 0.85,       alpha: 1))
+        return LinearGradient(colors: [c1, c2, c3], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Faux text field showing what's been inserted.
+            HStack {
+                Text(typed.isEmpty ? "Try it out…" : typed)
+                    .foregroundStyle(typed.isEmpty ? .secondary : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                Spacer(minLength: 0)
+                if !typed.isEmpty {
+                    Button { typed = "" } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .background(envTheme.keyFill.color)
+
+            EmojiCanvas(
+                settings: settings,
+                onInsert: { typed.append($0) },
+                onBackspace: { if !typed.isEmpty { typed.removeLast() } },
+                onSetSkinTone: onSetSkinTone
+            )
+            .frame(height: EmojiCanvas.preferredHeight(for: settings))
             .background { backdropGradient }
         }
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))

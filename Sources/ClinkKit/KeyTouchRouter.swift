@@ -96,6 +96,18 @@ public final class KeyTouchRouter {
     fileprivate var lingerDuration: TimeInterval = 0.1
     /// Scale applied to each key's frame before hit-testing (see `key(at:)`).
     fileprivate var hitboxScale: Double = 1.0
+    /// Adaptive hitboxes on: bias hit-testing toward the predicted next letter by
+    /// flexing each letter key's frame (see `key(at:)` / `AdaptiveHitbox`).
+    fileprivate var adaptiveEnabled: Bool = false
+    /// Adaptive tuning knobs (see `AdaptiveHitbox` / `KeyboardSettings`).
+    fileprivate var adaptiveGrow: Double = AdaptiveHitbox.defaultGrow
+    fileprivate var adaptiveShrink: Double = AdaptiveHitbox.defaultShrink
+    fileprivate var adaptivePredictionWeight: Double = AdaptiveHitbox.defaultPredictionWeight
+    fileprivate var adaptivePredictAtWordStart: Bool = true
+    /// The last letter typed (lowercased), driving the next-letter prediction.
+    /// nil at a word boundary (after space / function keys). Published so the
+    /// debug overlay can mirror the same prediction.
+    public private(set) var predictedFrom: Character?
     /// Points of horizontal space-bar travel per one-character cursor move, and
     /// the threshold to enter cursor-trackpad mode. Larger = less sensitive (see
     /// `KeyboardSettings.spaceCursorStride`).
@@ -128,6 +140,11 @@ public final class KeyTouchRouter {
                             onPressDown: @escaping () -> Void,
                             lingerDuration: TimeInterval,
                             hitboxScale: Double,
+                            adaptiveEnabled: Bool,
+                            adaptiveGrow: Double,
+                            adaptiveShrink: Double,
+                            adaptivePredictionWeight: Double,
+                            adaptivePredictAtWordStart: Bool,
                             cursorStride: CGFloat,
                             cursorActivationDelay: TimeInterval,
                             cursorLineStride: Int,
@@ -143,6 +160,11 @@ public final class KeyTouchRouter {
         self.onPressDown = onPressDown
         self.lingerDuration = lingerDuration
         self.hitboxScale = hitboxScale
+        self.adaptiveEnabled = adaptiveEnabled
+        self.adaptiveGrow = adaptiveGrow
+        self.adaptiveShrink = adaptiveShrink
+        self.adaptivePredictionWeight = adaptivePredictionWeight
+        self.adaptivePredictAtWordStart = adaptivePredictAtWordStart
         self.cursorStride = cursorStride
         self.cursorActivationDelay = cursorActivationDelay
         self.cursorLineStride = cursorLineStride
@@ -170,23 +192,53 @@ public final class KeyTouchRouter {
     /// vertical distance of 0 across that whole band, so a touch there can never
     /// jump up a row.
     fileprivate func key(at point: CGPoint) -> String? {
+        // Adaptive: each letter key's frame is flexed by its predicted likelihood
+        // (the previous letter drives the prediction). Non-letter keys stay at
+        // their plain size. With adaptive off the map is empty → every factor is
+        // 1.0 and this reduces to the original nearest-frame routing.
+        let factors: [Character: Double]
+        if adaptiveEnabled, predictedFrom != nil || adaptivePredictAtWordStart {
+            factors = AdaptiveHitbox.factorMap(prev: predictedFrom,
+                                               grow: adaptiveGrow,
+                                               shrink: adaptiveShrink,
+                                               predictionWeight: adaptivePredictionWeight)
+        } else {
+            factors = [:]
+        }
         var best: String?
         var bestDist = CGFloat.greatestFiniteMagnitude
+        var bestFactor = 0.0
         for (id, f) in frames {
-            let sf = scaledFrame(f)
+            var factor = 1.0
+            if adaptiveEnabled, let c = letterOfKey(id) { factor = factors[c] ?? 1.0 }
+            let sf = scaledFrame(f, extra: factor)
             let dx = max(sf.minX - point.x, 0, point.x - sf.maxX)
             let dy = max(sf.minY - point.y, 0, point.y - sf.maxY)
             let d = dx * dx + dy * dy
-            if d < bestDist { bestDist = d; best = id }
+            // On a tie (overlapping enlarged frames both contain the point), the
+            // more-likely key wins — otherwise dictionary order would decide.
+            if d < bestDist || (d == bestDist && factor > bestFactor) {
+                bestDist = d; best = id; bestFactor = factor
+            }
         }
         return best
     }
 
-    private func scaledFrame(_ f: CGRect) -> CGRect {
-        guard hitboxScale != 1.0 else { return f }
-        let w = f.width * CGFloat(hitboxScale)
-        let h = f.height * CGFloat(hitboxScale)
+    private func scaledFrame(_ f: CGRect, extra: Double = 1.0) -> CGRect {
+        let s = hitboxScale * extra
+        guard s != 1.0 else { return f }
+        let w = f.width * CGFloat(s)
+        let h = f.height * CGFloat(s)
         return CGRect(x: f.midX - w / 2, y: f.midY - h / 2, width: w, height: h)
+    }
+
+    /// The lowercased letter a key types, or nil for space / function / digit /
+    /// symbol keys (which don't participate in adaptive sizing).
+    private func letterOfKey(_ id: String) -> Character? {
+        guard let spec = resolveSpec(id), spec.kind == .character, !spec.isSpace,
+              case let .text(s) = spec.label, let ch = s.lowercased().first, ch.isLetter
+        else { return nil }
+        return ch
     }
 
     // MARK: - Per-touch lifecycle (called by the UIView)
@@ -212,6 +264,15 @@ public final class KeyTouchRouter {
         recomputePressed()
         tapTicks[id, default: 0] &+= 1   // fire the per-press tap pulse
         onPressDown()
+
+        // Remember the letter just typed so the *next* touch can predict from it.
+        // Space / function keys reset to a word boundary (nil → unigram prior).
+        if spec.kind == .character, !spec.isSpace, case let .text(g) = spec.label,
+           let ch = g.lowercased().first, ch.isLetter {
+            predictedFrom = ch
+        } else {
+            predictedFrom = nil
+        }
 
         switch spec.kind {
         case .character:
@@ -702,6 +763,11 @@ struct MultiTouchSurface: UIViewRepresentable {
     let onPressDown: () -> Void
     let lingerDuration: TimeInterval
     let hitboxScale: Double
+    let adaptiveEnabled: Bool
+    let adaptiveGrow: Double
+    let adaptiveShrink: Double
+    let adaptivePredictionWeight: Double
+    let adaptivePredictAtWordStart: Bool
     let cursorStride: CGFloat
     let cursorActivationDelay: TimeInterval
     let cursorLineStride: Int
@@ -717,7 +783,11 @@ struct MultiTouchSurface: UIViewRepresentable {
         let v = KeyGridTouchView(router: router)
         router.update(frames: frames, resolveSpec: resolveSpec,
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
-                      hitboxScale: hitboxScale, cursorStride: cursorStride,
+                      hitboxScale: hitboxScale, adaptiveEnabled: adaptiveEnabled,
+                      adaptiveGrow: adaptiveGrow, adaptiveShrink: adaptiveShrink,
+                      adaptivePredictionWeight: adaptivePredictionWeight,
+                      adaptivePredictAtWordStart: adaptivePredictAtWordStart,
+                      cursorStride: cursorStride,
                       cursorActivationDelay: cursorActivationDelay,
                       cursorLineStride: cursorLineStride,
                       cursorCombined: cursorCombined,
@@ -733,7 +803,11 @@ struct MultiTouchSurface: UIViewRepresentable {
     func updateUIView(_ uiView: KeyGridTouchView, context: Context) {
         router.update(frames: frames, resolveSpec: resolveSpec,
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
-                      hitboxScale: hitboxScale, cursorStride: cursorStride,
+                      hitboxScale: hitboxScale, adaptiveEnabled: adaptiveEnabled,
+                      adaptiveGrow: adaptiveGrow, adaptiveShrink: adaptiveShrink,
+                      adaptivePredictionWeight: adaptivePredictionWeight,
+                      adaptivePredictAtWordStart: adaptivePredictAtWordStart,
+                      cursorStride: cursorStride,
                       cursorActivationDelay: cursorActivationDelay,
                       cursorLineStride: cursorLineStride,
                       cursorCombined: cursorCombined,
