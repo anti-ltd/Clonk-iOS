@@ -131,6 +131,14 @@ struct ExtensionEditorView: View {
                 Text(draft.input.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if draft.input == .word || draft.input == .before {
+                    Divider().padding(.vertical, 2)
+                    Toggle("Replace input", isOn: $draft.replacesInput)
+                    Text(draft.replacesInput
+                         ? "The input text is deleted and replaced with the output."
+                         : "The output is inserted at the cursor, keeping the input.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, UX.rowVPadding)
         }

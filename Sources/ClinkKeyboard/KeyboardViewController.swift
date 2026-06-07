@@ -667,8 +667,12 @@ final class KeyboardViewController: UIInputViewController {
         }
 
         isApplyingEdit = true
-        if ext.input == .word && !word.isEmpty {
-            deleteBackwardMirrored(word.count)
+        // Replace the consumed input with the output when the action is a true
+        // transform. Only `.word` / `.before` read from the document, so only
+        // those can be deleted; `input` holds exactly what was read.
+        let canReplace = (ext.input == .word || ext.input == .before)
+        if ext.replacesInput && canReplace && !input.isEmpty {
+            deleteBackwardMirrored(input.count)
         }
         insertMirrored(output)
         isApplyingEdit = false

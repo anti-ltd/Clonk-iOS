@@ -53,6 +53,11 @@ public struct ClinkExtension: Codable, Sendable, Identifiable, Equatable {
     public var source: String
     /// Where the action's input comes from.
     public var input: ExtInputSource
+    /// Replace the consumed input with the output (a true transform) rather than
+    /// inserting at the cursor. Only applies to `.word` / `.before` inputs — for
+    /// `.clipboard` / `.none` there's nothing in the document to replace, so the
+    /// output is always inserted. Off = append (e.g. a word-count readout).
+    public var replacesInput: Bool
     /// Whether the action appears in the keyboard panel.
     public var enabled: Bool
 
@@ -63,6 +68,7 @@ public struct ClinkExtension: Codable, Sendable, Identifiable, Equatable {
         summary: String = "",
         source: String,
         input: ExtInputSource = .word,
+        replacesInput: Bool = true,
         enabled: Bool = true
     ) {
         self.id = id
@@ -71,6 +77,7 @@ public struct ClinkExtension: Codable, Sendable, Identifiable, Equatable {
         self.summary = summary
         self.source = source
         self.input = input
+        self.replacesInput = replacesInput
         self.enabled = enabled
     }
 
@@ -84,6 +91,7 @@ public struct ClinkExtension: Codable, Sendable, Identifiable, Equatable {
         summary = try c.decodeIfPresent(String.self, forKey: .summary) ?? ""
         source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
         input = (try? c.decodeIfPresent(ExtInputSource.self, forKey: .input)) ?? .word
+        replacesInput = try c.decodeIfPresent(Bool.self, forKey: .replacesInput) ?? true
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
     }
 }
@@ -161,6 +169,6 @@ public extension ClinkExtension {
                 n = len(text.split())
                 return f"{n} words"
             """,
-            input: .before),
+            input: .before, replacesInput: false),
     ]
 }
