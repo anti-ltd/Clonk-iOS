@@ -301,9 +301,14 @@ public struct EmojiCanvas: View {
     private func cellMetrics(cross: CGFloat) -> CellMetrics {
         let horizontal = settings.emojiScrollDirection == .horizontal
         let count = max(1, horizontal ? settings.emojiRowCount : settings.emojiColumnCount)
-        let usable = cross - 12 - settings.emojiCellSpacing * CGFloat(count - 1)   // edge padding + gaps
+        // Layout square: shrinks with spacing so the cells still tile the row.
+        let usable = cross - 12 - settings.emojiCellSpacing * CGFloat(count - 1)
         let side = max(16, usable / CGFloat(count))
-        return CellMetrics(side: side, glyph: side * settings.emojiGlyphScale)
+        // Glyph size keys off a spacing-INDEPENDENT reference cell (padding only),
+        // so dragging the spacing slider never resizes the emoji — it only changes
+        // the gaps between them.
+        let refSide = max(16, (cross - 12) / CGFloat(count))
+        return CellMetrics(side: side, glyph: refSide * settings.emojiGlyphScale)
     }
 
     private func grid(_ emoji: [String], scrollTarget: String?) -> some View {
