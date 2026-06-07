@@ -33,6 +33,8 @@ struct ThemeBuilderView: View {
     @State private var showKeyGradientEditor = false
     @State private var editingKeyGradient: ThemeGradient?
 
+    @State private var colorPicker = ColorPickerPresenter()
+
     init(theme: Theme) {
         _draft = State(initialValue: theme)
         originalImageID = theme.backgroundImageID
@@ -64,8 +66,6 @@ struct ThemeBuilderView: View {
 
     var body: some View {
         NavigationStack {
-            // Pinned preview + segmented tabs, just like the Layout/Keys editor:
-            // the keyboard stays put while the fields scroll under it.
             TabbedPreviewLayout(settings: previewSettings,
                                 previewColorScheme: draft.isDark ? .dark : .light, tabs: [
                 PreviewTab("General") {
@@ -86,17 +86,6 @@ struct ThemeBuilderView: View {
                     backgroundCard
                 },
             ])
-            // Drive the whole editor's chrome from the theme under edit — so the
-            // cards, nav tint, pickers and swatches preview the draft's colours
-            // and rounding the moment the sheet opens and on every change, even
-            // when this theme isn't the active one.
-            .tint(draft.accent.color)
-            .fontDesign(draft.keyFontDesign.fontDesign)
-            .environment(\.resolvedKeyboardTheme, draft)
-            .environment(\.cardTint, draft.keyFill.color)
-            .environment(\.specialKeyTint, draft.specialKeyFill.color)
-            .environment(\.cardCornerRadius, previewSettings.keyCornerRadius)
-            .environment(\.useGlassCards, draft.material == .liquidGlass)
             .navigationTitle(isExisting ? "Edit Theme" : "New Theme")
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: photoItem) { _, item in importPhoto(item) }
@@ -120,6 +109,17 @@ struct ThemeBuilderView: View {
                 }
             }
         }
+        // Environment on the NavigationStack so both page content AND the color
+        // picker overlay share the same theme values.
+        .tint(draft.accent.color)
+        .fontDesign(draft.keyFontDesign.fontDesign)
+        .environment(\.resolvedKeyboardTheme, draft)
+        .environment(\.cardTint, draft.keyFill.color)
+        .environment(\.specialKeyTint, draft.specialKeyFill.color)
+        .environment(\.cardCornerRadius, previewSettings.keyCornerRadius)
+        .environment(\.useGlassCards, draft.material == .liquidGlass)
+        .environment(\.colorPickerPresenter, colorPicker)
+        .themedColorPicker(colorPicker)
     }
 
     private var styleCard: some View {
@@ -526,6 +526,7 @@ struct GradientEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.cardCornerRadius) private var cardCornerRadius
     @State private var draft: ThemeGradient
+    @State private var colorPicker = ColorPickerPresenter()
 
     init(initial: ThemeGradient, onSave: @escaping (ThemeGradient) -> Void) {
         _draft = State(initialValue: initial)
@@ -556,6 +557,8 @@ struct GradientEditorView: View {
                 }
             }
         }
+        .environment(\.colorPickerPresenter, colorPicker)
+        .themedColorPicker(colorPicker)
     }
 
     private var preview: some View {
@@ -667,76 +670,167 @@ struct GradientEditorView: View {
     }
 }
 
+// MARK: - Color picker presenter (environment-threaded state)
+
+@Observable @MainActor
+final class ColorPickerPresenter {
+    var isPresented = false
+    private var getter: (() -> Color)?
+    private var setter: ((Color) -> Void)?
+
+    var color: Color {
+        get { getter?() ?? .white }
+        set { setter?(newValue) }
+    }
+
+    func present(_ binding: Binding<Color>) {
+        getter = { binding.wrappedValue }
+        setter = { binding.wrappedValue = $0 }
+        isPresented = true
+    }
+
+    func dismiss() { isPresented = false }
+}
+
+private struct ColorPickerPresenterKey: EnvironmentKey {
+    static let defaultValue: ColorPickerPresenter? = nil
+}
+
+extension EnvironmentValues {
+    var colorPickerPresenter: ColorPickerPresenter? {
+        get { self[ColorPickerPresenterKey.self] }
+        set { self[ColorPickerPresenterKey.self] = newValue }
+    }
+}
+
+// MARK: - Swatch button
+
 private struct ColorSwatchButton: View {
     @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(\.colorPickerPresenter) private var presenter
     @Binding var color: Color
     let width: CGFloat
     let height: CGFloat
-    @State private var isPresented = false
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous)
-        Button { isPresented = true } label: {
+        Button { presenter?.present($color) } label: {
             shape.fill(color)
                 .frame(width: width, height: height)
                 .overlay(shape.strokeBorder(.secondary.opacity(0.35), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $isPresented) {
-            ColorPickerSheet(color: $color)
+    }
+}
+
+// MARK: - Themed popup overlay
+
+extension View {
+    func themedColorPicker(_ presenter: ColorPickerPresenter) -> some View {
+        modifier(ThemedColorPickerModifier(presenter: presenter))
+    }
+}
+
+private struct ThemedColorPickerModifier: ViewModifier {
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    let presenter: ColorPickerPresenter
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottom) {
+            if presenter.isPresented {
+                ZStack(alignment: .bottom) {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                        .onTapGesture { withAnimation(.spring(response: 0.3)) { presenter.dismiss() } }
+
+                    ColorPickerPanel(presenter: presenter, cornerRadius: cardCornerRadius)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                .animation(.spring(response: 0.3, dampingFraction: 0.85), value: presenter.isPresented)
+            }
         }
     }
 }
 
-// MARK: - Custom HSB color picker sheet
-
-private struct ColorPickerSheet: View {
-    @Environment(\.dismiss) private var dismiss
+private struct ColorPickerPanel: View {
     @Environment(\.cardCornerRadius) private var cardCornerRadius
-    @Binding var color: Color
+    let presenter: ColorPickerPresenter
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle + title row
+            VStack(spacing: 10) {
+                Capsule()
+                    .fill(.secondary.opacity(0.4))
+                    .frame(width: 36, height: 4)
+                    .padding(.top, 10)
+
+                HStack {
+                    Text("Color")
+                        .font(.headline)
+                    Spacer()
+                    Button("Done") {
+                        withAnimation(.spring(response: 0.3)) { presenter.dismiss() }
+                    }
+                    .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 4)
+            }
+
+            Divider().opacity(0.4)
+
+            ScrollView {
+                ColorPickerContent(presenter: presenter)
+                    .padding(20)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .themePageBackground()
+        .clipShape(UnevenRoundedRectangle(
+            topLeadingRadius: cornerRadius,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: cornerRadius,
+            style: .continuous
+        ))
+        .shadow(color: .black.opacity(0.2), radius: 24, y: -4)
+    }
+}
+
+// MARK: - HSB picker content
+
+private struct ColorPickerContent: View {
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    let presenter: ColorPickerPresenter
 
     @State private var hue: Double = 0
     @State private var saturation: Double = 1
     @State private var brightness: Double = 1
     @State private var alpha: Double = 1
 
-    init(color: Binding<Color>) {
-        _color = color
-        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        UIColor(color.wrappedValue).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
-        _hue = State(initialValue: Double(h))
-        _saturation = State(initialValue: Double(s))
-        _brightness = State(initialValue: Double(b))
-        _alpha = State(initialValue: Double(a))
-    }
-
     private var current: Color {
         Color(hue: hue, saturation: saturation, brightness: brightness, opacity: alpha)
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    preview
-                    sliders
-                    presets
-                }
-                .padding(20)
-            }
-            .navigationTitle("Color")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
+        VStack(spacing: 20) {
+            preview
+            sliders
+            presets
         }
-        .presentationDetents([.medium, .large])
-        .onChange(of: hue)        { _, _ in color = current }
-        .onChange(of: saturation) { _, _ in color = current }
-        .onChange(of: brightness) { _, _ in color = current }
-        .onChange(of: alpha)      { _, _ in color = current }
+        .onAppear { loadFrom(presenter.color) }
+        .onChange(of: hue)        { _, _ in presenter.color = current }
+        .onChange(of: saturation) { _, _ in presenter.color = current }
+        .onChange(of: brightness) { _, _ in presenter.color = current }
+        .onChange(of: alpha)      { _, _ in presenter.color = current }
+    }
+
+    private func loadFrom(_ c: Color) {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(c).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        hue = Double(h); saturation = Double(s); brightness = Double(b); alpha = Double(a)
     }
 
     // Rows of presets — each row is shown as a full-width evenly-spaced HStack.
