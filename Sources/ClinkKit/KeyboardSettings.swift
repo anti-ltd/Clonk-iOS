@@ -227,6 +227,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Show the calculator as an action panel — evaluate arithmetic and insert
     /// the result directly into the host document.
     public var calculatorEnabled: Bool
+    /// Show the user's custom actions (the Python extension SDK) as an action
+    /// panel. The panel lists every enabled `ClinkExtension`; appended after the
+    /// built-in panels rather than living in `extensionOrder`.
+    public var userExtensionsEnabled: Bool
+    /// Show the user's custom panels (full custom UIs) as an action panel.
+    /// Appended after the built-in panels, like `userExtensionsEnabled`.
+    public var customPanelsEnabled: Bool
     /// Reach the action panels from the top-left button on the suggestion bar.
     public var activateWithIcon: Bool
     /// Reach the action panels by dragging the 123 key upward (the gesture emoji
@@ -432,6 +439,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         notepadMode: NotepadMode = .scratchpad,
         emojiEnabled: Bool = true,
         calculatorEnabled: Bool = false,
+        userExtensionsEnabled: Bool = true,
+        customPanelsEnabled: Bool = true,
         activateWithIcon: Bool = true,
         activateWithSlideUp: Bool = true,
         panelPickerStyle: PanelPickerStyle = .popover,
@@ -524,6 +533,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.notepadMode = notepadMode
         self.emojiEnabled = emojiEnabled
         self.calculatorEnabled = calculatorEnabled
+        self.userExtensionsEnabled = userExtensionsEnabled
+        self.customPanelsEnabled = customPanelsEnabled
         self.activateWithIcon = activateWithIcon
         self.activateWithSlideUp = activateWithSlideUp
         self.panelPickerStyle = panelPickerStyle
@@ -625,6 +636,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         notepadMode = (try? c.decodeIfPresent(NotepadMode.self, forKey: .notepadMode)) ?? .scratchpad
         emojiEnabled = try c.decodeIfPresent(Bool.self, forKey: .emojiEnabled) ?? true
         calculatorEnabled = try c.decodeIfPresent(Bool.self, forKey: .calculatorEnabled) ?? false
+        userExtensionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .userExtensionsEnabled) ?? true
+        customPanelsEnabled = try c.decodeIfPresent(Bool.self, forKey: .customPanelsEnabled) ?? true
         activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
         activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
         panelPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover

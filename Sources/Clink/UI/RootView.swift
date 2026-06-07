@@ -78,6 +78,10 @@ struct RootView: View {
         // Advanced placeholders.
         case hitboxes, overlays, response, performance
         case clipboard, notepad, emoji, calculator
+        /// The Python extension SDK — author / manage custom keyboard actions.
+        case customActions
+        /// Custom panels — author / manage full custom keyboard UIs.
+        case customPanels
     }
 
     private let sidebarWidth: CGFloat = 290
@@ -281,6 +285,8 @@ private struct DetailHost: View {
         case .notepad:    NotepadView()
         case .emoji:      EmojiSettingsView()
         case .calculator: CalculatorSettingsView()
+        case .customActions: ExtensionsView()
+        case .customPanels: PanelsView()
         // Placeholder pages — content to be built out.
         case .animation:   AnimationView()
         case .automation:  AutomationView()
@@ -372,6 +378,8 @@ private struct SidebarPanel: View {
         [
             NavItem(title: "Animation",   icon: "wand.and.stars",        dest: .animation),
             NavItem(title: "Automation",  icon: "gearshape.2",           dest: .automation),
+            NavItem(title: "Custom Actions", icon: "puzzlepiece.extension", dest: .customActions),
+            NavItem(title: "Custom Panels", icon: "square.grid.2x2",      dest: .customPanels),
             NavItem(title: "Cursor",      icon: "cursorarrow",           dest: .cursor),
             NavItem(title: "Haptics",     icon: "hand.tap",                         dest: .haptics),
             NavItem(title: "Keys",        icon: "keyboard",              dest: .keys),
@@ -505,6 +513,7 @@ private struct SidebarPanel: View {
             Button { select(.clink) } label: {
                 HStack(spacing: 10) {
                     LogoMark(color: themeAccent,
+                             letterColor: model.settings.resolvedTheme(dark: colorScheme == .dark).keyText.color,
                              cornerFraction: model.settings.keyCornerRadius / model.settings.keyHeight)
                         .frame(width: 32, height: 32)
                     Text("Clink").font(.title3.weight(.semibold))
@@ -838,6 +847,8 @@ private struct ClinkContent: View {
     private let customizationCards: [DestCard] = [
         DestCard(title: "Animation",   icon: "wand.and.stars",                              description: "Spring physics and press timing",       dest: .animation),
         DestCard(title: "Automation",  icon: "gearshape.2",                                 description: "Auto-capitalize and smart punctuation", dest: .automation),
+        DestCard(title: "Custom Actions", icon: "puzzlepiece.extension",                     description: "Write keyboard actions in Python",      dest: .customActions),
+        DestCard(title: "Custom Panels", icon: "square.grid.2x2",                            description: "Build custom keyboard UIs in Python",   dest: .customPanels),
         DestCard(title: "Cursor",      icon: "cursorarrow",                                 description: "Movement style and feel",               dest: .cursor),
         DestCard(title: "Haptics",     icon: "hand.tap",                                    description: "Key press haptic feedback",             dest: .haptics),
         DestCard(title: "Keys",        icon: "keyboard",                                    description: "Size, shape, and backspace repeat",     dest: .keys),
@@ -873,6 +884,7 @@ private struct ClinkContent: View {
             VStack(alignment: .leading, spacing: UX.cardSpacing) {
                 VStack(spacing: 6) {
                     LogoMark(color: themeAccent,
+                             letterColor: model.settings.resolvedTheme(dark: colorScheme == .dark).keyText.color,
                              cornerFraction: model.settings.keyCornerRadius / model.settings.keyHeight)
                         .frame(width: 72, height: 72)
                     Text("Clink")

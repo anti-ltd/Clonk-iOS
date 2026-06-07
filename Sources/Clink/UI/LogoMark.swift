@@ -8,7 +8,10 @@ import SwiftUI
 /// tile corners and the arc end-caps track the keyboard's Roundness setting:
 /// sharp keys → square corners + square arc caps, round keys → round both.
 struct LogoMark: View {
+    /// Tile color — the theme accent.
     var color: Color
+    /// The "c" stroke color — the theme key letter color.
+    var letterColor: Color
     var cornerFraction: CGFloat = 0.28
 
     private var f: CGFloat { min(max(cornerFraction, 0), 0.5) }
@@ -21,11 +24,10 @@ struct LogoMark: View {
                 RoundedRectangle(cornerRadius: s * f, style: .continuous)
                     .fill(color)
                 CArc()
-                    .stroke(style: StrokeStyle(lineWidth: s * 0.13, lineCap: lineCap))
-                    .blendMode(.destinationOut)
+                    .stroke(letterColor,
+                            style: StrokeStyle(lineWidth: s * 0.13, lineCap: lineCap))
             }
             .frame(width: s, height: s)
-            .compositingGroup()
         }
         .aspectRatio(1, contentMode: .fit)
     }

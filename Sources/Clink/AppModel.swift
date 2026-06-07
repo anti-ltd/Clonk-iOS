@@ -30,6 +30,8 @@ final class AppModel {
 
     let clipboard = ClipboardManager()
     let notepad = NotepadManager()
+    let extensions = ExtensionManager()
+    let panels = PanelManager()
 
     private let store = SharedStore.shared
     private let keyboardBundleID = "ltd.anti.clink.keyboard"

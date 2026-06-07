@@ -22,6 +22,8 @@ final class KeyboardViewController: UIInputViewController {
     private let live = KeyboardLiveState()
     private let clipboard = ClipboardManager()
     private let notepad = NotepadManager()
+    private let extensions = ExtensionManager()
+    private let panels = PanelManager()
     /// Shared transient UI state (plane/shift/emoji-mode). Held by the controller
     /// so letters ⇄ emoji is an internal SwiftUI swap — no system keyboard
     /// transition, so switching is instant with none of the appearance resize.
@@ -136,6 +138,9 @@ final class KeyboardViewController: UIInputViewController {
         // while we weren't on screen.
         store.reportFullAccess(hasFullAccess)
         reloadSettings()
+        // Pick up custom actions / panels created / edited in the app.
+        extensions.reload()
+        panels.reload()
         // loadLexicon()  // TEMP: disabled to isolate the launch crash.
         // We may be attaching to a different text field than last time — the mirror
         // can't be trusted across that, so re-seed on the next read.
@@ -414,6 +419,8 @@ final class KeyboardViewController: UIInputViewController {
             controller: keyboard,
             clipboard: clipboard,
             notepad: notepad,
+            extensions: extensions,
+            panels: panels,
             hasFullAccess: hasFullAccess,
             showHitboxOverlay: settings.showHitboxOverlay,
             onInsert: { [weak self] text in
@@ -498,6 +505,18 @@ final class KeyboardViewController: UIInputViewController {
                 self.isApplyingEdit = false
                 self.live.activePanel = nil
                 self.scheduleSuggestionUpdate()
+            },
+            onRunExtension: { [weak self] ext in
+                self?.runExtension(ext)
+            },
+            onPanelInsert: { [weak self] text in
+                guard let self, !text.isEmpty else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(text)
+                self.isApplyingEdit = false
+                self.scheduleSuggestionUpdate()
+                // Panel stays open so the user can insert several times; they
+                // dismiss it with the panel's close button.
             }
         )
         // Fill the host (which fills the input view) so the bar pins to the top
@@ -622,6 +641,39 @@ final class KeyboardViewController: UIInputViewController {
     /// Mark the mirror stale; the next `contextBeforeCursor()` re-seeds from the
     /// proxy. Cheap, and self-healing — worst case is one extra proxy read.
     private func invalidateMirror() { bufferValid = false }
+
+    // MARK: - Custom actions (Python extension SDK)
+
+    /// Gather a custom action's input, run its PyMini script, and insert the
+    /// result. For a word-scoped action the typed word is replaced; otherwise the
+    /// output is inserted at the cursor. Runs synchronously — PyMini is
+    /// step-budget bounded so it can't hang the keyboard.
+    private func runExtension(_ ext: ClinkExtension) {
+        let word = currentPartialWord
+        let input: String
+        switch ext.input {
+        case .none:      input = ""
+        case .word:      input = word
+        case .before:    input = textDocumentProxy.documentContextBeforeInput ?? ""
+        case .clipboard: input = hasFullAccess ? (UIPasteboard.general.string ?? "") : ""
+        }
+
+        let result = extensions.run(ext, input: input)
+        live.activePanel = nil
+        guard let output = result.output, !output.isEmpty else {
+            // A syntax / runtime error (or empty output) inserts nothing; the
+            // in-app editor is where the user sees and fixes the error.
+            return
+        }
+
+        isApplyingEdit = true
+        if ext.input == .word && !word.isEmpty {
+            deleteBackwardMirrored(word.count)
+        }
+        insertMirrored(output)
+        isApplyingEdit = false
+        scheduleSuggestionUpdate()
+    }
 
     /// Debounce. Each keystroke cancels the previous pending compute and
     /// reschedules ~80ms out, so a fast burst collapses to a SINGLE

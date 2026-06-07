@@ -19,25 +19,35 @@ public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
     /// in the separate `EmojiCanvas` — but it shares the same activation UI.
     case emoji
     case calculator
+    /// User-authored custom actions (the Python extension SDK). Lists the
+    /// enabled `ClinkExtension`s; appended after the built-in panels.
+    case extensions
+    /// User-authored custom panels — full custom UIs built from a PyMini script
+    /// (`ClinkPanel`). Lists the enabled panels; appended after the others.
+    case customPanels
 
     public var id: String { rawValue }
 
     public var label: String {
         switch self {
-        case .clipboard:   return "Clipboard"
-        case .notepad:     return "Notepad"
-        case .emoji:       return "Emoji"
-        case .calculator:  return "Calculator"
+        case .clipboard:    return "Clipboard"
+        case .notepad:      return "Notepad"
+        case .emoji:        return "Emoji"
+        case .calculator:   return "Calculator"
+        case .extensions:   return "Actions"
+        case .customPanels: return "Panels"
         }
     }
 
     /// One-line description shown under the label in the `cards` picker.
     public var summary: String {
         switch self {
-        case .clipboard:   return "Recent copied text"
-        case .notepad:     return "Quick jotted notes"
-        case .emoji:       return "Emoji keyboard"
-        case .calculator:  return "Arithmetic calculator"
+        case .clipboard:    return "Recent copied text"
+        case .notepad:      return "Quick jotted notes"
+        case .emoji:        return "Emoji keyboard"
+        case .calculator:   return "Arithmetic calculator"
+        case .extensions:   return "Your custom actions"
+        case .customPanels: return "Your custom panels"
         }
     }
 
@@ -45,10 +55,12 @@ public enum ActionPanel: String, Sendable, CaseIterable, Identifiable {
     /// variant when the panel is open (matching the old clipboard toggle).
     public func icon(active: Bool) -> String {
         switch self {
-        case .clipboard:  return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
-        case .notepad:    return active ? "note.text.badge.plus" : "note.text"
-        case .emoji:      return active ? "face.smiling.fill" : "face.smiling"
-        case .calculator: return active ? "numbers.rectangle.fill" : "numbers.rectangle"
+        case .clipboard:    return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
+        case .notepad:      return active ? "note.text.badge.plus" : "note.text"
+        case .emoji:        return active ? "face.smiling.fill" : "face.smiling"
+        case .calculator:   return active ? "numbers.rectangle.fill" : "numbers.rectangle"
+        case .extensions:   return active ? "puzzlepiece.extension.fill" : "puzzlepiece.extension"
+        case .customPanels: return active ? "square.grid.2x2.fill" : "square.grid.2x2"
         }
     }
 }

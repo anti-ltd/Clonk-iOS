@@ -79,10 +79,14 @@ struct LocalizationView: View {
                 row(Language(id: selected, name: displayName(for: selected)))
             }
 
-            Section(search.isEmpty ? "All languages" : "Results") {
+            Section {
                 ForEach(filtered) { lang in
                     if lang.id != selected { row(lang) }
                 }
+            } header: {
+                Text(search.isEmpty ? "All languages" : "Results")
+            } footer: {
+                Text("Don't see a language? Its spell-check dictionary ships with the system keyboard. Add it in **Settings → General → Keyboard → Keyboards** (e.g. Spanish), then return here — it'll appear in the list.")
             }
         }
         .listStyle(.insetGrouped)

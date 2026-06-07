@@ -65,6 +65,11 @@ public struct KeyboardCanvas: View {
     private let onNotepadInsert: (String) -> Void
     /// Fired when the user taps the insert button in the calculator panel.
     private let onCalculatorInsert: (String) -> Void
+    /// Fired when the user taps a custom action in the extensions panel — the
+    /// host gathers the action's input, runs its script, and inserts the result.
+    private let onRunExtension: (ClinkExtension) -> Void
+    /// Fired when a custom panel's button inserts text — typed at the cursor.
+    private let onPanelInsert: (String) -> Void
     /// When true, render a semi-transparent hitbox outline over each key so the
     /// user can see exactly which area maps to each key. Used by the Advanced
     /// settings view; false for normal use.
@@ -84,12 +89,20 @@ public struct KeyboardCanvas: View {
     /// Quick-notepad store — observed so the compose buffer / notes list update.
     private var notepad: NotepadManager
 
+    /// User-authored custom actions — observed so the panel reflects edits.
+    private var extensions: ExtensionManager
+
+    /// User-authored custom panels — observed so the list reflects edits.
+    private var panels: PanelManager
+
     public init(
         settings: KeyboardSettings,
         live: KeyboardLiveState = KeyboardLiveState(),
         controller: KeyboardController? = nil,
         clipboard: ClipboardManager = ClipboardManager(),
         notepad: NotepadManager = NotepadManager(),
+        extensions: ExtensionManager = ExtensionManager(),
+        panels: PanelManager = PanelManager(),
         hasFullAccess: Bool = false,
         showHitboxOverlay: Bool = false,
         onInsert: @escaping (String) -> Void,
@@ -102,7 +115,9 @@ public struct KeyboardCanvas: View {
         onCursorMove: @escaping (Int) -> Void = { _ in },
         onClipboardInsert: @escaping (String) -> Void = { _ in },
         onNotepadInsert: @escaping (String) -> Void = { _ in },
-        onCalculatorInsert: @escaping (String) -> Void = { _ in }
+        onCalculatorInsert: @escaping (String) -> Void = { _ in },
+        onRunExtension: @escaping (ClinkExtension) -> Void = { _ in },
+        onPanelInsert: @escaping (String) -> Void = { _ in }
     ) {
         self.settings = settings
         self.live = live
@@ -111,6 +126,8 @@ public struct KeyboardCanvas: View {
         _controller = State(initialValue: controller ?? KeyboardController())
         self.clipboard = clipboard
         self.notepad = notepad
+        self.extensions = extensions
+        self.panels = panels
         self.hasFullAccess = hasFullAccess
         self.showHitboxOverlay = showHitboxOverlay
         self.onInsert = onInsert
@@ -124,6 +141,8 @@ public struct KeyboardCanvas: View {
         self.onClipboardInsert = onClipboardInsert
         self.onNotepadInsert = onNotepadInsert
         self.onCalculatorInsert = onCalculatorInsert
+        self.onRunExtension = onRunExtension
+        self.onPanelInsert = onPanelInsert
     }
 
     private typealias Plane = KeyboardController.Plane
@@ -275,15 +294,25 @@ public struct KeyboardCanvas: View {
     /// The panels available right now, in user-defined display order. Clipboard
     /// needs Full Access (it reads the pasteboard); notepad and emoji do not.
     private var enabledPanels: [ActionPanel] {
-        settings.extensionOrder.compactMap { id -> ActionPanel? in
+        var panels = settings.extensionOrder.compactMap { id -> ActionPanel? in
             guard let panel = ActionPanel(rawValue: id) else { return nil }
             switch panel {
             case .clipboard:  return (settings.clipboardEnabled && hasFullAccess) ? panel : nil
             case .notepad:    return settings.notepadEnabled    ? panel : nil
             case .emoji:      return settings.emojiEnabled      ? panel : nil
             case .calculator: return settings.calculatorEnabled ? panel : nil
+            case .extensions, .customPanels: return nil   // appended below, not in extensionOrder
             }
         }
+        // Custom actions / panels live outside `extensionOrder`; append when
+        // enabled and the user has at least one enabled item.
+        if settings.userExtensionsEnabled && !extensions.enabledItems.isEmpty {
+            panels.append(.extensions)
+        }
+        if settings.customPanelsEnabled && !self.panels.enabledItems.isEmpty {
+            panels.append(.customPanels)
+        }
+        return panels
     }
 
     /// Whether a panel takes over the whole keyboard (true overlay) rather than
@@ -296,7 +325,9 @@ public struct KeyboardCanvas: View {
         case .clipboard:   return settings.clipboardStyle == .overlay
         case .notepad:     return settings.notepadMode == .notes && notepadBrowsing
         case .emoji:       return false
-        case .calculator:  return true
+        case .calculator:   return true
+        case .extensions:   return true
+        case .customPanels: return true
         }
     }
 
@@ -384,7 +415,7 @@ public struct KeyboardCanvas: View {
         switch panel {
         case .emoji:
             withAnimation(.snappy(duration: 0.22)) { controller.showEmoji = true }
-        case .clipboard, .notepad, .calculator:
+        case .clipboard, .notepad, .calculator, .extensions, .customPanels:
             live.activePanel = panel
         }
     }
@@ -641,6 +672,22 @@ public struct KeyboardCanvas: View {
                         onInsert: { text in onCalculatorInsert(text) },
                         onCopy: { text in UIPasteboard.general.string = text },
                         onSaveToClipboard: { text in clipboard.capture(string: text) },
+                        onDismiss: { closePanel() }
+                    )
+                case .extensions:
+                    ExtensionsPanel(
+                        extensions: extensions.enabledItems,
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onRun: { ext in onRunExtension(ext) },
+                        onDismiss: { closePanel() }
+                    )
+                case .customPanels:
+                    CustomPanelsContainer(
+                        panels: panels.enabledItems,
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onInsert: { text in onPanelInsert(text) },
                         onDismiss: { closePanel() }
                     )
                 }
