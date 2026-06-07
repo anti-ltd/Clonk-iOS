@@ -633,7 +633,7 @@ final class KeyboardViewController: UIInputViewController {
         suggestionWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.updateSuggestions() }
         suggestionWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + settings.suggestionDebounceDelay / 1000, execute: work)
     }
 
     private func updateSuggestions() {

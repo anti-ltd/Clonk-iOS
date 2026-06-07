@@ -3,6 +3,7 @@
  building multi-stop background and key-background gradients.
  */
 import SwiftUI
+import UIKit
 import iUXiOS
 import PhotosUI
 
@@ -436,28 +437,9 @@ struct ThemeBuilderView: View {
         return HStack {
             Text(label)
             Spacer(minLength: 12)
-            colorSwatch(binding)
+            ColorSwatchButton(color: binding, width: 56, height: 30)
         }
         .padding(.vertical, 2)
-    }
-
-    /// A color well drawn as a rounded-rect swatch that follows the theme's key
-    /// rounding — the native `ColorPicker` only offers a fixed circular well, so
-    /// a hidden, scaled-up picker sits over the swatch as its tap target.
-    private func colorSwatch(_ binding: Binding<Color>) -> some View {
-        let shape = RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous)
-        return shape.fill(binding.wrappedValue)
-            .frame(width: 56, height: 30)
-            .overlay {
-                // Scaled so the circular well covers the whole swatch, making the
-                // full rounded rect the tap target; near-zero opacity hides it.
-                ColorPicker("", selection: binding, supportsOpacity: true)
-                    .labelsHidden()
-                    .scaleEffect(8)
-                    .opacity(0.02)
-            }
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(.secondary.opacity(0.35), lineWidth: 0.5))
     }
 
     /// Load the picked photo, downscale it to a keyboard-sized JPEG, store it in
@@ -651,20 +633,8 @@ struct GradientEditorView: View {
         .padding(.vertical, UX.rowVPadding)
     }
 
-    /// A rounded color well for a gradient stop — follows the theme's key
-    /// rounding via the same scaled-hidden-picker trick as the theme editor.
     private func stopSwatch(_ binding: Binding<Color>) -> some View {
-        let shape = RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous)
-        return shape.fill(binding.wrappedValue)
-            .frame(width: 36, height: 36)
-            .overlay {
-                ColorPicker("", selection: binding, supportsOpacity: true)
-                    .labelsHidden()
-                    .scaleEffect(8)
-                    .opacity(0.02)
-            }
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(.secondary.opacity(0.35), lineWidth: 0.5))
+        ColorSwatchButton(color: binding, width: 36, height: 36)
     }
 
     /// Position for a new stop: midpoint of the largest gap between existing stops.
@@ -693,6 +663,239 @@ struct GradientEditorView: View {
             lo.color.g + (hi.color.g - lo.color.g) * t,
             lo.color.b + (hi.color.b - lo.color.b) * t,
             lo.color.a + (hi.color.a - lo.color.a) * t
+        )
+    }
+}
+
+private struct ColorSwatchButton: View {
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Binding var color: Color
+    let width: CGFloat
+    let height: CGFloat
+    @State private var isPresented = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: max(2, cardCornerRadius - 4), style: .continuous)
+        Button { isPresented = true } label: {
+            shape.fill(color)
+                .frame(width: width, height: height)
+                .overlay(shape.strokeBorder(.secondary.opacity(0.35), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $isPresented) {
+            ColorPickerSheet(color: $color)
+        }
+    }
+}
+
+// MARK: - Custom HSB color picker sheet
+
+private struct ColorPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Binding var color: Color
+
+    @State private var hue: Double = 0
+    @State private var saturation: Double = 1
+    @State private var brightness: Double = 1
+    @State private var alpha: Double = 1
+
+    init(color: Binding<Color>) {
+        _color = color
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(color.wrappedValue).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        _hue = State(initialValue: Double(h))
+        _saturation = State(initialValue: Double(s))
+        _brightness = State(initialValue: Double(b))
+        _alpha = State(initialValue: Double(a))
+    }
+
+    private var current: Color {
+        Color(hue: hue, saturation: saturation, brightness: brightness, opacity: alpha)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    preview
+                    sliders
+                    presets
+                }
+                .padding(20)
+            }
+            .navigationTitle("Color")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .onChange(of: hue)        { _, _ in color = current }
+        .onChange(of: saturation) { _, _ in color = current }
+        .onChange(of: brightness) { _, _ in color = current }
+        .onChange(of: alpha)      { _, _ in color = current }
+    }
+
+    private static let presetColors: [[Color]] = [
+        // Neutrals
+        [.white, Color(white: 0.9), Color(white: 0.75), Color(white: 0.55), Color(white: 0.35), Color(white: 0.15), .black],
+        // Warm
+        [Color(hex: "FF6B6B"), Color(hex: "FF8E53"), Color(hex: "FFA94D"), Color(hex: "FFD43B"),
+         Color(hex: "F4C542"), Color(hex: "E8A838"), Color(hex: "C2762A")],
+        // Cool
+        [Color(hex: "74C0FC"), Color(hex: "4DABF7"), Color(hex: "339AF0"), Color(hex: "228BE6"),
+         Color(hex: "1971C2"), Color(hex: "1864AB"), Color(hex: "0C4A8A")],
+        // Green / teal
+        [Color(hex: "8CE99A"), Color(hex: "51CF66"), Color(hex: "2F9E44"), Color(hex: "38D9A9"),
+         Color(hex: "20C997"), Color(hex: "0CA678"), Color(hex: "087F5B")],
+        // Purple / pink
+        [Color(hex: "E599F7"), Color(hex: "CC5DE8"), Color(hex: "AE3EC9"), Color(hex: "F783AC"),
+         Color(hex: "E64980"), Color(hex: "C2255C"), Color(hex: "A61E4D")],
+        // Translucent whites & blacks
+        [Color.white.opacity(0.9), Color.white.opacity(0.7), Color.white.opacity(0.5),
+         Color.white.opacity(0.3), Color.black.opacity(0.3), Color.black.opacity(0.5), Color.black.opacity(0.7)],
+    ]
+
+    private var presets: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Presets")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: 6) {
+                ForEach(Self.presetColors.indices, id: \.self) { row in
+                    HStack(spacing: 6) {
+                        ForEach(Self.presetColors[row].indices, id: \.self) { col in
+                            let c = Self.presetColors[row][col]
+                            presetSwatch(c)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+        }
+    }
+
+    private func presetSwatch(_ c: Color) -> some View {
+        let r = max(2, cardCornerRadius - 8)
+        let shape = RoundedRectangle(cornerRadius: r, style: .continuous)
+        return Button {
+            applyColor(c)
+        } label: {
+            ZStack {
+                CheckerboardView().clipShape(shape)
+                shape.fill(c)
+            }
+            .frame(width: 36, height: 36)
+            .overlay(shape.strokeBorder(.secondary.opacity(0.25), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func applyColor(_ c: Color) {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(c).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        hue = Double(h)
+        saturation = Double(s)
+        brightness = Double(b)
+        alpha = Double(a)
+    }
+
+    private var preview: some View {
+        let shape = RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+        return ZStack {
+            CheckerboardView()
+                .clipShape(shape)
+            shape.fill(current)
+        }
+        .frame(height: 56)
+        .overlay(shape.strokeBorder(.secondary.opacity(0.2), lineWidth: 0.5))
+    }
+
+    private var sliders: some View {
+        VStack(spacing: 14) {
+            GradientSlider(value: $hue, gradient: LinearGradient(
+                colors: stride(from: 0.0, through: 1.0, by: 1.0/11).map {
+                    Color(hue: $0, saturation: 1, brightness: 1)
+                },
+                startPoint: .leading, endPoint: .trailing))
+
+            GradientSlider(value: $saturation, gradient: LinearGradient(
+                colors: [Color(hue: hue, saturation: 0, brightness: brightness),
+                         Color(hue: hue, saturation: 1, brightness: brightness)],
+                startPoint: .leading, endPoint: .trailing))
+
+            GradientSlider(value: $brightness, gradient: LinearGradient(
+                colors: [Color(hue: hue, saturation: saturation, brightness: 0),
+                         Color(hue: hue, saturation: saturation, brightness: 1)],
+                startPoint: .leading, endPoint: .trailing))
+
+            ZStack {
+                CheckerboardView()
+                    .clipShape(Capsule())
+                    .frame(height: 28)
+                GradientSlider(value: $alpha, gradient: LinearGradient(
+                    colors: [current.opacity(0), current.opacity(1)],
+                    startPoint: .leading, endPoint: .trailing))
+            }
+        }
+    }
+}
+
+private struct GradientSlider: View {
+    @Binding var value: Double
+    let gradient: LinearGradient
+
+    var body: some View {
+        GeometryReader { geo in
+            let trackW = geo.size.width
+            let thumbX = value * (trackW - 28) + 14
+            ZStack(alignment: .leading) {
+                Capsule().fill(gradient).frame(height: 28)
+                Circle()
+                    .fill(.white)
+                    .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
+                    .frame(width: 28, height: 28)
+                    .offset(x: thumbX - 14)
+            }
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onChanged { drag in
+                value = max(0, min(1, (drag.location.x - 14) / (trackW - 28)))
+            })
+        }
+        .frame(height: 28)
+    }
+}
+
+private struct CheckerboardView: View {
+    var body: some View {
+        Canvas { ctx, size in
+            let cell: CGFloat = 6
+            let cols = Int(ceil(size.width / cell))
+            let rows = Int(ceil(size.height / cell))
+            for row in 0..<rows {
+                for col in 0..<cols {
+                    let rect = CGRect(x: CGFloat(col) * cell, y: CGFloat(row) * cell,
+                                     width: cell, height: cell)
+                    ctx.fill(Path(rect), with: .color((row + col) % 2 == 0 ? .white : Color(white: 0.8)))
+                }
+            }
+        }
+    }
+}
+
+private extension Color {
+    init(hex: String) {
+        let v = UInt32(hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+                          .prefix(6), radix: 16) ?? 0xFFFFFF
+        self.init(
+            red:   Double((v >> 16) & 0xFF) / 255,
+            green: Double((v >>  8) & 0xFF) / 255,
+            blue:  Double( v        & 0xFF) / 255
         )
     }
 }

@@ -76,7 +76,7 @@ struct RootView: View {
         // Customization placeholders (pages to be built out).
         case animation, automation, cursor, keys, sounds, haptics, suggestions, popups
         // Advanced placeholders.
-        case hitboxes, overlays, response
+        case hitboxes, overlays, response, performance
         case clipboard, notepad, emoji, calculator
     }
 
@@ -290,9 +290,10 @@ private struct DetailHost: View {
         case .haptics:     HapticsView()
         case .suggestions: SuggestionsView()
         case .popups:      PopupsView()
-        case .hitboxes:    HitboxView()
-        case .overlays:    OverlaysView()
-        case .response:    ResponseView()
+        case .hitboxes:     HitboxView()
+        case .overlays:     OverlaysView()
+        case .performance:  PerformanceView()
+        case .response:     ResponseView()
         }
     }
 }
@@ -384,9 +385,10 @@ private struct SidebarPanel: View {
     /// Advanced pages, alphabetical. (Placeholders pending build-out.)
     private var advancedRows: [NavItem] {
         [
-            NavItem(title: "Hitboxes", icon: "square.dashed",       dest: .hitboxes),
-            NavItem(title: "Overlays", icon: "square.stack.3d.up",  dest: .overlays),
-            NavItem(title: "Response", icon: "timer",               dest: .response),
+            NavItem(title: "Hitboxes",    icon: "square.dashed",       dest: .hitboxes),
+            NavItem(title: "Overlays",    icon: "square.stack.3d.up",  dest: .overlays),
+            NavItem(title: "Performance", icon: "gauge.with.dots.needle.bottom.50percent", dest: .performance),
+            NavItem(title: "Response",    icon: "timer",               dest: .response),
         ].sorted { $0.title < $1.title }
     }
 
@@ -853,9 +855,10 @@ private struct ClinkContent: View {
     ]
 
     private let advancedCards: [DestCard] = [
-        DestCard(title: "Hitboxes", icon: "square.dashed",      description: "Touch target size and presets", dest: .hitboxes),
-        DestCard(title: "Overlays", icon: "square.stack.3d.up", description: "Debug overlays",               dest: .overlays),
-        DestCard(title: "Response", icon: "timer",              description: "Long-press and slide-up timing", dest: .response),
+        DestCard(title: "Hitboxes",    icon: "square.dashed",                                  description: "Touch target size and presets",      dest: .hitboxes),
+        DestCard(title: "Overlays",    icon: "square.stack.3d.up",                             description: "Debug overlays",                     dest: .overlays),
+        DestCard(title: "Performance", icon: "gauge.with.dots.needle.bottom.50percent",         description: "Suggestion timing and CPU budget",   dest: .performance),
+        DestCard(title: "Response",    icon: "timer",                                          description: "Long-press and slide-up timing",     dest: .response),
     ]
 
     private var extensionCards: [DestCard] {

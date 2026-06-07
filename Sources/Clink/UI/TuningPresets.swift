@@ -172,6 +172,19 @@ enum TuningPresets {
             && aeq(s.spaceWidth, 7) && aeq(s.funcKeyWidth, 1.5) && aeq(s.keySpacing, 2) && aeq(s.rowSpacing, 6)
         }),
     ]
+
+    /// Suggestion compute budget — how often UITextChecker runs during typing.
+    static let performance: [Preset] = [
+        Preset(name: "Balanced",
+               apply: { $0.suggestionDebounceDelay = 80 },
+               matches: { aeq($0.suggestionDebounceDelay, 80) }),
+        Preset(name: "Efficient",
+               apply: { $0.suggestionDebounceDelay = 200 },
+               matches: { aeq($0.suggestionDebounceDelay, 200) }),
+        Preset(name: "Instant",
+               apply: { $0.suggestionDebounceDelay = 20 },
+               matches: { aeq($0.suggestionDebounceDelay, 20) }),
+    ]
 }
 
 // MARK: - Views

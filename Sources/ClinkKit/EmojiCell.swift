@@ -25,13 +25,22 @@ struct EmojiCell: View {
 
     var body: some View {
         Button(action: action) {
-            Text(glyph)
-                .font(.system(size: glyphSize))
+            // The cell rectangle: one axis pinned to the square side, the other
+            // fills its flexible grid track. The glyph rides in an overlay at its
+            // natural size (`fixedSize`) so it's CENTERED in the cell and never
+            // clipped — a large emoji simply spills into the inter-cell gap rather
+            // than being cut by the cell bounds.
+            Color.clear
+                .frame(width: fixedWidth, height: fixedHeight)
                 .frame(maxWidth: fixedWidth == nil ? .infinity : nil,
                        maxHeight: fixedHeight == nil ? .infinity : nil)
-                .frame(width: fixedWidth, height: fixedHeight)
-                .scaleEffect(simulatedPressed ? 1.3 : 1)
-                .animation(.interactiveSpring(response: 0.22, dampingFraction: 0.6), value: simulatedPressed)
+                .overlay {
+                    Text(glyph)
+                        .font(.system(size: glyphSize))
+                        .fixedSize()
+                        .scaleEffect(simulatedPressed ? 1.3 : 1)
+                        .animation(.interactiveSpring(response: 0.22, dampingFraction: 0.6), value: simulatedPressed)
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(EmojiBloomStyle())
