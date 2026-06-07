@@ -739,24 +739,36 @@ private struct ColorPickerSheet: View {
         .onChange(of: alpha)      { _, _ in color = current }
     }
 
-    private static let presetColors: [[Color]] = [
+    // Rows of presets — each row is shown as a full-width evenly-spaced HStack.
+    private static let presetRows: [[Color]] = [
         // Neutrals
-        [.white, Color(white: 0.9), Color(white: 0.75), Color(white: 0.55), Color(white: 0.35), Color(white: 0.15), .black],
-        // Warm
-        [Color(hex: "FF6B6B"), Color(hex: "FF8E53"), Color(hex: "FFA94D"), Color(hex: "FFD43B"),
-         Color(hex: "F4C542"), Color(hex: "E8A838"), Color(hex: "C2762A")],
-        // Cool
-        [Color(hex: "74C0FC"), Color(hex: "4DABF7"), Color(hex: "339AF0"), Color(hex: "228BE6"),
-         Color(hex: "1971C2"), Color(hex: "1864AB"), Color(hex: "0C4A8A")],
-        // Green / teal
-        [Color(hex: "8CE99A"), Color(hex: "51CF66"), Color(hex: "2F9E44"), Color(hex: "38D9A9"),
+        [.white, Color(white: 0.93), Color(white: 0.82), Color(white: 0.68),
+         Color(white: 0.50), Color(white: 0.32), Color(white: 0.18), Color(white: 0.08), .black],
+        // Reds / oranges
+        [Color(hex: "FF8787"), Color(hex: "FF6B6B"), Color(hex: "FA5252"),
+         Color(hex: "FF8E53"), Color(hex: "FD7E14"), Color(hex: "E8590C"),
+         Color(hex: "D9480F"), Color(hex: "B34000"), Color(hex: "7D2E00")],
+        // Yellows / amber
+        [Color(hex: "FFE066"), Color(hex: "FFD43B"), Color(hex: "FCC419"),
+         Color(hex: "FAB005"), Color(hex: "F59F00"), Color(hex: "E67700"),
+         Color(hex: "FFEC99"), Color(hex: "FFD8A8"), Color(hex: "FFA94D")],
+        // Blues
+        [Color(hex: "A5D8FF"), Color(hex: "74C0FC"), Color(hex: "4DABF7"),
+         Color(hex: "339AF0"), Color(hex: "228BE6"), Color(hex: "1971C2"),
+         Color(hex: "1864AB"), Color(hex: "145591"), Color(hex: "0C4A8A")],
+        // Greens
+        [Color(hex: "B2F2BB"), Color(hex: "8CE99A"), Color(hex: "51CF66"),
+         Color(hex: "2F9E44"), Color(hex: "1E7E34"), Color(hex: "38D9A9"),
          Color(hex: "20C997"), Color(hex: "0CA678"), Color(hex: "087F5B")],
-        // Purple / pink
-        [Color(hex: "E599F7"), Color(hex: "CC5DE8"), Color(hex: "AE3EC9"), Color(hex: "F783AC"),
+        // Purples / pinks
+        [Color(hex: "EEB4F7"), Color(hex: "E599F7"), Color(hex: "CC5DE8"),
+         Color(hex: "AE3EC9"), Color(hex: "862E9C"), Color(hex: "F783AC"),
          Color(hex: "E64980"), Color(hex: "C2255C"), Color(hex: "A61E4D")],
         // Translucent whites & blacks
-        [Color.white.opacity(0.9), Color.white.opacity(0.7), Color.white.opacity(0.5),
-         Color.white.opacity(0.3), Color.black.opacity(0.3), Color.black.opacity(0.5), Color.black.opacity(0.7)],
+        [Color.white.opacity(0.9), Color.white.opacity(0.75), Color.white.opacity(0.55),
+         Color.white.opacity(0.35), Color.white.opacity(0.15),
+         Color.black.opacity(0.15), Color.black.opacity(0.35),
+         Color.black.opacity(0.55), Color.black.opacity(0.75)],
     ]
 
     private var presets: some View {
@@ -767,13 +779,11 @@ private struct ColorPickerSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(spacing: 6) {
-                ForEach(Self.presetColors.indices, id: \.self) { row in
+                ForEach(Self.presetRows.indices, id: \.self) { row in
                     HStack(spacing: 6) {
-                        ForEach(Self.presetColors[row].indices, id: \.self) { col in
-                            let c = Self.presetColors[row][col]
-                            presetSwatch(c)
+                        ForEach(Self.presetRows[row].indices, id: \.self) { col in
+                            presetSwatch(Self.presetRows[row][col])
                         }
-                        Spacer(minLength: 0)
                     }
                 }
             }
@@ -783,14 +793,13 @@ private struct ColorPickerSheet: View {
     private func presetSwatch(_ c: Color) -> some View {
         let r = max(2, cardCornerRadius - 8)
         let shape = RoundedRectangle(cornerRadius: r, style: .continuous)
-        return Button {
-            applyColor(c)
-        } label: {
+        return Button { applyColor(c) } label: {
             ZStack {
                 CheckerboardView().clipShape(shape)
                 shape.fill(c)
             }
-            .frame(width: 36, height: 36)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
             .overlay(shape.strokeBorder(.secondary.opacity(0.25), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -818,27 +827,27 @@ private struct ColorPickerSheet: View {
 
     private var sliders: some View {
         VStack(spacing: 14) {
-            GradientSlider(value: $hue, gradient: LinearGradient(
+            GradientSlider(value: $hue, cornerRadius: cardCornerRadius, gradient: LinearGradient(
                 colors: stride(from: 0.0, through: 1.0, by: 1.0/11).map {
                     Color(hue: $0, saturation: 1, brightness: 1)
                 },
                 startPoint: .leading, endPoint: .trailing))
 
-            GradientSlider(value: $saturation, gradient: LinearGradient(
+            GradientSlider(value: $saturation, cornerRadius: cardCornerRadius, gradient: LinearGradient(
                 colors: [Color(hue: hue, saturation: 0, brightness: brightness),
                          Color(hue: hue, saturation: 1, brightness: brightness)],
                 startPoint: .leading, endPoint: .trailing))
 
-            GradientSlider(value: $brightness, gradient: LinearGradient(
+            GradientSlider(value: $brightness, cornerRadius: cardCornerRadius, gradient: LinearGradient(
                 colors: [Color(hue: hue, saturation: saturation, brightness: 0),
                          Color(hue: hue, saturation: saturation, brightness: 1)],
                 startPoint: .leading, endPoint: .trailing))
 
             ZStack {
                 CheckerboardView()
-                    .clipShape(Capsule())
+                    .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
                     .frame(height: 28)
-                GradientSlider(value: $alpha, gradient: LinearGradient(
+                GradientSlider(value: $alpha, cornerRadius: cardCornerRadius, gradient: LinearGradient(
                     colors: [current.opacity(0), current.opacity(1)],
                     startPoint: .leading, endPoint: .trailing))
             }
@@ -848,6 +857,7 @@ private struct ColorPickerSheet: View {
 
 private struct GradientSlider: View {
     @Binding var value: Double
+    var cornerRadius: CGFloat = 14
     let gradient: LinearGradient
 
     var body: some View {
@@ -855,7 +865,9 @@ private struct GradientSlider: View {
             let trackW = geo.size.width
             let thumbX = value * (trackW - 28) + 14
             ZStack(alignment: .leading) {
-                Capsule().fill(gradient).frame(height: 28)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(gradient)
+                    .frame(height: 28)
                 Circle()
                     .fill(.white)
                     .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
