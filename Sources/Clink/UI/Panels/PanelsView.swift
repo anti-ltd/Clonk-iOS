@@ -33,6 +33,7 @@ struct PanelsView: View {
                     PanelEditorView(
                         draft: ClinkPanel(name: "New Panel", summary: "", source: ClinkPanel.starterSource),
                         isNew: true)
+                    .tracksNavigationDepth()
                 } label: {
                     Label("New panel", systemImage: "plus.circle.fill").foregroundStyle(.tint)
                 }
@@ -40,6 +41,7 @@ struct PanelsView: View {
                 ForEach(model.panels.items) { panel in
                     NavigationLink {
                         PanelEditorView(draft: panel, isNew: false)
+                            .tracksNavigationDepth()
                     } label: {
                         row(panel)
                     }

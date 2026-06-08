@@ -30,7 +30,7 @@ struct ClipboardHistoryView: View {
                               isOn: $model.settings.clipboardEnabled)
                     if model.settings.clipboardEnabled && !model.hasFullAccess {
                         Divider()
-                        NavigationLink { EnableFlowView() } label: {
+                        NavigationLink { EnableFlowView().tracksNavigationDepth() } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "lock.shield").font(.title3).foregroundStyle(.tint)
                                 VStack(alignment: .leading, spacing: 2) {

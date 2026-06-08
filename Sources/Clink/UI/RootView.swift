@@ -44,9 +44,25 @@ extension View {
 @Observable @MainActor
 final class SidebarState {
     var isOpen = false
+    /// Incremented when a NavigationLink destination appears; decremented on disappear.
+    /// Used to hide the sidebar button when a back button is present.
+    var navigationDepth: Int = 0
     /// Jump to a destination from inside a content page (the onboarding "next
     /// step" buttons). Wired up by `RootView`.
     var navigate: ((RootView.SidebarDestination) -> Void)?
+}
+
+private struct NavDepthModifier: ViewModifier {
+    @Environment(SidebarState.self) private var sidebar
+    func body(content: Content) -> some View {
+        content
+            .onAppear { sidebar.navigationDepth += 1 }
+            .onDisappear { sidebar.navigationDepth -= 1 }
+    }
+}
+
+extension View {
+    func tracksNavigationDepth() -> some View { modifier(NavDepthModifier()) }
 }
 
 // MARK: - Root
@@ -232,6 +248,8 @@ struct RootView: View {
             ThemeNavButton(systemName: "sidebar.left") {
                 withAnimation(sidebarAnim) { sidebar.isOpen.toggle() }
             }
+            .opacity(sidebar.navigationDepth > 0 ? 0 : 1)
+            .allowsHitTesting(sidebar.navigationDepth == 0)
             Spacer(minLength: 0).allowsHitTesting(false)
             if let icon = navBar.trailingIcon, let action = navBar.trailingAction {
                 ThemeNavButton(systemName: icon, action: action)

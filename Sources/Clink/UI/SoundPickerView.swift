@@ -60,7 +60,7 @@ struct SoundPickerView: View {
 
     private var fullAccessNotice: some View {
         NavigationLink {
-            EnableFlowView()
+            EnableFlowView().tracksNavigationDepth()
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "lock.shield").font(.title3).foregroundStyle(.tint)

@@ -33,6 +33,7 @@ struct ExtensionsView: View {
                     ExtensionEditorView(
                         draft: ClinkExtension(name: "New Action", summary: "", source: ClinkExtension.starterSource),
                         isNew: true)
+                    .tracksNavigationDepth()
                 } label: {
                     Label("New action", systemImage: "plus.circle.fill")
                         .foregroundStyle(.tint)
@@ -41,6 +42,7 @@ struct ExtensionsView: View {
                 ForEach(model.extensions.items) { ext in
                     NavigationLink {
                         ExtensionEditorView(draft: ext, isNew: false)
+                            .tracksNavigationDepth()
                     } label: {
                         row(ext)
                     }
