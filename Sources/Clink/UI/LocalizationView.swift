@@ -56,45 +56,52 @@ struct LocalizationView: View {
 
     var body: some View {
         @Bindable var model = model
-        return List {
-            Section {
+        ScrollView {
+            VStack(spacing: UX.cardSpacing) {
                 Text("Choose the language your typing suggestions, autocomplete, and auto-correction use. Only languages your device can spell-check are listed. Picking a language also switches the key layout to match (e.g. French → AZERTY, Russian → ЙЦУКЕН).")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-            }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, UX.screenPadding)
 
-            Section("Input") {
-                Toggle(isOn: $model.settings.accentPopupsEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Accent popups")
-                        Text("Hold a letter for accents (é, ü, ñ …).")
-                            .font(.caption).foregroundStyle(.secondary)
+                CardSection("Input") {
+                    ToggleRow("Accent popups",
+                              subtitle: "Hold a letter for accents (é, ü, ñ …).",
+                              isOn: $model.settings.accentPopupsEnabled)
+                }
+
+                CardSection("Current") {
+                    row(Language(id: selected, name: displayName(for: selected)))
+                }
+
+                let others = filtered.filter { $0.id != selected }
+                CardSection(search.isEmpty ? "All languages" : "Results") {
+                    ForEach(Array(others.enumerated()), id: \.element.id) { idx, lang in
+                        if idx > 0 { Divider() }
+                        row(lang)
+                    }
+                    if others.isEmpty {
+                        Text("No results for \"\(search)\"")
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, UX.rowVPadding)
                     }
                 }
-            }
 
-            Section("Current") {
-                row(Language(id: selected, name: displayName(for: selected)))
-            }
-
-            Section {
-                ForEach(filtered) { lang in
-                    if lang.id != selected { row(lang) }
-                }
-            } header: {
-                Text(search.isEmpty ? "All languages" : "Results")
-            } footer: {
                 Text("Don't see a language? Its spell-check dictionary ships with the system keyboard. Add it in **Settings → General → Keyboard → Keyboards** (e.g. Spanish), then return here — it'll appear in the list.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, UX.screenPadding)
             }
+            .padding(.vertical, UX.cardSpacing)
         }
-        .listStyle(.insetGrouped)
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always),
                     prompt: "Search languages")
         .navigationTitle("Localization")
         .navigationBarTitleDisplayMode(.inline)
         .navTrailingButton("textformat.abc") { sidebar.navigate?(.layout) }
+        .tint(themeAccent)
+        .themePageBackground()
     }
 
     @ViewBuilder
@@ -116,6 +123,7 @@ struct LocalizationView: View {
                         .foregroundStyle(themeAccent)
                 }
             }
+            .padding(.vertical, UX.rowVPadding)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

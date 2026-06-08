@@ -9,8 +9,13 @@ import UniformTypeIdentifiers
 
 struct ExtensionsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
     @State private var importing = false
     @State private var importMessage: String?
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
 
     var body: some View {
         @Bindable var m = model
@@ -79,9 +84,13 @@ struct ExtensionsView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .tint(themeAccent)
         .navigationTitle("Custom Actions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { EditButton() } }
+        .themePageBackground()
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.clinkExt, .json],
                       allowsMultipleSelection: false) { handleImport($0) }

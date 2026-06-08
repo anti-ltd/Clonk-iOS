@@ -9,8 +9,13 @@ import UniformTypeIdentifiers
 
 struct PanelsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
     @State private var importing = false
     @State private var importMessage: String?
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
 
     var body: some View {
         @Bindable var m = model
@@ -74,9 +79,13 @@ struct PanelsView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .tint(themeAccent)
         .navigationTitle("Custom Panels")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { EditButton() } }
+        .themePageBackground()
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.clinkPanel, .json],
                       allowsMultipleSelection: false) { handleImport($0) }
