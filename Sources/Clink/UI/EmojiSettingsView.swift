@@ -199,3 +199,7 @@ struct EmojiSettingsView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview { EmojiSettingsView().clinkPreview() }
+#endif

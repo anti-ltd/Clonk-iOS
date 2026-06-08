@@ -88,3 +88,7 @@ struct CursorView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview { CursorView().clinkPreview() }
+#endif

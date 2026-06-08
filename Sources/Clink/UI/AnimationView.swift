@@ -155,3 +155,7 @@ struct AnimationView: View {
             .padding(.bottom, 2)
     }
 }
+
+#if DEBUG
+#Preview { AnimationView().clinkPreview() }
+#endif

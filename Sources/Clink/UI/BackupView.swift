@@ -180,3 +180,7 @@ private struct ShareSheet: UIViewControllerRepresentable {
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
+
+#if DEBUG
+#Preview { BackupView().clinkPreview() }
+#endif

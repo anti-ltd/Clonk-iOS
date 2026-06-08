@@ -121,3 +121,7 @@ struct LayoutView: View {
         (layout.rows.first ?? []).joined(separator: " ")
     }
 }
+
+#if DEBUG
+#Preview { LayoutView().clinkPreview() }
+#endif

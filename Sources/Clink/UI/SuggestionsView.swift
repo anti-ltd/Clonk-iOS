@@ -24,3 +24,7 @@ struct SuggestionsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview { SuggestionsView().clinkPreview() }
+#endif

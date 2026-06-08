@@ -37,3 +37,7 @@ struct AutomationView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview { AutomationView().clinkPreview() }
+#endif

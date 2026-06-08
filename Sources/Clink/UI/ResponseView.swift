@@ -54,3 +54,7 @@ struct ResponseView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview { ResponseView().clinkPreview() }
+#endif

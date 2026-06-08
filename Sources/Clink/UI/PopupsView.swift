@@ -41,3 +41,7 @@ struct PopupsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview { PopupsView().clinkPreview() }
+#endif

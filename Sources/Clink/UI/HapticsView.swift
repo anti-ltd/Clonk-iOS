@@ -78,3 +78,7 @@ struct HapticsView: View {
         .buttonStyle(.plain)
     }
 }
+
+#if DEBUG
+#Preview { HapticsView().clinkPreview() }
+#endif

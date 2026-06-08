@@ -100,3 +100,7 @@ struct KeysView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview { KeysView().clinkPreview() }
+#endif

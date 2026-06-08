@@ -627,6 +627,32 @@ struct ThemeNavButtonStyle: ButtonStyle {
     }
 }
 
+// MARK: - Xcode preview support
+
+#if DEBUG
+extension View {
+    /// Inject the standard app environment (`AppModel` + `SidebarState` +
+    /// `NavBarState`) and a `NavigationStack` so any panel renders in the Xcode
+    /// canvas — most panels trap on a missing `AppModel` otherwise. Lives here (an
+    /// existing in-target file) rather than a new file, since the project uses
+    /// explicit pbxproj file refs and a brand-new file wouldn't be compiled.
+    ///
+    /// Usage at the bottom of a panel file:
+    ///
+    ///     #if DEBUG
+    ///     #Preview { CursorView().clinkPreview() }
+    ///     #endif
+    ///
+    /// Select the **Clink** app scheme (not ClinkKeyboard) before previewing.
+    func clinkPreview() -> some View {
+        NavigationStack { self }
+            .environment(AppModel())
+            .environment(SidebarState())
+            .environment(NavBarState())
+    }
+}
+#endif
+
 /// Registers a trailing nav-bar button for the current view's lifetime.
 /// Clears on disappear so the button vanishes when the view is not active.
 private struct NavTrailingButtonModifier: ViewModifier {

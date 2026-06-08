@@ -111,3 +111,7 @@ private struct AdaptiveHitboxControls: View {
         }
     }
 }
+
+#if DEBUG
+#Preview { HitboxView().clinkPreview() }
+#endif

@@ -213,3 +213,7 @@ private struct ClipboardEntryRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+
+#if DEBUG
+#Preview { ClipboardHistoryView().clinkPreview() }
+#endif

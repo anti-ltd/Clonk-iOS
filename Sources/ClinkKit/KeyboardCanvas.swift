@@ -1363,6 +1363,12 @@ public struct KeyboardCanvas: View {
                             router: touch,
                             physics: physics)
                         .frame(width: unit * CGFloat(spec.weight))
+                        // Plane switches (ABC ⇄ 123 ⇄ #+=) change a row's key count,
+                        // so the tail keys insert/remove. Inside GlassEffectContainer
+                        // that runs the glass *appear* animation — the "key builds in"
+                        // glitch (e.g. the " key on the symbols plane). Snap them in/out
+                        // instead, exactly as the glyph layer does (see its note above).
+                        .transition(.identity)
                 }
             }
         }

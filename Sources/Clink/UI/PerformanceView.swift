@@ -74,3 +74,7 @@ struct PerformanceView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview { PerformanceView().clinkPreview() }
+#endif

@@ -129,3 +129,7 @@ struct LocalizationView: View {
         .buttonStyle(.plain)
     }
 }
+
+#if DEBUG
+#Preview { LocalizationView().clinkPreview() }
+#endif

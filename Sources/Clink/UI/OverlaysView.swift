@@ -22,3 +22,7 @@ struct OverlaysView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
+#if DEBUG
+#Preview { OverlaysView().clinkPreview() }
+#endif

@@ -93,3 +93,7 @@ struct SoundsView: View {
         .buttonStyle(.plain)
     }
 }
+
+#if DEBUG
+#Preview { SoundsView().clinkPreview() }
+#endif

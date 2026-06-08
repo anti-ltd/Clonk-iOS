@@ -35,3 +35,7 @@ struct CalculatorSettingsView: View {
         .themePageBackground()
     }
 }
+
+#if DEBUG
+#Preview { CalculatorSettingsView().clinkPreview() }
+#endif

@@ -1000,6 +1000,12 @@ private struct ClinkContent: View {
             .padding(12)
             .background(cardTint ?? Color(.secondarySystemBackground),
                         in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+            // Subtle hairline edge, matching CardSection's `GlassSurface` outline.
+            .overlay {
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(UX.Glass.outlineOpacity),
+                                  lineWidth: UX.Glass.outlineWidth)
+            }
         }
         .buttonStyle(.plain)
     }

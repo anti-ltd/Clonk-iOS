@@ -8,6 +8,7 @@
   • The overlay owns its open/close animation so the parent just toggles isPresented.
  */
 import SwiftUI
+import iUXiOS
 
 private struct ContentHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
@@ -55,6 +56,8 @@ struct ThemedSheetOverlay<Content: View>: View {
     let onDismiss: () -> Void
     @ViewBuilder let content: Content
 
+    @Environment(\.resolvedKeyboardTheme) private var theme
+
     @GestureState private var dragOffset: CGFloat = 0
     @State private var measuredHeight: CGFloat = 0
     @State private var screenHeight: CGFloat = 0
@@ -95,7 +98,7 @@ struct ThemedSheetOverlay<Content: View>: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: panelHeight)
-                .themePageBackground()
+                .background { panelBackground(shape) }
                 .clipShape(shape)
                 .overlay(shape.strokeBorder(.primary.opacity(0.12), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.18), radius: 20, y: -4)
@@ -132,6 +135,19 @@ struct ThemedSheetOverlay<Content: View>: View {
             }
         }
         .ignoresSafeArea()
+    }
+
+    /// Surface for the floating panel — rendered exactly like the sidebar
+    /// (`RootView.sidebarPanel`): real Liquid Glass on glass themes (translucent,
+    /// refractive), the key-fill colour on solid themes. This replaces the theme
+    /// *page* background, which is clear on glass themes and left these popups
+    /// fully transparent.
+    @ViewBuilder private func panelBackground(_ shape: some Shape) -> some View {
+        if theme.material == .liquidGlass, #available(iOS 26.0, *) {
+            Color.clear.glassEffect(.regular, in: shape)
+        } else {
+            shape.fill(theme.keyFill.color)
+        }
     }
 
     private func dismiss() {
