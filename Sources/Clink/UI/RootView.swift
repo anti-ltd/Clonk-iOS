@@ -47,6 +47,10 @@ final class SidebarState {
     /// Incremented when a NavigationLink destination appears; decremented on disappear.
     /// Used to hide the sidebar button when a back button is present.
     var navigationDepth: Int = 0
+    /// Sheets triggered from the sidebar but presented at root level so they
+    /// render full-width above everything.
+    var showExtensionPicker = false
+    var showBackupSheet = false
     /// Jump to a destination from inside a content page (the onboarding "next
     /// step" buttons). Wired up by `RootView`.
     var navigate: ((RootView.SidebarDestination) -> Void)?
@@ -145,6 +149,12 @@ struct RootView: View {
 
             // Always-on liquid-glass strip filling the top safe area.
             topGlassStrip
+
+            // Sheets triggered from the sidebar live here — inside the ZStack so
+            // they inherit the theme environment — rather than as outermost modifiers
+            // where @Environment reads come from the parent (WindowGroup), not from
+            // the ZStack's .environment(…) chain.
+            SidebarSheetHost(sidebar: sidebar)
         }
         .fontDesign(resolvedTheme.keyFontDesign.fontDesign)
         .environment(\.resolvedKeyboardTheme, resolvedTheme)
@@ -322,6 +332,32 @@ private struct DetailHost: View {
     }
 }
 
+// MARK: - Sidebar sheet host
+
+/// Transparent full-screen view placed *inside* the root ZStack so it inherits
+/// the theme environment. Sheets attached here get proper theming; the same sheets
+/// as outermost modifiers on the ZStack would read from the WindowGroup parent,
+/// which has no custom theme environment keys.
+private struct SidebarSheetHost: View {
+    let sidebar: SidebarState
+
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+            .themedSheet(isPresented: Binding(get: { sidebar.showExtensionPicker },
+                                              set: { sidebar.showExtensionPicker = $0 }),
+                         title: "Extensions") {
+                ExtensionPickerContent()
+            }
+            .themedSheet(isPresented: Binding(get: { sidebar.showBackupSheet },
+                                              set: { sidebar.showBackupSheet = $0 }),
+                         title: "Backup & Restore") {
+                BackupControls()
+            }
+    }
+}
+
 // MARK: - Placeholder page
 
 /// A stand-in page for a settings area that's scaffolded but not yet built out.
@@ -355,8 +391,6 @@ private struct SidebarPanel: View {
     @Environment(\.specialKeyTextColor) private var specialKeyTextColor
     let sidebar: SidebarState
     @Binding var destination: RootView.SidebarDestination
-    @State private var showExtensionPicker = false
-    @State private var showBackupSheet = false
     /// Whether the sidebar can scroll further up / down — drives the edge fades
     /// and the scroll-affordance carets.
     @State private var canScrollUp = false
@@ -468,12 +502,6 @@ private struct SidebarPanel: View {
         .animation(.easeInOut(duration: 0.2), value: canScrollUp)
         .animation(.easeInOut(duration: 0.2), value: canScrollDown)
         .foregroundColor(themeTextColor)
-        .themedSheet(isPresented: $showExtensionPicker, title: "Extensions") {
-            ExtensionPickerContent()
-        }
-        .themedSheet(isPresented: $showBackupSheet, title: "Backup & Restore") {
-            BackupControls()
-        }
     }
 
     private func fadeMask(canUp: Bool, canDown: Bool) -> LinearGradient {
@@ -509,7 +537,7 @@ private struct SidebarPanel: View {
             Rectangle()
                 .fill(themeAccent.opacity(0.4))
                 .frame(height: 0.5)
-            Button { showExtensionPicker = true } label: {
+            Button { sidebar.showExtensionPicker = true } label: {
                 Image(systemName: "gearshape")
                     .font(.caption).fontWeight(.semibold).foregroundStyle(specialKeyTextColor)
             }
@@ -539,7 +567,7 @@ private struct SidebarPanel: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Button { showBackupSheet = true } label: {
+            Button { sidebar.showBackupSheet = true } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.title3)
                     .foregroundStyle(.secondary)
@@ -679,7 +707,9 @@ private struct ExtensionPickerContent: View {
     var body: some View {
         @Bindable var m = model
         VStack(spacing: UX.cardSpacing) {
-            ExtensionReorderList(order: $m.settings.extensionOrder)
+            CardSection("Panels") {
+                ExtensionReorderList(order: $m.settings.extensionOrder)
+            }
 
             CardSection("Panel access") {
                 Toggle("Top-left icon", isOn: $m.settings.activateWithIcon)
@@ -735,10 +765,6 @@ private struct ExtensionReorderList: View {
                 }
             }
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
     }
 
     @ViewBuilder
@@ -763,7 +789,7 @@ private struct ExtensionReorderList: View {
             toggleRow(extID: extID, name: ext.name, icon: ext.icon)
         }
         .frame(height: rowH)
-        .background(isDragged ? Color(.tertiarySystemGroupedBackground) : Color.clear)
+        .background(isDragged ? Color(.systemFill) : Color.clear)
         .shadow(color: isDragged ? .black.opacity(0.12) : .clear, radius: 6, y: 3)
         .offset(y: yOff)
         .zIndex(isDragged ? 1 : 0)
