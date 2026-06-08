@@ -28,19 +28,43 @@ final class SoundPlayer {
     private var rotation = 0
     private var sessionActivated = false
 
-    private let haptics = UIImpactFeedbackGenerator(style: .light)
+    /// Haptic generator + the style it was built for. Rebuilt lazily whenever the
+    /// user changes `hapticStyle` (the style is fixed at construction).
+    private var haptics = UIImpactFeedbackGenerator(style: .light)
+    private var haptchStyle: HapticStyle = .light
+
+    private static func uiStyle(_ s: HapticStyle) -> UIImpactFeedbackGenerator.FeedbackStyle {
+        switch s {
+        case .light:  return .light
+        case .medium: return .medium
+        case .heavy:  return .heavy
+        case .rigid:  return .rigid
+        case .soft:   return .soft
+        }
+    }
+
+    /// The generator for `style`, rebuilt (and re-primed) if the style changed.
+    private func generator(for style: HapticStyle) -> UIImpactFeedbackGenerator {
+        if style != haptchStyle {
+            haptics = UIImpactFeedbackGenerator(style: Self.uiStyle(style))
+            haptchStyle = style
+            haptics.prepare()
+        }
+        return haptics
+    }
 
     /// Play feedback for one keypress.
     func play(settings: KeyboardSettings, hasFullAccess: Bool) {
         guard settings.soundEnabled || settings.hapticsEnabled else { return }
 
         if settings.hapticsEnabled, hasFullAccess {
-            haptics.impactOccurred(intensity: 0.6)
+            let gen = generator(for: settings.hapticStyle)
+            gen.impactOccurred(intensity: settings.hapticIntensity)
             // Re-prime immediately: the generator's engine spins back down after
             // ~1–2s idle, so without this the *next* tap in a fast burst has
             // noticeably higher latency. Keeping it warm makes every keystroke's
             // haptic land with the same crispness.
-            haptics.prepare()
+            gen.prepare()
         }
 
         guard settings.soundEnabled else { return }
@@ -60,7 +84,7 @@ final class SoundPlayer {
 
     /// Warm the haptic engine and decode the pack's samples ahead of typing.
     func prepare(for settings: KeyboardSettings, hasFullAccess: Bool) {
-        if settings.hapticsEnabled, hasFullAccess { haptics.prepare() }
+        if settings.hapticsEnabled, hasFullAccess { generator(for: settings.hapticStyle).prepare() }
         guard settings.soundEnabled, hasFullAccess, settings.soundPack.needsFullAccess else { return }
         for name in settings.soundPack.sampleNames where players[name] == nil {
             guard let url = Bundle.main.url(

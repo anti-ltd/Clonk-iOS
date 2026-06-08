@@ -22,6 +22,12 @@ struct KeyPressPhysics {
     var bloomScale: CGFloat          = 1.12
     var springResponse: Double       = 0.26
     var springDamping: Double        = 0.60
+    /// Drop the press spring — snap to bloom/colour instantly (native highlight).
+    var instant: Bool                = false
+    /// Strength of the additive tap-flash (0 = off).
+    var tapFlashStrength: CGFloat    = 0.34
+    /// Space-bar press bloom scale (its own knob, not `bloomScale`).
+    var spaceBloomScale: CGFloat     = 1.04
     var spaceSpringResponse: Double  = 0.28
     var spaceSpringDamping: Double   = 0.78
     var spaceLeanMultiplier: CGFloat = 0.14
@@ -210,6 +216,9 @@ public struct KeyboardCanvas: View {
             bloomScale: CGFloat(settings.keyBloomScale),
             springResponse: settings.keySpringResponse,
             springDamping: settings.keySpringDamping,
+            instant: settings.keyPressInstant,
+            tapFlashStrength: CGFloat(settings.tapFlashStrength),
+            spaceBloomScale: CGFloat(settings.spaceBloomScale),
             spaceSpringResponse: settings.spaceSpringResponse,
             spaceSpringDamping: settings.spaceSpringDamping,
             spaceLeanMultiplier: CGFloat(settings.spaceLeanMultiplier),
@@ -808,7 +817,7 @@ public struct KeyboardCanvas: View {
                         // centre in sync with the bar, instead of snapping.
                         .offset(x: g.offsetX)
                         .position(x: proxy[g.anchor].midX, y: proxy[g.anchor].midY)
-                        .animation(.interactiveSpring(response: settings.keySpringResponse, dampingFraction: settings.keySpringDamping), value: g.scaleX)
+                        .animation(settings.keyPressInstant ? nil : .interactiveSpring(response: settings.keySpringResponse, dampingFraction: settings.keySpringDamping), value: g.scaleX)
                         // GlassEffectContainer's implicit animation bleeds into this
                         // ForEach, fading out removed items (e.g. delete glyph at its
                         // old keyID) before the replacement fades in — leaving a gap.

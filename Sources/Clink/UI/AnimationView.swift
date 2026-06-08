@@ -66,6 +66,12 @@ struct AnimationView: View {
             ToggleRow("Liquid key press",
                       subtitle: "Bloom and warp each key when pressed — best on Liquid Glass.",
                       isOn: $model.settings.keyPressWarp)
+            Divider()
+            ToggleRow("Instant highlight",
+                      subtitle: "Drop the press spring — keys snap to their bloom with zero animation, like the stock keyboard. Overrides the speed/springiness below.",
+                      isOn: $model.settings.keyPressInstant)
+            .disabled(!model.settings.keyPressWarp)
+            .opacity(model.settings.keyPressWarp ? 1 : 0.4)
         }
         TunedSection(title: "Animation", presets: TuningPresets.animation) {
             fineTuneHeader("Key press")
@@ -83,8 +89,18 @@ struct AnimationView: View {
                       in: 0.3...1.0, step: 0.05) {
                 $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
             }
+            Divider()
+            SliderRow("Tap flash", value: $model.settings.tapFlashStrength,
+                      in: 0...0.7, step: 0.02) {
+                $0 < 0.005 ? "Off" : "\(Int(($0 * 100).rounded()))%"
+            }
 
             fineTuneHeader("Space bar")
+            SliderRow("Bloom", value: $model.settings.spaceBloomScale,
+                      in: 1.0...1.2, step: 0.01) {
+                $0 <= 1.001 ? "Off" : "\(Int(($0 * 100).rounded()))%"
+            }
+            Divider()
             SliderRow("Speed", value: $model.settings.spaceSpringResponse,
                       in: 0.08...0.6, step: 0.02) {
                 String(format: "%.2fs", $0)

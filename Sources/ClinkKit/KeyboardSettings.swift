@@ -113,6 +113,25 @@ public enum CursorMovementType: String, Codable, Sendable, CaseIterable, Identif
     }
 }
 
+/// Tactile character of the key-press haptic. Maps to `UIImpactFeedbackGenerator`
+/// feedback styles (the UIKit mapping lives in `SoundPlayer`, keeping this type
+/// UIKit-free so it can cross the App Group). `light` is the default subtle tap;
+/// `rigid`/`heavy` read punchier and more mechanical — the "beast" end.
+public enum HapticStyle: String, Codable, Sendable, CaseIterable, Identifiable {
+    case light, medium, heavy, rigid, soft
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .light:  return "Light"
+        case .medium: return "Medium"
+        case .heavy:  return "Heavy"
+        case .rigid:  return "Rigid"
+        case .soft:   return "Soft"
+        }
+    }
+}
+
 /// The full user-customizable configuration of the Clink keyboard. This is the
 /// single value that crosses the process boundary between the container app
 /// (which edits it) and the keyboard extension (which renders from it), via the
@@ -275,6 +294,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var soundEnabled: Bool
     public var soundVolume: Double      // 0.0 ... 1.0
     public var hapticsEnabled: Bool
+    /// Tactile character of the key-press haptic (light → rigid). Picks the
+    /// `UIImpactFeedbackGenerator` style. Only fires when `hapticsEnabled` and
+    /// Full Access are on.
+    public var hapticStyle: HapticStyle
+    /// Strength of each key-press haptic, 0...1. Lower is a faint tick, 1.0 is a
+    /// firm thwack. Passed straight to `impactOccurred(intensity:)`.
+    public var hapticIntensity: Double
     /// Multiplier applied to each key's frame before hit-testing. 1.0 = hitbox
     /// matches the visual key exactly. Values above 1 make the hitbox larger
     /// (more forgiving); values below 1 shrink it (more precise, with wider
@@ -334,7 +360,20 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var keySpringResponse: Double
     /// Spring damping for the key press bloom — lower = bouncier, 1.0 = no oscillation.
     public var keySpringDamping: Double
+    /// Drop the press spring entirely — the key snaps to its bloom/colour with no
+    /// animation, mirroring the stock keyboard's instant highlight. Zero latency
+    /// on the visual press at the cost of the liquid ease. Overrides the spring
+    /// speed/damping when on.
+    public var keyPressInstant: Bool
+    /// Strength of the additive white "tap registered" flash on each press
+    /// (0 = off). The crisp visual snap that confirms a keystroke landed; gated on
+    /// `keyPressWarp` like the bloom.
+    public var tapFlashStrength: Double
     // Space bar physics
+    /// Scale the space bar blooms to on press (its own knob — letters use
+    /// `keyBloomScale`). 1.0 = no bloom; the space bar historically used a dead
+    /// 1.04 so it felt flatter than the letter keys.
+    public var spaceBloomScale: Double
     /// Spring response (seconds) for the space bar press and cursor-drag animations.
     public var spaceSpringResponse: Double
     /// Spring damping for the space bar.
@@ -461,6 +500,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
         hapticsEnabled: Bool = false,
+        hapticStyle: HapticStyle = .light,
+        hapticIntensity: Double = 0.6,
         showHitboxOverlay: Bool = false,
         hitboxScale: Double = 0.90,
         suggestionHitboxScale: Double = 1.0,
@@ -477,6 +518,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keyBloomScale: Double = 1.12,
         keySpringResponse: Double = 0.26,
         keySpringDamping: Double = 0.60,
+        keyPressInstant: Bool = false,
+        tapFlashStrength: Double = 0.34,
+        spaceBloomScale: Double = 1.04,
         spaceSpringResponse: Double = 0.28,
         spaceSpringDamping: Double = 0.78,
         spaceLeanMultiplier: Double = 0.14,
@@ -556,6 +600,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
         self.hapticsEnabled = hapticsEnabled
+        self.hapticStyle = hapticStyle
+        self.hapticIntensity = hapticIntensity
         self.showHitboxOverlay = showHitboxOverlay
         self.hitboxScale = hitboxScale
         self.suggestionHitboxScale = suggestionHitboxScale
@@ -572,6 +618,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.keyBloomScale = keyBloomScale
         self.keySpringResponse = keySpringResponse
         self.keySpringDamping = keySpringDamping
+        self.keyPressInstant = keyPressInstant
+        self.tapFlashStrength = tapFlashStrength
+        self.spaceBloomScale = spaceBloomScale
         self.spaceSpringResponse = spaceSpringResponse
         self.spaceSpringDamping = spaceSpringDamping
         self.spaceLeanMultiplier = spaceLeanMultiplier
@@ -660,6 +709,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? false
+        hapticStyle = (try? c.decodeIfPresent(HapticStyle.self, forKey: .hapticStyle)) ?? .light
+        hapticIntensity = try c.decodeIfPresent(Double.self, forKey: .hapticIntensity) ?? 0.6
         showHitboxOverlay = try c.decodeIfPresent(Bool.self, forKey: .showHitboxOverlay) ?? false
         hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.90
         suggestionHitboxScale = try c.decodeIfPresent(Double.self, forKey: .suggestionHitboxScale) ?? 1.0
@@ -676,6 +727,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keyBloomScale = try c.decodeIfPresent(Double.self, forKey: .keyBloomScale) ?? 1.12
         keySpringResponse = try c.decodeIfPresent(Double.self, forKey: .keySpringResponse) ?? 0.26
         keySpringDamping = try c.decodeIfPresent(Double.self, forKey: .keySpringDamping) ?? 0.60
+        keyPressInstant = try c.decodeIfPresent(Bool.self, forKey: .keyPressInstant) ?? false
+        tapFlashStrength = try c.decodeIfPresent(Double.self, forKey: .tapFlashStrength) ?? 0.34
+        spaceBloomScale = try c.decodeIfPresent(Double.self, forKey: .spaceBloomScale) ?? 1.04
         spaceSpringResponse = try c.decodeIfPresent(Double.self, forKey: .spaceSpringResponse) ?? 0.28
         spaceSpringDamping = try c.decodeIfPresent(Double.self, forKey: .spaceSpringDamping) ?? 0.78
         spaceLeanMultiplier = try c.decodeIfPresent(Double.self, forKey: .spaceLeanMultiplier) ?? 0.14

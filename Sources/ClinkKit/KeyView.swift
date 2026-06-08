@@ -19,9 +19,11 @@ struct TapPulse: ViewModifier {
     let trigger: Int
     let shape: RoundedRectangle
     let enabled: Bool
+    /// Peak opacity of the flash (0 = off). Tunable via `tapFlashStrength`.
+    var strength: CGFloat = 0.34
 
     func body(content: Content) -> some View {
-        if enabled {
+        if enabled, strength > 0.001 {
             content.keyframeAnimator(initialValue: 0.0, trigger: trigger) { view, flash in
                 view.overlay {
                     shape.fill(.white)
@@ -32,8 +34,8 @@ struct TapPulse: ViewModifier {
             } keyframes: { _ in
                 KeyframeTrack {
                     CubicKeyframe(0.0, duration: 0.001)
-                    CubicKeyframe(0.34, duration: 0.05)   // snap bright
-                    CubicKeyframe(0.0, duration: 0.20)    // ease back out
+                    CubicKeyframe(strength, duration: 0.05)   // snap bright
+                    CubicKeyframe(0.0, duration: 0.20)        // ease back out
                 }
             }
         } else {
@@ -126,7 +128,7 @@ struct KeyView: View {
             let maxLean: CGFloat = 28
             let offset = max(min(dragX * physics.spaceLeanMultiplier, maxLean), -maxLean)
             let scale: CGFloat = cursorActive ? physics.spaceCursorDragScale
-                                              : (pressWarp && !showsPopup ? 1.04 : 1)
+                                              : (pressWarp && !showsPopup ? physics.spaceBloomScale : 1)
             return (scale, scale, offset)
         }
         // Visible bloom on press for the generic keys. The shift key opts out —
@@ -159,7 +161,7 @@ struct KeyView: View {
             // of two different ones fighting over the scale (the release stutter).
             .animation(spec.isSpace
                        ? .interactiveSpring(response: physics.spaceSpringResponse, dampingFraction: physics.spaceSpringDamping)
-                       : (pressWarp && !spec.isShift
+                       : (pressWarp && !spec.isShift && !physics.instant
                           ? .interactiveSpring(response: physics.springResponse, dampingFraction: physics.springDamping) : nil),
                        value: isPressed)
             // The space bar's trackpad shrink in/out — a one-shot at engage/release,
@@ -176,7 +178,7 @@ struct KeyView: View {
             // landing, so each tap gets its own confirmation. It only flashes a
             // brief highlight over the key — it never touches the bloom geometry,
             // so it adds to the press effect rather than overriding it.
-            .modifier(TapPulse(trigger: router.tapTick(keyID), shape: shape, enabled: pressWarp))
+            .modifier(TapPulse(trigger: router.tapTick(keyID), shape: shape, enabled: pressWarp, strength: physics.tapFlashStrength))
             // Publish the glyph for the on-top layer — except shift, which draws
             // its own so it can morph with its interactive glass.
             .anchorPreference(key: KeyGlyphKey.self, value: .bounds) { anchor in

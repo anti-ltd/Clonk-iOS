@@ -17,8 +17,36 @@ struct HapticsView: View {
         PinnedPreviewLayout(settings: model.settings) {
             CardSection {
                 ToggleRow("Key press haptics",
-                          subtitle: "A subtle tap on each keypress.",
+                          subtitle: "A tap on each keypress.",
                           isOn: $model.settings.hapticsEnabled)
+            }
+
+            if model.settings.hapticsEnabled {
+                CardSection("Feel") {
+                    Text("How each keystroke lands in your hand. Heavier styles and a higher strength read punchier and more mechanical; lighter is a faint tick.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, UX.rowVPadding)
+                    Divider()
+                    HStack {
+                        Text("Style")
+                        Spacer()
+                        Picker("Style", selection: $model.settings.hapticStyle) {
+                            ForEach(HapticStyle.allCases) { style in
+                                Text(style.label).tag(style)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                    }
+                    .padding(.vertical, UX.rowVPadding)
+                    Divider()
+                    SliderRow("Strength", value: $model.settings.hapticIntensity,
+                              in: 0.1...1.0, step: 0.05) {
+                        "\(Int(($0 * 100).rounded()))%"
+                    }
+                }
             }
 
             if model.settings.hapticsEnabled && !model.hasFullAccess {
