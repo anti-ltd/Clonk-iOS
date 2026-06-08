@@ -94,7 +94,7 @@ struct RootView: View {
     enum SidebarDestination: Hashable {
         case clink, permissions, localization, layout, theme
         // Customization placeholders (pages to be built out).
-        case animation, automation, cursor, keys, sounds, haptics, suggestions, popups
+        case animation, automation, cursor, keys, sounds, haptics, suggestions, popups, gestures
         // Advanced placeholders.
         case hitboxes, overlays, response, performance
         case clipboard, notepad, emoji, calculator
@@ -322,6 +322,7 @@ private struct DetailHost: View {
         case .keys:        KeysView()
         case .sounds:      SoundsView()
         case .haptics:     HapticsView()
+        case .gestures:    GesturesView()
         case .suggestions: SuggestionsView()
         case .popups:      PopupsView()
         case .hitboxes:     HitboxView()
@@ -433,6 +434,7 @@ private struct SidebarPanel: View {
             NavItem(title: "Custom Actions", icon: "puzzlepiece.extension", dest: .customActions),
             NavItem(title: "Custom Panels", icon: "square.grid.2x2",      dest: .customPanels),
             NavItem(title: "Cursor",      icon: "cursorarrow",           dest: .cursor),
+            NavItem(title: "Gestures",    icon: "hand.draw",             dest: .gestures),
             NavItem(title: "Haptics",     icon: "hand.tap",                         dest: .haptics),
             NavItem(title: "Keys",        icon: "keyboard",              dest: .keys),
             NavItem(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait", dest: .popups),
@@ -894,6 +896,7 @@ private struct ClinkContent: View {
         DestCard(title: "Custom Actions", icon: "puzzlepiece.extension",                     description: "Write keyboard actions in Python",      dest: .customActions),
         DestCard(title: "Custom Panels", icon: "square.grid.2x2",                            description: "Build custom keyboard UIs in Python",   dest: .customPanels),
         DestCard(title: "Cursor",      icon: "cursorarrow",                                 description: "Movement style and feel",               dest: .cursor),
+        DestCard(title: "Gestures",    icon: "hand.draw",                                   description: "Swipe typing and the glide trail",      dest: .gestures),
         DestCard(title: "Haptics",     icon: "hand.tap",                                    description: "Key press haptic feedback",             dest: .haptics),
         DestCard(title: "Keys",        icon: "keyboard",                                    description: "Size, shape, and backspace repeat",     dest: .keys),
         DestCard(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait",    description: "Popup style and Liquid Glass",          dest: .popups),

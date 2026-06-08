@@ -289,6 +289,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// lands you mid-sentence with the gap already there. No effect when
     /// `autoReturnToLetters` is off.
     public var autoSpaceAfterReturn: Bool
+    /// Glide/swipe typing: trace a continuous path across the letter keys and the
+    /// gesture is decoded into a word on lift (the first letter is typed instantly
+    /// on touch-down as usual, then replaced by the decoded word once the trace is
+    /// recognised). Tapping keys still types normally — only a deliberate slide
+    /// across keys engages the swipe path. Off by default.
+    public var swipeTypingEnabled: Bool
+    /// Draw the live finger trail while swiping. Purely visual; no effect on the
+    /// decode. Only meaningful when `swipeTypingEnabled`.
+    public var swipeShowTrail: Bool
+    /// Stroke width (pt) of the swipe trail.
+    public var swipeTrailWidth: Double
     // Clink sound + feel
     public var soundPackID: String
     public var soundEnabled: Bool
@@ -496,6 +507,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         autoPunctuationEnabled: Bool = true,
         autoReturnToLetters: Bool = true,
         autoSpaceAfterReturn: Bool = true,
+        swipeTypingEnabled: Bool = false,
+        swipeShowTrail: Bool = true,
+        swipeTrailWidth: Double = 4,
         soundPackID: String = SoundPack.default.id,
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
@@ -596,6 +610,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.autoPunctuationEnabled = autoPunctuationEnabled
         self.autoReturnToLetters = autoReturnToLetters
         self.autoSpaceAfterReturn = autoSpaceAfterReturn
+        self.swipeTypingEnabled = swipeTypingEnabled
+        self.swipeShowTrail = swipeShowTrail
+        self.swipeTrailWidth = swipeTrailWidth
         self.soundPackID = soundPackID
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
@@ -705,6 +722,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
         autoReturnToLetters = try c.decodeIfPresent(Bool.self, forKey: .autoReturnToLetters) ?? true
         autoSpaceAfterReturn = try c.decodeIfPresent(Bool.self, forKey: .autoSpaceAfterReturn) ?? true
+        swipeTypingEnabled = try c.decodeIfPresent(Bool.self, forKey: .swipeTypingEnabled) ?? false
+        swipeShowTrail = try c.decodeIfPresent(Bool.self, forKey: .swipeShowTrail) ?? true
+        swipeTrailWidth = try c.decodeIfPresent(Double.self, forKey: .swipeTrailWidth) ?? 4
         soundPackID = try c.decodeIfPresent(String.self, forKey: .soundPackID) ?? SoundPack.default.id
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8

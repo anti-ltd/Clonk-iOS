@@ -76,6 +76,12 @@ public struct KeyboardCanvas: View {
     private let onRunExtension: (ClinkExtension) -> Void
     /// Fired when a custom panel's button inserts text — typed at the cursor.
     private let onPanelInsert: (String) -> Void
+    /// Fired the instant a swipe/glide trace engages — the host deletes the stray
+    /// letter typed on touch-down so the decoded word can replace it.
+    private let onSwipeStart: () -> Void
+    /// Fired on lift with the traced path + the live letter-key centres — the host
+    /// decodes a word and inserts it. See `KeyTouchRouter` swipe session.
+    private let onSwipeEnd: ([CGPoint], [Character: CGPoint]) -> Void
     /// When true, render a semi-transparent hitbox outline over each key so the
     /// user can see exactly which area maps to each key. Used by the Advanced
     /// settings view; false for normal use.
@@ -123,7 +129,9 @@ public struct KeyboardCanvas: View {
         onNotepadInsert: @escaping (String) -> Void = { _ in },
         onCalculatorInsert: @escaping (String) -> Void = { _ in },
         onRunExtension: @escaping (ClinkExtension) -> Void = { _ in },
-        onPanelInsert: @escaping (String) -> Void = { _ in }
+        onPanelInsert: @escaping (String) -> Void = { _ in },
+        onSwipeStart: @escaping () -> Void = {},
+        onSwipeEnd: @escaping ([CGPoint], [Character: CGPoint]) -> Void = { _, _ in }
     ) {
         self.settings = settings
         self.live = live
@@ -149,6 +157,8 @@ public struct KeyboardCanvas: View {
         self.onCalculatorInsert = onCalculatorInsert
         self.onRunExtension = onRunExtension
         self.onPanelInsert = onPanelInsert
+        self.onSwipeStart = onSwipeStart
+        self.onSwipeEnd = onSwipeEnd
     }
 
     private typealias Plane = KeyboardController.Plane
@@ -760,6 +770,19 @@ public struct KeyboardCanvas: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlayPreferenceValue(KeyFrameKey.self) { anchors in
                         GeometryReader { proxy in
+                            // Swipe trail rides in the SAME coordinate space the
+                            // touch surface reports points in (this GeometryReader's
+                            // local space == the UIView's local space), so it tracks
+                            // the finger exactly. Below the surface but above the
+                            // keys; never intercepts touches.
+                            if settings.swipeTypingEnabled, settings.swipeShowTrail,
+                               touch.swipeActive, touch.swipeTrail.count > 1 {
+                                SwipeTrailShape(points: touch.swipeTrail)
+                                    .stroke(theme.accent.color.opacity(0.55),
+                                            style: StrokeStyle(lineWidth: CGFloat(settings.swipeTrailWidth),
+                                                               lineCap: .round, lineJoin: .round))
+                                    .allowsHitTesting(false)
+                            }
                             MultiTouchSurface(
                                 router: touch,
                                 frames: anchors.mapValues { proxy[$0] },
@@ -786,7 +809,13 @@ public struct KeyboardCanvas: View {
                                 accentHoldDelay: settings.accentHoldDelay / 1000,
                                 accentMoveCancel: CGFloat(settings.accentMoveCancel),
                                 dragUpThreshold: CGFloat(settings.dragUpThreshold),
-                                surfaceWidth: proxy.size.width)
+                                surfaceWidth: proxy.size.width,
+                                // Only while typing into the host — never with a
+                                // panel (notepad/calc/…) composing, where the swipe
+                                // callbacks' host-document edits wouldn't apply.
+                                swipeEnabled: settings.swipeTypingEnabled && live.activePanel == nil,
+                                onSwipeStart: onSwipeStart,
+                                onSwipeEnd: onSwipeEnd)
                         }
                     }
             }

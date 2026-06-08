@@ -320,4 +320,52 @@ public final class SuggestionEngine {
         let picks = heuristics.bigrams[previousWord!.lowercased()] ?? heuristics.commonFallback
         return Array(picks.prefix(3))
     }
+
+    // MARK: - Swipe / glide typing
+
+    private let swipeDecoder = SwipeDecoder()
+    /// Lowercased word pool for swipe decoding, built from the current language's
+    /// heuristics. Cached and rebuilt only when the language changes (the tables
+    /// are static per language).
+    private var swipeVocabCache: (language: String, words: [String])?
+
+    private func swipeVocabulary() -> [String] {
+        if let c = swipeVocabCache, c.language == language { return c.words }
+        var set = Set<String>()
+        set.formUnion(heuristics.commonWords)
+        set.formUnion(heuristics.commonFallback.map { $0.lowercased() })
+        set.formUnion(heuristics.sentenceStarters.map { $0.lowercased() })
+        for (k, vs) in heuristics.bigrams {
+            set.insert(k)
+            for v in vs { set.insert(v.lowercased()) }
+        }
+        let words = Array(set)
+        swipeVocabCache = (language, words)
+        return words
+    }
+
+    /// Decode a glide/swipe trace into ranked word candidates. `keyCenters` maps
+    /// each lowercased letter to its key's centre in the trace's coordinate space.
+    /// Context (`previousWord` / `sentenceStart`) gently biases plausible
+    /// next-words upward. The first result is the best guess; the rest are
+    /// alternates. An empty array means nothing plausible matched.
+    public func swipeCandidates(path: [CGPoint],
+                                keyCenters: [Character: CGPoint],
+                                previousWord: String?,
+                                sentenceStart: Bool,
+                                limit: Int = 4) -> [String] {
+        let bias = Set(nextWords(previousWord: previousWord, sentenceStart: sentenceStart)
+                        .map { $0.lowercased() })
+        let words = swipeDecoder.decode(path: path,
+                                        keyCenters: keyCenters,
+                                        vocabulary: swipeVocabulary(),
+                                        bias: bias,
+                                        limit: limit)
+        // Capitalise the lead candidate at a sentence start, matching the bar's
+        // auto-capitalisation so a swiped sentence opener reads correctly.
+        guard sentenceStart, let first = words.first, !first.isEmpty else { return words }
+        var result = words
+        result[0] = first.prefix(1).uppercased() + first.dropFirst()
+        return result
+    }
 }

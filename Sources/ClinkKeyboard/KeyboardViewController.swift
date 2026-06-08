@@ -517,6 +517,31 @@ final class KeyboardViewController: UIInputViewController {
                 self.scheduleSuggestionUpdate()
                 // Panel stays open so the user can insert several times; they
                 // dismiss it with the panel's close button.
+            },
+            // Swipe/glide typing. On engage, drop the stray first letter that was
+            // typed instantly on touch-down; on lift, decode the trace into a word
+            // and insert it (with a trailing space, like the system swipe keyboard).
+            onSwipeStart: { [weak self] in
+                guard let self else { return }
+                self.isApplyingEdit = true
+                self.deleteBackwardMirrored(1)
+                self.isApplyingEdit = false
+            },
+            onSwipeEnd: { [weak self] path, centers in
+                guard let self else { return }
+                let before = self.contextBeforeCursor()
+                let partial = SmartPunctuation.trailingPartialWord(in: before)
+                let words = self.engine.swipeCandidates(
+                    path: path,
+                    keyCenters: centers,
+                    previousWord: self.previousWord(before: before, partial: partial),
+                    sentenceStart: self.isSentenceStart(before: before, partial: partial),
+                    limit: 4)
+                guard let best = words.first, !best.isEmpty else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(best + " ")
+                self.isApplyingEdit = false
+                self.scheduleSuggestionUpdate()
             }
         )
         // Fill the host (which fills the input view) so the bar pins to the top

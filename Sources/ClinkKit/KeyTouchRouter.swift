@@ -42,6 +42,23 @@ public final class KeyTouchRouter {
     /// Bumped on every backspace auto-repeat so the delete glyph bounces.
     public private(set) var deleteTick = 0
 
+    // MARK: - Swipe / glide typing
+    //
+    // A swipe is a single finger that lands on a letter and slides across the
+    // grid; on lift the traced path is decoded into a word. The first letter is
+    // still typed instantly on touch-down (so plain tapping is unchanged); when
+    // the slide engages, the host deletes that stray letter and, on lift, inserts
+    // the decoded word. `KeyGridTouchView` owns the per-touch path capture and the
+    // engage decision — the router holds the published render state and the host
+    // callbacks. See `beginSwipe` / `endSwipe`.
+
+    /// True while a swipe trace is engaged (past the tap threshold). Drives the
+    /// trail overlay; no key types while it's set for the swiping finger.
+    public private(set) var swipeActive = false
+    /// The live finger trail (in the touch surface's local coordinate space, the
+    /// same space the key `frames` live in). Published for the trail overlay.
+    public private(set) var swipeTrail: [CGPoint] = []
+
     // MARK: - Accent long-press session
     //
     // Holding a letter key (when accent popups are on) raises a bar of diacritic
@@ -139,6 +156,14 @@ public final class KeyTouchRouter {
     fileprivate var accentMoveCancel: CGFloat = 12
     /// Upward travel (pt) before a drag-up key (123→panel) fires.
     fileprivate var dragUpThreshold: CGFloat = 24
+    /// Swipe/glide typing on: a slide across the letters is decoded into a word.
+    fileprivate var swipeEnabled: Bool = false
+    /// Fired the instant a swipe engages — the host deletes the first letter that
+    /// was typed on touch-down (the decoded word replaces it on lift).
+    fileprivate var onSwipeStart: () -> Void = {}
+    /// Fired on lift with the traced path and the current letter-key centres — the
+    /// host decodes a word and inserts it.
+    fileprivate var onSwipeEnd: ([CGPoint], [Character: CGPoint]) -> Void = { _, _ in }
 
     fileprivate func update(frames: [String: CGRect],
                             resolveSpec: @escaping (String) -> KeySpec?,
@@ -162,7 +187,10 @@ public final class KeyTouchRouter {
                             accentHoldDelay: TimeInterval,
                             accentMoveCancel: CGFloat,
                             dragUpThreshold: CGFloat,
-                            surfaceWidth: CGFloat) {
+                            surfaceWidth: CGFloat,
+                            swipeEnabled: Bool,
+                            onSwipeStart: @escaping () -> Void,
+                            onSwipeEnd: @escaping ([CGPoint], [Character: CGPoint]) -> Void) {
         self.frames = frames
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
@@ -186,6 +214,55 @@ public final class KeyTouchRouter {
         self.accentMoveCancel = accentMoveCancel
         self.dragUpThreshold = dragUpThreshold
         self.surfaceWidth = surfaceWidth
+        self.swipeEnabled = swipeEnabled
+        self.onSwipeStart = onSwipeStart
+        self.onSwipeEnd = onSwipeEnd
+    }
+
+    // MARK: - Swipe session (driven by KeyGridTouchView)
+
+    /// Whether swipe typing is on (read by the touch view to decide whether to
+    /// track a path at all).
+    fileprivate var isSwipeEnabled: Bool { swipeEnabled }
+
+    /// Whether a key types a letter on the current plane — gates which keys a
+    /// swipe may start on / engage into.
+    fileprivate func isLetterKey(_ id: String) -> Bool { letterOfKey(id) != nil }
+
+    /// Lowercased letter → its key's centre, in the frames' coordinate space.
+    /// The decode geometry runs against this map.
+    fileprivate func letterCenters() -> [Character: CGPoint] {
+        var m: [Character: CGPoint] = [:]
+        for (id, f) in frames where letterOfKey(id) != nil {
+            m[letterOfKey(id)!] = CGPoint(x: f.midX, y: f.midY)
+        }
+        return m
+    }
+
+    /// Engage the swipe: the host drops the stray first letter. Idempotent.
+    fileprivate func beginSwipe() {
+        guard !swipeActive else { return }
+        swipeActive = true
+        onSwipeStart()
+    }
+
+    /// Publish the live trail for the overlay.
+    fileprivate func updateSwipeTrail(_ points: [CGPoint]) { swipeTrail = points }
+
+    /// Finish the swipe: hand the path + letter centres to the host to decode and
+    /// insert. No-op if not engaged.
+    fileprivate func endSwipe(path: [CGPoint]) {
+        guard swipeActive else { return }
+        swipeActive = false
+        swipeTrail = []
+        onSwipeEnd(path, letterCenters())
+    }
+
+    /// Abandon the swipe with no commit (touch cancelled).
+    fileprivate func cancelSwipe() {
+        guard swipeActive else { return }
+        swipeActive = false
+        swipeTrail = []
     }
 
     // MARK: - Hit testing
@@ -717,6 +794,15 @@ final class KeyGridTouchView: UIView {
     /// key the finger originally landed on.
     private var bindings: [ObjectIdentifier: (id: String, start: CGPoint)] = [:]
 
+    /// Per-touch swipe path tracking. A touch that lands on a letter is a swipe
+    /// *candidate*; it becomes engaged once the finger slides past the threshold
+    /// into a different letter key. Until engaged it's an ordinary tap.
+    private struct SwipeTrack { var points: [CGPoint]; let startKeyID: String; var engaged: Bool }
+    private var swipeTracks: [ObjectIdentifier: SwipeTrack] = [:]
+    /// Minimum travel (pt) before a candidate can engage — keeps a normal tap
+    /// (with its tiny finger wobble) from ever reading as a swipe.
+    private let swipeEngageTravel: CGFloat = 22
+
     init(router: KeyTouchRouter) {
         self.router = router
         super.init(frame: .zero)
@@ -733,6 +819,12 @@ final class KeyGridTouchView: UIView {
             guard let id = router.key(at: p) else { continue }
             bindings[ObjectIdentifier(t)] = (id, p)
             router.touchDown(id: id, localPoint: p, windowPoint: t.location(in: nil))
+            // Begin tracking a possible swipe when it lands on a letter — but never
+            // while another finger's swipe is already engaged (swipe is one-finger).
+            if router.isSwipeEnabled, router.isLetterKey(id),
+               !swipeTracks.values.contains(where: { $0.engaged }) {
+                swipeTracks[ObjectIdentifier(t)] = SwipeTrack(points: [p], startKeyID: id, engaged: false)
+            }
         }
     }
 
@@ -743,21 +835,76 @@ final class KeyGridTouchView: UIView {
             router.touchMoved(id: b.id, translationX: p.x - b.start.x,
                               translationY: p.y - b.start.y,
                               windowPoint: t.location(in: nil))
+
+            let oid = ObjectIdentifier(t)
+            guard var track = swipeTracks[oid] else { continue }
+            track.points.append(p)
+            if track.engaged {
+                router.updateSwipeTrail(track.points)
+            } else {
+                // Engage once the finger has travelled far enough AND crossed into
+                // a different letter key — a deliberate glide, not a tap wobble.
+                let travel = hypot(p.x - b.start.x, p.y - b.start.y)
+                let cur = router.key(at: p)
+                if travel >= swipeEngageTravel, let cur, cur != track.startKeyID,
+                   router.isLetterKey(cur) {
+                    track.engaged = true
+                    router.beginSwipe()
+                    router.updateSwipeTrail(track.points)
+                }
+            }
+            swipeTracks[oid] = track
         }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches {
-            guard let b = bindings.removeValue(forKey: ObjectIdentifier(t)) else { continue }
+            let oid = ObjectIdentifier(t)
+            guard let b = bindings.removeValue(forKey: oid) else { continue }
             router.touchUp(id: b.id, windowPoint: t.location(in: nil))
+            // A finished swipe commits its word; a candidate that never engaged was
+            // just a tap (already typed on touch-down) — drop it.
+            if let track = swipeTracks.removeValue(forKey: oid), track.engaged {
+                router.endSwipe(path: track.points)
+            }
         }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         for t in touches {
-            guard let b = bindings.removeValue(forKey: ObjectIdentifier(t)) else { continue }
+            let oid = ObjectIdentifier(t)
+            guard let b = bindings.removeValue(forKey: oid) else { continue }
             router.touchCancelled(id: b.id)
+            if let track = swipeTracks.removeValue(forKey: oid), track.engaged {
+                router.cancelSwipe()
+            }
         }
+    }
+}
+
+/// The live swipe trail — a smoothed polyline through the captured finger points,
+/// drawn over the keys while a glide is in progress.
+struct SwipeTrailShape: Shape {
+    let points: [CGPoint]
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        guard points.count > 2 else {
+            for p in points.dropFirst() { path.addLine(to: p) }
+            return path
+        }
+        // Quadratic smoothing: curve through the midpoints of consecutive samples,
+        // using each raw point as the control — rounds off the jitter of raw touch
+        // samples into a clean stroke.
+        for i in 1..<(points.count - 1) {
+            let mid = CGPoint(x: (points[i].x + points[i + 1].x) / 2,
+                              y: (points[i].y + points[i + 1].y) / 2)
+            path.addQuadCurve(to: mid, control: points[i])
+        }
+        path.addLine(to: points[points.count - 1])
+        return path
     }
 }
 
@@ -787,6 +934,9 @@ struct MultiTouchSurface: UIViewRepresentable {
     let accentMoveCancel: CGFloat
     let dragUpThreshold: CGFloat
     let surfaceWidth: CGFloat
+    let swipeEnabled: Bool
+    let onSwipeStart: () -> Void
+    let onSwipeEnd: ([CGPoint], [Character: CGPoint]) -> Void
 
     func makeUIView(context: Context) -> KeyGridTouchView {
         let v = KeyGridTouchView(router: router)
@@ -808,7 +958,10 @@ struct MultiTouchSurface: UIViewRepresentable {
                       accentHoldDelay: accentHoldDelay,
                       accentMoveCancel: accentMoveCancel,
                       dragUpThreshold: dragUpThreshold,
-                      surfaceWidth: surfaceWidth)
+                      surfaceWidth: surfaceWidth,
+                      swipeEnabled: swipeEnabled,
+                      onSwipeStart: onSwipeStart,
+                      onSwipeEnd: onSwipeEnd)
         return v
     }
 
@@ -831,6 +984,9 @@ struct MultiTouchSurface: UIViewRepresentable {
                       accentHoldDelay: accentHoldDelay,
                       accentMoveCancel: accentMoveCancel,
                       dragUpThreshold: dragUpThreshold,
-                      surfaceWidth: surfaceWidth)
+                      surfaceWidth: surfaceWidth,
+                      swipeEnabled: swipeEnabled,
+                      onSwipeStart: onSwipeStart,
+                      onSwipeEnd: onSwipeEnd)
     }
 }
