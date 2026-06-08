@@ -4,6 +4,7 @@
  (Theme editor, Sound picker, etc.) lives inside the per-destination NavigationStack.
  */
 import SwiftUI
+import UIKit
 import iUXiOS
 
 // MARK: - Theme page background
@@ -256,7 +257,15 @@ struct RootView: View {
     private var navButtonLayer: some View {
         HStack(spacing: 0) {
             ThemeNavButton(systemName: "sidebar.left") {
-                withAnimation(sidebarAnim) { sidebar.isOpen.toggle() }
+                // If a text field is editing (e.g. the localization search), the
+                // first tap just dismisses its keyboard — don't also yank the
+                // sidebar open. `sendAction` returns true when a responder handled
+                // the resign, i.e. a keyboard was up.
+                let dismissedKeyboard = UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                if !dismissedKeyboard {
+                    withAnimation(sidebarAnim) { sidebar.isOpen.toggle() }
+                }
             }
             .opacity(sidebar.navigationDepth > 0 ? 0 : 1)
             .allowsHitTesting(sidebar.navigationDepth == 0)
@@ -736,6 +745,15 @@ private struct ExtensionPickerContent: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, UX.rowVPadding)
             }
+        }
+        // Built-in panels added after a user's `extensionOrder` was first saved
+        // aren't in their stored order, so the reorder list above would silently
+        // omit them. Append any missing built-ins on appear so every panel is
+        // listed and toggleable.
+        .onAppear {
+            let known = allExtensions.map { $0.name.lowercased() }
+            let missing = known.filter { !model.settings.extensionOrder.contains($0) }
+            if !missing.isEmpty { model.settings.extensionOrder.append(contentsOf: missing) }
         }
     }
 }

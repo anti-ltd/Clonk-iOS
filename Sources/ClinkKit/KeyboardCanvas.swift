@@ -286,9 +286,12 @@ public struct KeyboardCanvas: View {
         // activation adds no permanent bar — the picker is transient.)
         let anyPanel = (settings.clipboardEnabled && hasFullAccess)
             || settings.notepadEnabled || settings.emojiEnabled
+            || settings.calculatorEnabled
         if settings.suggestionsEnabled || (settings.activateWithIcon && anyPanel) {
             h += Metrics.suggestionBarHeight
         }
+        // User-chosen top/bottom breathing room around the key block.
+        h += CGFloat(settings.keyboardTopPadding) + CGFloat(settings.keyboardBottomPadding)
         return h
     }
 
@@ -318,7 +321,8 @@ public struct KeyboardCanvas: View {
             switch panel.kind {
             case .clipboard:  return (settings.clipboardEnabled && hasFullAccess) ? panel : nil
             case .notepad:    return settings.notepadEnabled    ? panel : nil
-            case .emoji:      return settings.emojiEnabled      ? panel : nil
+            // Emoji leaves the picker when it has its own dedicated key by 123.
+            case .emoji:      return (settings.emojiEnabled && !settings.emojiKeyInRow) ? panel : nil
             case .calculator: return settings.calculatorEnabled ? panel : nil
             default:          return nil   // custom kinds appended below, not in extensionOrder
             }
@@ -456,6 +460,20 @@ public struct KeyboardCanvas: View {
         live.activePanel = nil
         pickerOpen = false
         notepadBrowsing = false
+    }
+
+    /// The top-left "back" action while a panel is open. Returns to the cards
+    /// picker when that's the active style (and there's a picker to return to —
+    /// 2+ panels); otherwise there's no picker to fall back to, so it closes to
+    /// the main keyboard. `closePanel()` already clears `notepadBrowsing`.
+    private func backToPicker() {
+        let canPick = settings.panelPickerStyle == .cards && enabledPanels.count >= 2
+        guard canPick else { closePanel(); return }
+        withAnimation(.snappy(duration: 0.22)) {
+            live.activePanel = nil
+            notepadBrowsing = false
+            pickerOpen = true
+        }
     }
 
     /// Collapse the picker (popover or inline) the moment a key is pressed — the
@@ -678,6 +696,7 @@ public struct KeyboardCanvas: View {
                         onTap: { text in onClipboardInsert(text) },
                         onSave: { clipboard.captureFromPasteboard() },
                         onDismiss: { closePanel() },
+                        onBack: { backToPicker() },
                         onCopy: { idx in
                             guard clipboard.history.indices.contains(idx) else { return }
                             UIPasteboard.general.string = clipboard.history[idx].text
@@ -695,7 +714,8 @@ public struct KeyboardCanvas: View {
                         onLoad: { text in notepad.scratch = text; notepadBrowsing = false },
                         onDelete: { idx in notepad.deleteNote(at: idx) },
                         onClear: { notepad.clearNotes() },
-                        onDismiss: { notepadBrowsing = false }
+                        onDismiss: { notepadBrowsing = false },
+                        onBack: { notepadBrowsing = false }
                     )
                 case .calculator:
                     CalculatorPanel(
@@ -704,7 +724,8 @@ public struct KeyboardCanvas: View {
                         onInsert: { text in onCalculatorInsert(text) },
                         onCopy: { text in UIPasteboard.general.string = text },
                         onSaveToClipboard: { text in clipboard.capture(string: text) },
-                        onDismiss: { closePanel() }
+                        onDismiss: { closePanel() },
+                        onBack: { backToPicker() }
                     )
                 case .extensions:
                     ExtensionsPanel(
@@ -712,7 +733,8 @@ public struct KeyboardCanvas: View {
                         theme: theme,
                         cornerRadius: CGFloat(settings.keyCornerRadius),
                         onRun: { ext in onRunExtension(ext) },
-                        onDismiss: { closePanel() }
+                        onDismiss: { closePanel() },
+                        onBack: { backToPicker() }
                     )
                 case .customPanels:
                     CustomPanelsContainer(
@@ -721,7 +743,8 @@ public struct KeyboardCanvas: View {
                         theme: theme,
                         cornerRadius: CGFloat(settings.keyCornerRadius),
                         onInsert: { text in onPanelInsert(text) },
-                        onDismiss: { closePanel() }
+                        onDismiss: { closePanel() },
+                        onBack: { backToPicker() }
                     )
                 case .customPanel:
                     // A standalone custom panel — open straight to it.
@@ -731,7 +754,8 @@ public struct KeyboardCanvas: View {
                         theme: theme,
                         cornerRadius: CGFloat(settings.keyCornerRadius),
                         onInsert: { text in onPanelInsert(text) },
-                        onDismiss: { closePanel() }
+                        onDismiss: { closePanel() },
+                        onBack: { backToPicker() }
                     )
                 }
             } else if pickerCardsActive {
@@ -818,6 +842,11 @@ public struct KeyboardCanvas: View {
                                 onSwipeEnd: onSwipeEnd)
                         }
                     }
+                    // User breathing room: space above the keys (below the bar) and
+                    // below the keys (lifting the keyboard up). Wraps the touch
+                    // overlay too, so hit frames shift with the keys.
+                    .padding(.top, CGFloat(settings.keyboardTopPadding))
+                    .padding(.bottom, CGFloat(settings.keyboardBottomPadding))
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: live.activePanel)
@@ -1199,14 +1228,23 @@ public struct KeyboardCanvas: View {
         if plane == .letters {
             let slideEnabled = settings.activateWithSlideUp && !enabledPanels.isEmpty
             specs.append(planeKey(
-                "123", to: .numbers, weight: 1.4,
+                "123", to: .numbers, weight: Self.planeToggleWeight,
                 onDragUp: slideEnabled ? { slideUpActivate() } : nil,
                 // Continuous tracking only matters for the popover picker, where the
                 // finger can drag onto a row; inline/cards just open on the up-gesture.
                 onDragUpMove: slideEnabled ? { slideHoverUpdate($0) } : nil,
                 onDragUpEnd: slideEnabled ? { slideDragEnd($0) } : nil))
         } else {
-            specs.append(planeKey("ABC", to: .letters, weight: 1.4))
+            specs.append(planeKey("ABC", to: .letters, weight: Self.planeToggleWeight))
+        }
+        // Dedicated emoji key (opt-in): sits right next to 123 / ABC and opens
+        // the emoji keyboard directly. When on, emoji leaves the panel picker
+        // (see `enabledPanels`), so this is its sole entry point.
+        let emojiKey = settings.emojiKeyInRow && settings.emojiEnabled
+        if emojiKey {
+            specs.append(.init(kind: .function, label: .system("face.smiling"), weight: Self.emojiRowKeyWeight) {
+                activate(.emoji)
+            })
         }
         // Globe — only in the extension (host passes a handler).
         if onNextKeyboard != nil {
@@ -1235,12 +1273,20 @@ public struct KeyboardCanvas: View {
         // for action types, exactly like the system keyboard.
         let returnLabel: KeySpec.Label = live.returnKeySymbol.map { .system($0) }
             ?? .text(live.returnKeyTitle)
+        // With the dedicated emoji key on the leading side, widen the return key to
+        // match 123 + emoji so the space bar stays centred between equal flanks.
+        let returnWeight = emojiKey ? (Self.planeToggleWeight + Self.emojiRowKeyWeight) : 1.8
         specs.append(.init(kind: .function, label: returnLabel,
-                           weight: 1.8, highlighted: live.returnKeyProminent) {
+                           weight: returnWeight, highlighted: live.returnKeyProminent) {
             insert("\n")
         })
         return specs
     }
+
+    /// Weight of the 123 / ABC plane-toggle key in the bottom row.
+    private static let planeToggleWeight: Double = 1.4
+    /// Weight of the optional dedicated emoji key beside 123.
+    private static let emojiRowKeyWeight: Double = 1.2
 
     /// Every on-screen key, keyed by the same `"\(rowID)-\(index)"` ID the rows
     /// render with — so the multitouch router can resolve a hit-tested key back to

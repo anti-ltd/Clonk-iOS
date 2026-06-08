@@ -49,6 +49,12 @@ struct EmojiSettingsView: View {
                     ToggleRow("Emoji keyboard",
                               subtitle: "Reach emoji from the panel button or by sliding up on 123. Off removes emoji entirely.",
                               isOn: $model.settings.emojiEnabled)
+                    if model.settings.emojiEnabled {
+                        Divider()
+                        ToggleRow("Emoji key next to 123",
+                                  subtitle: "Add a dedicated 🙂 key beside the 123 key. This removes emoji from the panel picker.",
+                                  isOn: $model.settings.emojiKeyInRow)
+                    }
                 }
 
                 CardSection("Layout") {

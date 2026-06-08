@@ -19,10 +19,17 @@ struct PanelSwitcherPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 16))
-                    .foregroundStyle(theme.accent.color)
-                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                // Top-left in the cards picker returns to the main keyboard, same
+                // as the trailing dismiss.
+                Button(action: onDismiss) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 16))
+                        .foregroundStyle(theme.accent.color)
+                        .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight,
+                               height: KeyboardCanvas.Metrics.suggestionBarHeight)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 divider
                 Spacer()
                 divider

@@ -213,6 +213,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var keySpacing: Double
     /// Vertical gap between rows, in points.
     public var rowSpacing: Double
+    /// Extra space above the key block — between the suggestion bar and the keys
+    /// (or the top of the keyboard when the bar is hidden). Gives breathing room,
+    /// e.g. to show more of a background image. Points. Not gap-between-keys.
+    public var keyboardTopPadding: Double
+    /// Extra space below the key block — between the keys and the bottom of the
+    /// keyboard, lifting the whole keyboard upward. Points.
+    public var keyboardBottomPadding: Double
     /// Show the clipboard history button in the suggestion bar. Requires Full
     /// Access — without it the pasteboard is not readable from the extension.
     public var clipboardEnabled: Bool
@@ -243,6 +250,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// button / slide-up like clipboard and notepad). On by default — turning it
     /// off removes emoji access entirely.
     public var emojiEnabled: Bool
+    /// Surface emoji from a dedicated key next to the 123 key instead of the
+    /// panel picker. When on, emoji is removed from the picker list and a 🙂 key
+    /// appears beside 123 / ABC in the bottom row. No effect when `emojiEnabled`
+    /// is off.
+    public var emojiKeyInRow: Bool
     /// Show the calculator as an action panel — evaluate arithmetic and insert
     /// the result directly into the host document.
     public var calculatorEnabled: Bool
@@ -494,6 +506,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         funcKeyWidth: Double = 1.4,
         keySpacing: Double = 1,
         rowSpacing: Double = 4,
+        keyboardTopPadding: Double = 0,
+        keyboardBottomPadding: Double = 0,
         clipboardEnabled: Bool = false,
         clipboardStyle: ClipboardStyle = .bar,
         clipboardCloseOnPaste: Bool = false,
@@ -504,6 +518,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         notepadEnabled: Bool = false,
         notepadMode: NotepadMode = .scratchpad,
         emojiEnabled: Bool = true,
+        emojiKeyInRow: Bool = false,
         calculatorEnabled: Bool = false,
         userExtensionsEnabled: Bool = true,
         customPanelsEnabled: Bool = true,
@@ -600,6 +615,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.funcKeyWidth = funcKeyWidth
         self.keySpacing = keySpacing
         self.rowSpacing = rowSpacing
+        self.keyboardTopPadding = keyboardTopPadding
+        self.keyboardBottomPadding = keyboardBottomPadding
         self.clipboardEnabled = clipboardEnabled
         self.clipboardStyle = clipboardStyle
         self.clipboardCloseOnPaste = clipboardCloseOnPaste
@@ -610,6 +627,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.notepadEnabled = notepadEnabled
         self.notepadMode = notepadMode
         self.emojiEnabled = emojiEnabled
+        self.emojiKeyInRow = emojiKeyInRow
         self.calculatorEnabled = calculatorEnabled
         self.userExtensionsEnabled = userExtensionsEnabled
         self.customPanelsEnabled = customPanelsEnabled
@@ -715,6 +733,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         funcKeyWidth = try c.decodeIfPresent(Double.self, forKey: .funcKeyWidth) ?? 1.4
         keySpacing = try c.decodeIfPresent(Double.self, forKey: .keySpacing) ?? 5
         rowSpacing = try c.decodeIfPresent(Double.self, forKey: .rowSpacing) ?? 7
+        keyboardTopPadding = try c.decodeIfPresent(Double.self, forKey: .keyboardTopPadding) ?? 0
+        keyboardBottomPadding = try c.decodeIfPresent(Double.self, forKey: .keyboardBottomPadding) ?? 0
         clipboardEnabled = try c.decodeIfPresent(Bool.self, forKey: .clipboardEnabled) ?? false
         clipboardStyle = (try? c.decodeIfPresent(ClipboardStyle.self, forKey: .clipboardStyle)) ?? .bar
         clipboardCloseOnPaste = try c.decodeIfPresent(Bool.self, forKey: .clipboardCloseOnPaste) ?? false
@@ -725,6 +745,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         notepadEnabled = try c.decodeIfPresent(Bool.self, forKey: .notepadEnabled) ?? false
         notepadMode = (try? c.decodeIfPresent(NotepadMode.self, forKey: .notepadMode)) ?? .scratchpad
         emojiEnabled = try c.decodeIfPresent(Bool.self, forKey: .emojiEnabled) ?? true
+        emojiKeyInRow = try c.decodeIfPresent(Bool.self, forKey: .emojiKeyInRow) ?? false
         calculatorEnabled = try c.decodeIfPresent(Bool.self, forKey: .calculatorEnabled) ?? false
         userExtensionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .userExtensionsEnabled) ?? true
         customPanelsEnabled = try c.decodeIfPresent(Bool.self, forKey: .customPanelsEnabled) ?? true

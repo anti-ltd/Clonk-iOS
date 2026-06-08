@@ -58,6 +58,9 @@ struct LocalizationView: View {
         @Bindable var model = model
         ScrollView {
             VStack(spacing: UX.cardSpacing) {
+                searchField
+                    .padding(.horizontal, UX.screenPadding)
+
                 Text("Choose the language your typing suggestions, autocomplete, and auto-correction use. Only languages your device can spell-check are listed. Picking a language also switches the key layout to match (e.g. French → AZERTY, Russian → ЙЦУКЕН).")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -95,13 +98,40 @@ struct LocalizationView: View {
             }
             .padding(.vertical, UX.cardSpacing)
         }
-        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: "Search languages")
         .navigationTitle("Localization")
         .navigationBarTitleDisplayMode(.inline)
         .navTrailingButton("textformat.abc") { sidebar.navigate?(.layout) }
         .tint(themeAccent)
         .themePageBackground()
+    }
+
+    /// In-content search field. Replaces the system `.searchable` drawer, whose
+    /// full-width bar collided with the custom leading/trailing nav buttons that
+    /// `RootView` overlays on the top row.
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search languages", text: $search)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+            if !search.isEmpty {
+                Button {
+                    search = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
     }
 
     @ViewBuilder

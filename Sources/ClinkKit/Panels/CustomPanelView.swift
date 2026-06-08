@@ -173,6 +173,9 @@ struct CustomPanelsContainer: View {
     let cornerRadius: CGFloat
     let onInsert: (String) -> Void
     let onDismiss: () -> Void
+    /// Top-left "back" action at the panel root; nil leaves the icon decorative.
+    /// (Inside a sub-panel the leading chevron always returns to the list first.)
+    var onBack: (() -> Void)? = nil
 
     @State private var selected: ClinkPanel?
 
@@ -203,10 +206,7 @@ struct CustomPanelsContainer: View {
                 }
                 .buttonStyle(.plain)
             } else {
-                Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 16))
-                    .foregroundStyle(theme.accent.color)
-                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                PanelLeadingIcon("square.grid.2x2", theme: theme, onBack: onBack)
             }
             Text(shown?.name ?? "Panels")
                 .font(.system(size: 16, weight: .medium))

@@ -14,6 +14,8 @@ struct CalculatorPanel: View {
     let onCopy: (String) -> Void
     let onSaveToClipboard: (String) -> Void
     let onDismiss: () -> Void
+    /// Top-left "back" action; nil leaves the leading icon decorative.
+    var onBack: (() -> Void)? = nil
 
     @State private var display = "0"
     @State private var storedValue: Double? = nil
@@ -78,10 +80,7 @@ struct CalculatorPanel: View {
 
     private var headerBar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "numbers.rectangle")
-                .font(.system(size: 16))
-                .foregroundStyle(theme.accent.color)
-                .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+            PanelLeadingIcon("numbers.rectangle", theme: theme, onBack: onBack)
             headerDivider
             Text(display)
                 .font(.system(size: 22, weight: .medium, design: .monospaced))

@@ -17,6 +17,8 @@ struct NotepadBrowsePanel: View {
     let onDelete: (Int) -> Void
     let onClear: () -> Void
     let onDismiss: () -> Void
+    /// Top-left "back" action; nil leaves the leading icon decorative.
+    var onBack: (() -> Void)? = nil
 
     @State private var openRow: Int? = nil
     private let scrollSpace = "noteScroll"
@@ -24,10 +26,7 @@ struct NotepadBrowsePanel: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Image(systemName: "note.text")
-                    .font(.system(size: 16))
-                    .foregroundStyle(theme.accent.color)
-                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                PanelLeadingIcon("note.text", theme: theme, onBack: onBack)
                 divider
                 Spacer()
                 divider

@@ -5,7 +5,7 @@ import SwiftUI
 import iUXiOS
 
 struct KeysView: View {
-    private enum Tab { case geometry, backspace }
+    private enum Tab { case geometry, padding, backspace }
 
     @Environment(AppModel.self) private var model
     @State private var selectedTab: Tab = .geometry
@@ -15,12 +15,16 @@ struct KeysView: View {
         PinnedPreviewLayout(settings: model.settings,
                             bottomBar: AnyView(
                                 ThemedTabPicker(
-                                    options: [("Geometry", Tab.geometry), ("Backspace", Tab.backspace)],
+                                    options: [("Geometry", Tab.geometry),
+                                              ("Padding", Tab.padding),
+                                              ("Backspace", Tab.backspace)],
                                     selection: $selectedTab)
                             )) {
             switch selectedTab {
             case .geometry:
                 geometryTab(model: model)
+            case .padding:
+                paddingTab(model: model)
             case .backspace:
                 backspaceTab(model: model)
             }
@@ -60,6 +64,24 @@ struct KeysView: View {
             Divider()
             SliderRow("Row spacing", value: $model.settings.rowSpacing,
                       in: 0...16, step: 1) { "\(Int($0))pt" }
+        }
+    }
+
+    @ViewBuilder
+    private func paddingTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        CardSection("Values") {
+            Text("Add space around the keyboard — not between keys. Top padding sits between the suggestion bar and the keys (handy with a background image); bottom padding lifts the whole keyboard up from the bottom edge.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, UX.rowVPadding)
+            Divider()
+            SliderRow("Top padding", value: $model.settings.keyboardTopPadding,
+                      in: 0...48, step: 1) { "\(Int($0))pt" }
+            Divider()
+            SliderRow("Bottom padding", value: $model.settings.keyboardBottomPadding,
+                      in: 0...64, step: 1) { "\(Int($0))pt" }
         }
     }
 

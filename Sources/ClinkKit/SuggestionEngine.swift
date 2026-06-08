@@ -16,23 +16,49 @@ public final class SuggestionEngine {
     private let checker = UITextChecker()
     /// The `UITextChecker` language driving completions/guesses/spell-check.
     /// Set via `setLanguage`; guaranteed to be a value the device can check.
-    private var language = "en_US"
+    private var language = SuggestionEngine.resolveLanguage("en_US")
     /// The language-specific next-word/contraction/ranking tables layered on top
     /// of `UITextChecker` (the checker is language-agnostic; these aren't). Kept
     /// in sync with `language` by `setLanguage`. See `LanguageHeuristics`.
     private var heuristics = LanguageHeuristics.forLanguage("en_US")
 
     /// Point the engine at a spelling/completion language (a `UITextChecker`
-    /// identifier such as "en_US" or "fr_FR"). Unsupported identifiers fall back
-    /// to "en_US" — UITextChecker silently returns nothing for a language it
-    /// can't load, which would leave the bar dead, so we guard against it here.
+    /// identifier such as "en_US" or "fr_FR"). UITextChecker silently returns
+    /// nothing for a language it can't load — which leaves the bar AND autocorrect
+    /// dead — so we always resolve to a language the device actually has.
     /// Clears the correction cache (its entries were resolved in the old tongue).
     public func setLanguage(_ identifier: String) {
-        let resolved = UITextChecker.availableLanguages.contains(identifier) ? identifier : "en_US"
+        let resolved = Self.resolveLanguage(identifier)
         guard resolved != language else { return }
         language = resolved
         heuristics = LanguageHeuristics.forLanguage(resolved)
         correctionCache = nil
+    }
+
+    /// Map any requested identifier onto one `UITextChecker` actually supports on
+    /// this device, so completions/guesses are never silently empty:
+    /// 1. exact match; 2. hyphen→underscore normalised match ("en-US" → "en_US");
+    /// 3. any available variant of the same base language ("en_US" → "en_GB");
+    /// 4. a system English variant; 5. whatever the device lists first.
+    /// Falls back to the raw identifier only if the device lists nothing at all.
+    static func resolveLanguage(_ identifier: String) -> String {
+        let available = UITextChecker.availableLanguages
+        guard !available.isEmpty else { return identifier }
+        if available.contains(identifier) { return identifier }
+
+        let normalized = identifier.replacingOccurrences(of: "-", with: "_")
+        if available.contains(normalized) { return normalized }
+
+        let base = String(normalized.prefix(while: { $0 != "_" })).lowercased()
+        if let sameBase = available.first(where: {
+            String($0.lowercased().prefix(while: { $0 != "_" })) == base
+        }) {
+            return sameBase
+        }
+        if let english = available.first(where: { $0.lowercased().hasPrefix("en") }) {
+            return english
+        }
+        return available.first ?? identifier
     }
 
     /// The user's supplementary lexicon (Contacts names + Settings → text

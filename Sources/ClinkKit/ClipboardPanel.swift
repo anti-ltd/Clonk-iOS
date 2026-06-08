@@ -15,6 +15,9 @@ struct ClipboardPanel: View {
     let onTap: (String) -> Void
     let onSave: () -> Void
     let onDismiss: () -> Void
+    /// Top-left "back" action (returns to the panel picker / main keyboard); nil
+    /// leaves the leading icon decorative.
+    var onBack: (() -> Void)? = nil
     let onCopy: (Int) -> Void
     let onTogglePin: (Int) -> Void
     let onDelete: (Int) -> Void
@@ -28,10 +31,7 @@ struct ClipboardPanel: View {
         VStack(spacing: 0) {
             // Header — same height and icon positioning as the suggestion bar.
             HStack(spacing: 0) {
-                Image(systemName: "doc.on.clipboard.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(theme.accent.color)
-                    .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+                PanelLeadingIcon("doc.on.clipboard.fill", theme: theme, onBack: onBack)
                 divider
                 Spacer()
                 divider

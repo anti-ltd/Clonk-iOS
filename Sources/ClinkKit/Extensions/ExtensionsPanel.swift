@@ -16,6 +16,8 @@ struct ExtensionsPanel: View {
     /// Fired when a row is tapped — the host runs the action and inserts output.
     let onRun: (ClinkExtension) -> Void
     let onDismiss: () -> Void
+    /// Top-left "back" action; nil leaves the leading icon decorative.
+    var onBack: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,10 +39,7 @@ struct ExtensionsPanel: View {
 
     private var headerBar: some View {
         HStack(spacing: 0) {
-            Image(systemName: "puzzlepiece.extension")
-                .font(.system(size: 16))
-                .foregroundStyle(theme.accent.color)
-                .frame(width: KeyboardCanvas.Metrics.suggestionBarHeight)
+            PanelLeadingIcon("puzzlepiece.extension", theme: theme, onBack: onBack)
             Text("Actions")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(theme.keyText.color)

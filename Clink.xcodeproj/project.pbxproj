@@ -186,8 +186,10 @@
 		C44779B75A2874B4E3C59223 /* Theme+LiquidDark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0687E21636A382CE51307EED /* Theme+LiquidDark.swift */; };
 		C576639078F73C5EF212D064 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5181D0B09674CE8789540CEA /* RootView.swift */; };
 		C59299C5E20E2AC1B22BB372 /* SuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20464616D5B71AF83D8F3340 /* SuggestionsView.swift */; };
+		C5C12403CB0D258511C1B45D /* PanelLeadingIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B366331E81E0CE029D842344 /* PanelLeadingIcon.swift */; };
 		C8790542F376C5363EDBBED4 /* KeyPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D10A388F860363D872978F /* KeyPopup.swift */; };
 		C91926CA39628C7046A2312D /* AccentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0509D85BEBDDF08DDC933F33 /* AccentMap.swift */; };
+		C95F069E26CDC28720F0DE29 /* PanelLeadingIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B366331E81E0CE029D842344 /* PanelLeadingIcon.swift */; };
 		CC3125221D457BB07CC2F8EF /* ClipboardPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E6C9F76214DB0198BEBDDD0 /* ClipboardPanel.swift */; };
 		CD4319332C0957A136353784 /* AdaptiveHitbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFC2DFBCF6935D26D76CBFF /* AdaptiveHitbox.swift */; };
 		CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */; };
@@ -381,6 +383,7 @@
 		B023BF2E190A738B123F9CAB /* AutomationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationView.swift; sourceTree = "<group>"; };
 		B29C8B699D584D8359017967 /* ExtensionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionEditorView.swift; sourceTree = "<group>"; };
 		B3351629B8BC302520770F0F /* NotepadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadView.swift; sourceTree = "<group>"; };
+		B366331E81E0CE029D842344 /* PanelLeadingIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelLeadingIcon.swift; sourceTree = "<group>"; };
 		B558BC9C666527C188E5041E /* ClinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClinkApp.swift; sourceTree = "<group>"; };
 		B5FE9F8364688968E5539767 /* Theme+SolarizedDark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+SolarizedDark.swift"; sourceTree = "<group>"; };
 		B6F506DC457354A4B3A61F95 /* KeyGlyphLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyGlyphLayer.swift; sourceTree = "<group>"; };
@@ -497,6 +500,7 @@
 				2A6DFDCAA8AB77467EB6DB9A /* NotepadBrowsePanel.swift */,
 				77B832DE3693AB61F6202524 /* NotepadManager.swift */,
 				0160583BC8270DF57E31D4E4 /* NotepadNote.swift */,
+				B366331E81E0CE029D842344 /* PanelLeadingIcon.swift */,
 				F56FBF088403DCE7E480B111 /* PanelSwitcherPanel.swift */,
 				BA82BC99C7A359DF18B9CDDD /* RGBA.swift */,
 				FF59E26E52134F6C6A4604F2 /* SharedStore.swift */,
@@ -886,6 +890,7 @@
 				28E95081DC7A6860561C8FC5 /* NotepadView.swift in Sources */,
 				8DEFA224BE4F09F5673289E9 /* OverlaysView.swift in Sources */,
 				585900F7C59E4A6EABF941C4 /* PanelEditorView.swift in Sources */,
+				C5C12403CB0D258511C1B45D /* PanelLeadingIcon.swift in Sources */,
 				849ACEE6FB8B47D6797AAD1C /* PanelManager.swift in Sources */,
 				5AB114B63ED26718E990FE4F /* PanelRuntime.swift in Sources */,
 				A058B107ECEDBBA0DC84CE28 /* PanelSwitcherPanel.swift in Sources */,
@@ -1003,6 +1008,7 @@
 				861997865E1684F0E4DA47C1 /* NotepadBrowsePanel.swift in Sources */,
 				497AAD62F94C2913BD45CA6A /* NotepadManager.swift in Sources */,
 				794E83C6983B78DF30043554 /* NotepadNote.swift in Sources */,
+				C95F069E26CDC28720F0DE29 /* PanelLeadingIcon.swift in Sources */,
 				7A793F0F179C6037935F9A21 /* PanelManager.swift in Sources */,
 				7D2CE2A729F0E62F0A4953AE /* PanelRuntime.swift in Sources */,
 				3153F6606DC4308EF5C4B667 /* PanelSwitcherPanel.swift in Sources */,
