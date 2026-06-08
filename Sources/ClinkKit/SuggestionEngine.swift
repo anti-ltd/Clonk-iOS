@@ -324,9 +324,9 @@ public final class SuggestionEngine {
     // MARK: - Swipe / glide typing
 
     private let swipeDecoder = SwipeDecoder()
-    /// Lowercased word pool for swipe decoding, built from the current language's
-    /// heuristics. Cached and rebuilt only when the language changes (the tables
-    /// are static per language).
+    /// Lowercased word pool for swipe decoding: the language's heuristic tables
+    /// plus the full system dictionary from UITextChecker (seeded a–z). Built
+    /// once per language and cached; rebuilt on language change.
     private var swipeVocabCache: (language: String, words: [String])?
 
     private func swipeVocabulary() -> [String] {
@@ -338,6 +338,20 @@ public final class SuggestionEngine {
         for (k, vs) in heuristics.bigrams {
             set.insert(k)
             for v in vs { set.insert(v.lowercased()) }
+        }
+        // Pull the full system dictionary from UITextChecker by seeding it with
+        // every single-letter prefix. This is done once per language and cached —
+        // the cost is ~26 checker calls, but it means every real word the device
+        // knows is scoreable, not just the few hundred in the heuristic tables.
+        for ch in "abcdefghijklmnopqrstuvwxyz" {
+            let seed = String(ch)
+            let completions = checker.completions(
+                forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
+                in: seed, language: language) ?? []
+            for w in completions {
+                let lower = w.lowercased()
+                if lower.count >= 2 { set.insert(lower) }
+            }
         }
         let words = Array(set)
         swipeVocabCache = (language, words)
