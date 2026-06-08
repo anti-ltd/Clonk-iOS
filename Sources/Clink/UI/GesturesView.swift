@@ -35,6 +35,24 @@ struct GesturesView: View {
                     }
                 }
 
+                CardSection("Liquid glass") {
+                    ToggleRow("Key ripple",
+                              subtitle: "On glass themes, keys swell under your finger as you glide — the glass flows along the trace. No effect on solid themes.",
+                              isOn: $model.settings.swipeKeyMorph)
+                    if model.settings.swipeKeyMorph {
+                        Divider()
+                        SliderRow("Swell", value: $model.settings.swipeMorphStrength,
+                                  in: 0.05...0.40, step: 0.01) {
+                            "\(Int(($0 * 100).rounded()))%"
+                        }
+                        Divider()
+                        SliderRow("Wave width", value: $model.settings.swipeMorphRadius,
+                                  in: 1.0...2.5, step: 0.1) {
+                            String(format: "%.1f×", $0)
+                        }
+                    }
+                }
+
                 CardSection("How it works") {
                     Text("Swipe decoding runs fully offline against the keyboard language's word list — no network, no Full Access. The first letter is typed the instant you touch down, then replaced by the recognised word once the glide is read.")
                         .font(.caption)

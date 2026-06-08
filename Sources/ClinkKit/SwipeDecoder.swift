@@ -2,17 +2,19 @@
  Glide/swipe-typing decoder. Turns a continuous finger trace across the letter
  keys into ranked word candidates.
 
- The model is ordered key-proximity: a candidate word scores low only when the
- traced finger passed *near each of its letter keys, in sequence*. We resample the
- gesture to an arc-length-uniform point cloud, then for each candidate march its
- letters down the trace monotonically, summing each letter's distance to the
- closest gesture sample at or after the previous letter's match. A first / last
- letter anchor prunes the dictionary hard before that compare, since a swipe
- reliably begins on its first letter and ends on its last.
-
- Scoring proximity to *every* letter (not just overall path shape) is what stops a
- short `h→e→y` flick decoding as "happy": the trace never nears `p`, so happy's
- `p` term is large and it loses to "hey".
+ The model is symmetric key-proximity. We resample the gesture to an arc-length-
+ uniform point cloud, then score each candidate by two averaged terms:
+   • forward — every letter visited, in order: each letter's distance to the
+     closest gesture sample at or after the previous letter's match. Proximity to
+     *every* letter (not just overall shape) stops an `h→e→y` flick decoding as
+     "happy" — the trace never nears `p`, so happy's `p` term is large.
+   • reverse (coverage) — every traced point explained: each gesture sample's
+     distance to the nearest of the word's keys. Without it a tiny word wins by
+     matching just the trace's endpoints ("me" for "maybe", "ll" for "lol"); the
+     reverse term charges for the long swept middle such a word leaves uncovered.
+ A first / last letter anchor prunes the dictionary hard before that compare, since
+ a swipe reliably begins on its first letter and ends on its last; word frequency
+ breaks otherwise-equal paths toward the commoner word.
 
  Pure geometry + the supplied vocabulary — no `UITextChecker`, no I/O — so it's
  cheap enough to run synchronously on lift. `SuggestionEngine.swipeCandidates`
@@ -31,13 +33,16 @@ public struct SwipeDecoder {
     /// Rank `vocabulary` words by how well each one's ideal key path matches the
     /// traced `path`. `keyCenters` maps each lowercased letter to its key's centre
     /// (in the same coordinate space as `path`). `bias` words (e.g. likely
-    /// next-words for context) get a small score discount. Returns up to `limit`
+    /// next-words for context) get a small score discount; `frequencyRank` (word →
+    /// 0-based rank, most-common first) breaks otherwise-equal paths toward the more
+    /// common word — so "hey" beats equally-traced "hew". Returns up to `limit`
     /// words, best first; returns an empty array when no dictionary word fits (the
     /// host then inserts nothing rather than committing a garbage key trace).
     public func decode(path: [CGPoint],
                        keyCenters: [Character: CGPoint],
                        vocabulary: [String],
                        bias: Set<String> = [],
+                       frequencyRank: [String: Int] = [:],
                        limit: Int = 4) -> [String] {
         guard path.count >= 2, !keyCenters.isEmpty,
               let start = path.first, let end = path.last else {
@@ -67,8 +72,22 @@ public struct SwipeDecoder {
                 centers.append(c)
             }
             guard ok else { continue }
-            var d = orderedProximity(gesture, centers) / scale
+            // Symmetric cost: forward = every letter visited (in order); reverse =
+            // every traced point explained by some letter. Forward alone lets a tiny
+            // word win by matching just the trace's endpoints and ignoring its middle
+            // ("me" for a "maybe" swipe, "ll" for "lol"); reverse penalises the long
+            // stretch of path such a word leaves uncovered. Averaged so neither term
+            // dominates by word length.
+            let forward = orderedProximity(gesture, centers)
+            let reverse = coverageCost(gesture, centers)
+            var d = (forward + reverse) / 2 / scale
             if bias.contains(word) { d *= 0.85 }   // nudge context-likely words up
+            // Frequency tie-break: scale the cost down for commoner words, by at
+            // most ~6%. Small on purpose — it only decides genuine ties, never
+            // overrides a clearly closer path (wrong words score far worse).
+            if let r = frequencyRank[word] {
+                d *= 1.0 - 0.06 / (1.0 + Double(r) / 600.0)
+            }
             scored.append((raw, d))
         }
         guard !scored.isEmpty else { return fallback(path: path, keyCenters: keyCenters) }
@@ -156,6 +175,24 @@ public struct SwipeDecoder {
             gi = bestJ
         }
         return Double(sum) / Double(centers.count)
+    }
+
+    /// Mean distance from each gesture sample to the *nearest* of the word's letter
+    /// keys — how well the word's keys cover the whole traced path. Large when a
+    /// short word ignores a long swept middle (the path wanders far from its two or
+    /// three keys), which is what stops "me" beating "maybe".
+    private func coverageCost(_ gesture: [CGPoint], _ centers: [CGPoint]) -> Double {
+        guard !centers.isEmpty, !gesture.isEmpty else { return .greatestFiniteMagnitude }
+        var sum: CGFloat = 0
+        for p in gesture {
+            var bestD = CGFloat.greatestFiniteMagnitude
+            for c in centers {
+                let d = dist(p, c)
+                if d < bestD { bestD = d }
+            }
+            sum += bestD
+        }
+        return Double(sum) / Double(gesture.count)
     }
 
     /// Diagonal of the key field's bounding box — the natural scale for

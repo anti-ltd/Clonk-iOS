@@ -333,36 +333,28 @@ public final class SuggestionEngine {
         if let c = swipeVocabCache, c.language == language { return c.words }
         var set = Set<String>()
         set.formUnion(heuristics.commonWords)
-        // Always seed the everyday English set too. UITextChecker's single-letter
-        // completions are sparse, and a non-English active language ships no
-        // "maybe"/"more"/… — so without this, swiping a common English word on a
-        // non-English keyboard finds no candidate and the swipe is dropped.
-        set.formUnion(LanguageHeuristics.forLanguage("en").commonWords)
         set.formUnion(heuristics.commonFallback.map { $0.lowercased() })
         set.formUnion(heuristics.sentenceStarters.map { $0.lowercased() })
         for (k, vs) in heuristics.bigrams {
             set.insert(k)
             for v in vs { set.insert(v.lowercased()) }
         }
-        // Pull the device's full system dictionary from UITextChecker by seeding it
-        // with every two-letter prefix (aa…zz). A single-letter seed returns far too
-        // few completions — everyday words like "hey"/"lol" never surface, so a
-        // swipe for them finds no candidate and mis-decodes to whatever longer word
-        // *is* in the pool ("happy"). Two-letter prefixes pull tens of thousands of
-        // real words, including the informal ones the device knows. ~676 checker
-        // calls, done once per language and cached, so it's off the swipe hot path.
-        let alphabet = "abcdefghijklmnopqrstuvwxyz"
-        for a in alphabet {
-            for b in alphabet {
-                let seed = "\(a)\(b)"
-                let completions = checker.completions(
-                    forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
-                    in: seed, language: language) ?? []
-                for w in completions {
-                    let lower = w.lowercased()
-                    if lower.count >= 2 { set.insert(lower) }
-                }
-            }
+        // The bundled frequency list is the real backbone of the swipe vocabulary.
+        // UITextChecker's completions are too shallow to surface everyday words
+        // ("hey"/"lol" never came back), so this list guarantees they're scoreable —
+        // and its frequency order feeds the decoder's tie-break (see swipeCandidates).
+        // For non-English it's only a fallback layer under the language heuristics.
+        set.formUnion(SwipeLexicon.words)
+        // A light single-letter UITextChecker pass adds device-/language-specific
+        // long-tail words (names, locale words the static lists miss). Cheap (~26
+        // calls), cached per language; two-letter seeding was dropped — it cost ~676
+        // calls for words the bundled list already covers.
+        for ch in "abcdefghijklmnopqrstuvwxyz" {
+            let seed = String(ch)
+            let completions = checker.completions(
+                forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
+                in: seed, language: language) ?? []
+            for w in completions where w.count >= 2 { set.insert(w.lowercased()) }
         }
         let words = Array(set)
         swipeVocabCache = (language, words)
@@ -385,6 +377,7 @@ public final class SuggestionEngine {
                                         keyCenters: keyCenters,
                                         vocabulary: swipeVocabulary(),
                                         bias: bias,
+                                        frequencyRank: SwipeLexicon.rank,
                                         limit: limit)
         // Capitalise the lead candidate at a sentence start, matching the bar's
         // auto-capitalisation so a swiped sentence opener reads correctly.

@@ -155,6 +155,7 @@
 		A9A7D7A6D75B6F02F42BA672 /* PyAST.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C49EC9094961E6154402EA5 /* PyAST.swift */; };
 		AB406C8A0934B924102076E4 /* LogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6C36E725FD0C97028F25F5 /* LogoMark.swift */; };
 		29AF42A93DB741B7B9813BDD /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */; };
+		29AF42A93DB741B7B9813BDE /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */; };
 		AB58C4E13C3624393D1DBB74 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */; };
 		ABB5947EF710CBCEF688E5F4 /* Theme+Paper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EEB32EB6E1B33701B50BBB7 /* Theme+Paper.swift */; };
 		ABF159FD760D8E15C80CE747 /* Theme+Snobble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B732123D36D8014D00EF75 /* Theme+Snobble.swift */; };
@@ -166,6 +167,7 @@
 		B33B6A8DC6575D746BB8645D /* PyLexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37238DB16E06F1D8AEBDA9A8 /* PyLexer.swift */; };
 		B38A6D011F2D2D6EE6174125 /* SkinTonePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70622CD9069B9679F09AF4A4 /* SkinTonePicker.swift */; };
 		E5E72F28EAE44B358EBDCECD /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */; };
+		E5E72F28EAE44B358EBDCECE /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */; };
 		B45E135416622CEBA9D57215 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */; };
 		B4D66C6F23137F6EF5B40B27 /* EmojiCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D744EEA3405072F1C9A6785 /* EmojiCell.swift */; };
 		B532614642A9CE9B54BC7C0B /* Theme+Lavender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC95A8FEBDFF602C7F928DF /* Theme+Lavender.swift */; };
@@ -271,6 +273,7 @@
 		0160583BC8270DF57E31D4E4 /* NotepadNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadNote.swift; sourceTree = "<group>"; };
 		02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRow.swift; sourceTree = "<group>"; };
 		E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeDecoder.swift; sourceTree = "<group>"; };
+		E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeLexicon.swift; sourceTree = "<group>"; };
 		0509D85BEBDDF08DDC933F33 /* AccentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentMap.swift; sourceTree = "<group>"; };
 		0687E21636A382CE51307EED /* Theme+LiquidDark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidDark.swift"; sourceTree = "<group>"; };
 		0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorPanel.swift; sourceTree = "<group>"; };
@@ -505,6 +508,7 @@
 				8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */,
 				02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */,
 				E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */,
+				E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */,
 				8927D850C4365DFDC1FD2FDA /* Theme.swift */,
 				5D24CE900607D42C32A1E6C6 /* Theme+Bubblegum.swift */,
 				50FFFE172039C44D7B2D4E80 /* Theme+Carbon.swift */,
@@ -911,6 +915,7 @@
 				CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */,
 				C59299C5E20E2AC1B22BB372 /* SuggestionsView.swift in Sources */,
 				29AF42A93DB741B7B9813BDD /* SwipeDecoder.swift in Sources */,
+				29AF42A93DB741B7B9813BDE /* SwipeLexicon.swift in Sources */,
 				AB58C4E13C3624393D1DBB74 /* SwipeRow.swift in Sources */,
 				B73F0240AA82BC2F30FCB75C /* Theme+Bubblegum.swift in Sources */,
 				4EF90BFEBDA0E1AD70BB7E27 /* Theme+Carbon.swift in Sources */,
@@ -1017,6 +1022,7 @@
 				339C0C2F81219637976C8449 /* SuggestionBar.swift in Sources */,
 				5EA493BD6E3F05E3F7D12CCD /* SuggestionEngine.swift in Sources */,
 				E5E72F28EAE44B358EBDCECD /* SwipeDecoder.swift in Sources */,
+				E5E72F28EAE44B358EBDCECE /* SwipeLexicon.swift in Sources */,
 				B45E135416622CEBA9D57215 /* SwipeRow.swift in Sources */,
 				ED25A00327EED054A0E79CBC /* Theme+Bubblegum.swift in Sources */,
 				E7CEE5A0D037AF8CB8676B88 /* Theme+Carbon.swift in Sources */,

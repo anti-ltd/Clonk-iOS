@@ -300,6 +300,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var swipeShowTrail: Bool
     /// Stroke width (pt) of the swipe trail.
     public var swipeTrailWidth: Double
+    /// On liquid-glass themes, swell each key as the swiping finger passes over it
+    /// — the glass flows under the trace like a travelling ripple. Glass-only;
+    /// ignored on solid themes. On by default.
+    public var swipeKeyMorph: Bool
+    /// Peak extra scale a key reaches when the swipe finger is dead-centre on it
+    /// (0 = no swell). Only meaningful with `swipeKeyMorph`.
+    public var swipeMorphStrength: Double
+    /// How far past a key's own size the ripple reaches, as a multiple of the key
+    /// size — higher swells more neighbours at once (a wider wave). Only meaningful
+    /// with `swipeKeyMorph`.
+    public var swipeMorphRadius: Double
     // Clink sound + feel
     public var soundPackID: String
     public var soundEnabled: Bool
@@ -510,6 +521,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         swipeTypingEnabled: Bool = false,
         swipeShowTrail: Bool = true,
         swipeTrailWidth: Double = 4,
+        swipeKeyMorph: Bool = true,
+        swipeMorphStrength: Double = 0.20,
+        swipeMorphRadius: Double = 1.3,
         soundPackID: String = SoundPack.default.id,
         soundEnabled: Bool = false,
         soundVolume: Double = 0.8,
@@ -613,6 +627,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.swipeTypingEnabled = swipeTypingEnabled
         self.swipeShowTrail = swipeShowTrail
         self.swipeTrailWidth = swipeTrailWidth
+        self.swipeKeyMorph = swipeKeyMorph
+        self.swipeMorphStrength = swipeMorphStrength
+        self.swipeMorphRadius = swipeMorphRadius
         self.soundPackID = soundPackID
         self.soundEnabled = soundEnabled
         self.soundVolume = soundVolume
@@ -725,6 +742,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         swipeTypingEnabled = try c.decodeIfPresent(Bool.self, forKey: .swipeTypingEnabled) ?? false
         swipeShowTrail = try c.decodeIfPresent(Bool.self, forKey: .swipeShowTrail) ?? true
         swipeTrailWidth = try c.decodeIfPresent(Double.self, forKey: .swipeTrailWidth) ?? 4
+        swipeKeyMorph = try c.decodeIfPresent(Bool.self, forKey: .swipeKeyMorph) ?? true
+        swipeMorphStrength = try c.decodeIfPresent(Double.self, forKey: .swipeMorphStrength) ?? 0.20
+        swipeMorphRadius = try c.decodeIfPresent(Double.self, forKey: .swipeMorphRadius) ?? 1.3
         soundPackID = try c.decodeIfPresent(String.self, forKey: .soundPackID) ?? SoundPack.default.id
         soundEnabled = try c.decodeIfPresent(Bool.self, forKey: .soundEnabled) ?? false
         soundVolume = try c.decodeIfPresent(Double.self, forKey: .soundVolume) ?? 0.8

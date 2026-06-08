@@ -1387,6 +1387,9 @@ public struct KeyboardCanvas: View {
                 ForEach(Array(specs.enumerated()), id: \.offset) { i, spec in
                     KeyView(spec: spec, theme: theme, cornerRadius: CGFloat(settings.keyCornerRadius),
                             popupEnabled: settings.keyPopupEnabled, pressWarp: settings.keyPressWarp,
+                            swipeMorph: settings.swipeTypingEnabled && settings.swipeKeyMorph,
+                            swipeMorphStrength: CGFloat(settings.swipeMorphStrength),
+                            swipeMorphRadius: CGFloat(settings.swipeMorphRadius),
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
                             router: touch,

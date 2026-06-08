@@ -64,6 +64,13 @@ struct KeyView: View {
     let popupEnabled: Bool
     /// Bloom/warp the key on press (optional, per `keyPressWarp`).
     let pressWarp: Bool
+    /// Swell the key as a swiping finger passes over it (liquid-glass only, per
+    /// `swipeKeyMorph`).
+    let swipeMorph: Bool
+    /// Peak extra scale at the finger's centre (per `swipeMorphStrength`).
+    let swipeMorphStrength: CGFloat
+    /// Ripple reach in key-sizes (per `swipeMorphRadius`).
+    let swipeMorphRadius: CGFloat
     /// Stable identity (row-col) so the glyph layer can track this key across
     /// rebuilds for its symbol animations.
     let keyID: String
@@ -114,6 +121,18 @@ struct KeyView: View {
 
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous) }
 
+    /// Live swell from a passing swipe finger (1 = rest). Glass-only and gated on
+    /// `swipeKeyMorph`; reads the router's proximity bulge, so it tracks the finger
+    /// frame-by-frame and settles back to 1 the moment the swipe lifts. Applied to
+    /// the surface alone (not the glyph), so the glass flows while the letter holds
+    /// its place — and because the surfaces share a `GlassEffectContainer`, a swollen
+    /// key liquid-merges into its neighbours as the ripple passes. Strength and reach
+    /// come from `swipeMorphStrength` / `swipeMorphRadius`.
+    private var swipeBulgeScale: CGFloat {
+        guard swipeMorph, theme.material == .liquidGlass, router.swipeActive else { return 1 }
+        return 1 + router.swipeProximityBulge(for: keyID, radiusFactor: swipeMorphRadius) * swipeMorphStrength
+    }
+
     /// Liquid "warp": the space bar stretches toward the finger (and squashes
     /// vertically) while dragging the cursor; with `pressWarp` on, every key
     /// blooms a little on press. Both spring back on release.
@@ -145,7 +164,13 @@ struct KeyView: View {
         // container); the glyph is drawn on top by the canvas glyph layer.
         // The shift key draws its OWN glyph as glass content, so its interactive
         // glass can animate the glyph along with it (the caps-lock morph).
+        let swipeScale = swipeBulgeScale
         return surface
+            // Swipe ripple: a passing glide finger swells the key. Lightly sprung so
+            // it flows rather than snaps, and keyed only to its own value so it never
+            // disturbs the press bloom below. Multiplies with the press scale.
+            .scaleEffect(swipeScale, anchor: .center)
+            .animation(.interactiveSpring(response: 0.16, dampingFraction: 0.72), value: swipeScale)
             .scaleEffect(x: w.scaleX, y: w.scaleY, anchor: .center)
             // The lean offset rides BEFORE the springs below. While dragging, only
             // `dragX` (the offset) changes — `isPressed`/`cursorActive` are steady —

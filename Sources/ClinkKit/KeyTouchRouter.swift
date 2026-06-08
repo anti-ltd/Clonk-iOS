@@ -249,6 +249,24 @@ public final class KeyTouchRouter {
     /// Publish the live trail for the overlay.
     fileprivate func updateSwipeTrail(_ points: [CGPoint]) { swipeTrail = points }
 
+    /// How strongly a key should swell as the swiping finger passes over it, on
+    /// `0` (rest) … `1` (finger dead-centre on the key). Falls off smoothly to `0`
+    /// just past the key's edge, so only the key under the trace and its immediate
+    /// neighbours react — a travelling ripple, not the whole grid pulsing. Returns
+    /// `0` when no swipe is engaged. Reads the live trail head, so a view that calls
+    /// this re-renders as the finger moves. `radiusFactor` scales the influence
+    /// radius in key-sizes — higher reaches more neighbours (a wider wave). The key
+    /// drives the visual; see `KeyView.swipeBulgeScale`.
+    public func swipeProximityBulge(for keyID: String, radiusFactor: CGFloat) -> CGFloat {
+        guard swipeActive, let tip = swipeTrail.last, let f = frames[keyID] else { return 0 }
+        let centre = CGPoint(x: f.midX, y: f.midY)
+        let d = hypot(tip.x - centre.x, tip.y - centre.y)
+        let radius = max(f.width, f.height) * radiusFactor
+        guard radius > 0, d < radius else { return 0 }
+        let t = 1 - d / radius
+        return t * t   // ease-in falloff — gentle at the fringe, peaks under the finger
+    }
+
     /// Finish the swipe: hand the path + letter centres to the host to decode and
     /// insert. No-op if not engaged.
     fileprivate func endSwipe(path: [CGPoint]) {
