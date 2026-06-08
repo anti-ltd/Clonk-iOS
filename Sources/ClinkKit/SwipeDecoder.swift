@@ -2,12 +2,17 @@
  Glide/swipe-typing decoder. Turns a continuous finger trace across the letter
  keys into ranked word candidates.
 
- The model is the classic template match: each candidate word defines an *ideal*
- path — the polyline through its letters' key centres. We resample both the
- gesture and every candidate's ideal path to a fixed number of arc-length-uniform
- points, then score by mean point-to-point distance (lower is better). A first /
- last letter anchor prunes the dictionary hard before the (more expensive) path
- compare, since a swipe reliably begins on its first letter and ends on its last.
+ The model is ordered key-proximity: a candidate word scores low only when the
+ traced finger passed *near each of its letter keys, in sequence*. We resample the
+ gesture to an arc-length-uniform point cloud, then for each candidate march its
+ letters down the trace monotonically, summing each letter's distance to the
+ closest gesture sample at or after the previous letter's match. A first / last
+ letter anchor prunes the dictionary hard before that compare, since a swipe
+ reliably begins on its first letter and ends on its last.
+
+ Scoring proximity to *every* letter (not just overall path shape) is what stops a
+ short `h→e→y` flick decoding as "happy": the trace never nears `p`, so happy's
+ `p` term is large and it loses to "hey".
 
  Pure geometry + the supplied vocabulary — no `UITextChecker`, no I/O — so it's
  cheap enough to run synchronously on lift. `SuggestionEngine.swipeCandidates`
@@ -16,9 +21,10 @@
 import CoreGraphics
 
 public struct SwipeDecoder {
-    /// Arc-length samples used for both the gesture and each template. Enough to
-    /// capture a word's shape without making the per-candidate compare costly.
-    static let sampleCount = 48
+    /// Arc-length samples the gesture is resampled to before scoring. Dense enough
+    /// that every candidate letter key has a nearby sample to match against, without
+    /// making the per-candidate compare costly.
+    static let sampleCount = 96
 
     public init() {}
 
@@ -26,8 +32,8 @@ public struct SwipeDecoder {
     /// traced `path`. `keyCenters` maps each lowercased letter to its key's centre
     /// (in the same coordinate space as `path`). `bias` words (e.g. likely
     /// next-words for context) get a small score discount. Returns up to `limit`
-    /// words, best first; falls back to the literally-traced key sequence when no
-    /// dictionary word fits.
+    /// words, best first; returns an empty array when no dictionary word fits (the
+    /// host then inserts nothing rather than committing a garbage key trace).
     public func decode(path: [CGPoint],
                        keyCenters: [Character: CGPoint],
                        vocabulary: [String],
@@ -52,17 +58,16 @@ public struct SwipeDecoder {
             let word = raw.lowercased()
             guard word.count >= 2, let wf = word.first, let wl = word.last,
                   wf == firstKey, wl == lastKey else { continue }
-            // Build the ideal polyline; bail if any letter isn't on this plane.
-            var ideal: [CGPoint] = []
-            ideal.reserveCapacity(word.count)
+            // Gather the word's letter-key centres; bail if any isn't on this plane.
+            var centers: [CGPoint] = []
+            centers.reserveCapacity(word.count)
             var ok = true
             for ch in word {
                 guard let c = keyCenters[ch] else { ok = false; break }
-                ideal.append(c)
+                centers.append(c)
             }
             guard ok else { continue }
-            let template = resample(ideal, count: Self.sampleCount)
-            var d = meanDistance(gesture, template) / scale
+            var d = orderedProximity(gesture, centers) / scale
             if bias.contains(word) { d *= 0.85 }   // nudge context-likely words up
             scored.append((raw, d))
         }
@@ -124,12 +129,33 @@ public struct SwipeDecoder {
         return len
     }
 
-    private func meanDistance(_ a: [CGPoint], _ b: [CGPoint]) -> Double {
-        let n = min(a.count, b.count)
-        guard n > 0 else { return .greatestFiniteMagnitude }
+    /// Mean cost that the gesture passes *near each of the word's letter keys, in
+    /// order*. For each letter we take the closest gesture sample at or after the
+    /// one matched to the previous letter (a monotonic march down the trace), so a
+    /// candidate only scores low when the finger genuinely visited every one of its
+    /// keys in sequence. This is what rejects "happy" for an `h→e→y` flick: the
+    /// trace never nears `p`, so `p`'s term is large. The `gesture` is pre-resampled
+    /// to a uniform arc-length density, so every key has a sample close by to match.
+    ///
+    /// `upper` reserves one remaining sample per still-unmatched later letter, so a
+    /// greedy early match can't consume the tail and strand the word's final keys.
+    private func orderedProximity(_ gesture: [CGPoint], _ centers: [CGPoint]) -> Double {
+        guard !centers.isEmpty, !gesture.isEmpty else { return .greatestFiniteMagnitude }
+        var gi = 0
         var sum: CGFloat = 0
-        for i in 0..<n { sum += dist(a[i], b[i]) }
-        return Double(sum) / Double(n)
+        for (k, c) in centers.enumerated() {
+            let remaining = centers.count - 1 - k
+            let upper = min(gesture.count, max(gi + 1, gesture.count - remaining))
+            var bestD = CGFloat.greatestFiniteMagnitude
+            var bestJ = gi
+            for j in gi..<upper {
+                let d = dist(gesture[j], c)
+                if d < bestD { bestD = d; bestJ = j }
+            }
+            sum += bestD
+            gi = bestJ
+        }
+        return Double(sum) / Double(centers.count)
     }
 
     /// Diagonal of the key field's bounding box — the natural scale for
@@ -155,18 +181,12 @@ public struct SwipeDecoder {
         return best
     }
 
-    /// Last-resort decode: map the trace to the sequence of letter keys it crossed,
-    /// collapsing consecutive repeats — so the user gets *something* when no
-    /// dictionary word matches the path.
+    /// No-match result: empty. A swipe that matches no dictionary word inserts
+    /// nothing — never the raw sequence of keys the finger crossed, which is
+    /// gibberish ("maybe" mis-traced → "mnbvfdsasdrtygvbgfre"), not a word. The
+    /// host simply leaves the text untouched, like the system swipe keyboard.
     private func fallback(path: [CGPoint], keyCenters: [Character: CGPoint]) -> [String] {
-        guard !path.isEmpty, !keyCenters.isEmpty else { return [] }
-        var chars: [Character] = []
-        for p in path {
-            guard let ch = nearestLetter(to: p, centers: keyCenters) else { continue }
-            if chars.last != ch { chars.append(ch) }
-        }
-        let word = String(chars)
-        return word.isEmpty ? [] : [word]
+        []
     }
 
     private func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat {

@@ -333,24 +333,35 @@ public final class SuggestionEngine {
         if let c = swipeVocabCache, c.language == language { return c.words }
         var set = Set<String>()
         set.formUnion(heuristics.commonWords)
+        // Always seed the everyday English set too. UITextChecker's single-letter
+        // completions are sparse, and a non-English active language ships no
+        // "maybe"/"more"/… — so without this, swiping a common English word on a
+        // non-English keyboard finds no candidate and the swipe is dropped.
+        set.formUnion(LanguageHeuristics.forLanguage("en").commonWords)
         set.formUnion(heuristics.commonFallback.map { $0.lowercased() })
         set.formUnion(heuristics.sentenceStarters.map { $0.lowercased() })
         for (k, vs) in heuristics.bigrams {
             set.insert(k)
             for v in vs { set.insert(v.lowercased()) }
         }
-        // Pull the full system dictionary from UITextChecker by seeding it with
-        // every single-letter prefix. This is done once per language and cached —
-        // the cost is ~26 checker calls, but it means every real word the device
-        // knows is scoreable, not just the few hundred in the heuristic tables.
-        for ch in "abcdefghijklmnopqrstuvwxyz" {
-            let seed = String(ch)
-            let completions = checker.completions(
-                forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
-                in: seed, language: language) ?? []
-            for w in completions {
-                let lower = w.lowercased()
-                if lower.count >= 2 { set.insert(lower) }
+        // Pull the device's full system dictionary from UITextChecker by seeding it
+        // with every two-letter prefix (aa…zz). A single-letter seed returns far too
+        // few completions — everyday words like "hey"/"lol" never surface, so a
+        // swipe for them finds no candidate and mis-decodes to whatever longer word
+        // *is* in the pool ("happy"). Two-letter prefixes pull tens of thousands of
+        // real words, including the informal ones the device knows. ~676 checker
+        // calls, done once per language and cached, so it's off the swipe hot path.
+        let alphabet = "abcdefghijklmnopqrstuvwxyz"
+        for a in alphabet {
+            for b in alphabet {
+                let seed = "\(a)\(b)"
+                let completions = checker.completions(
+                    forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
+                    in: seed, language: language) ?? []
+                for w in completions {
+                    let lower = w.lowercased()
+                    if lower.count >= 2 { set.insert(lower) }
+                }
             }
         }
         let words = Array(set)
