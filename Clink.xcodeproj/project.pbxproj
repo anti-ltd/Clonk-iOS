@@ -28,6 +28,7 @@
 		1AA0ADB52B9F181050148248 /* Theme+Midnight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E513B9833103D8D833AB3D9 /* Theme+Midnight.swift */; };
 		1E3B3CB33F53763C9A5B4A9B /* ResponseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533CC42392A2CF228BDDA184 /* ResponseView.swift */; };
 		222850E0E17BEC4AAAB0B4C3 /* Theme+Dobble.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB390E73F039F0D0C8883754 /* Theme+Dobble.swift */; };
+		234FE56EB809D2AE6C4EDB4D /* GesturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90E70F4068777D9696762009 /* GesturesView.swift */; };
 		246637A4A2D098C666F37469 /* Theme+Lavender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC95A8FEBDFF602C7F928DF /* Theme+Lavender.swift */; };
 		24A8813A458D296CD6EC7A29 /* TrackpadPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C6E41338498DA588787103C /* TrackpadPanel.swift */; };
 		25674E38D35421FBD754EEB9 /* SoundPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7949529FFC551E295B024531 /* SoundPickerView.swift */; };
@@ -42,9 +43,9 @@
 		2D1FB5E1FF7C14C2198C873F /* TypingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5462C6538A73BD8117516CB5 /* TypingView.swift */; };
 		30B323B0F36FED3B16754F0B /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */; };
 		3153F6606DC4308EF5C4B667 /* PanelSwitcherPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56FBF088403DCE7E480B111 /* PanelSwitcherPanel.swift */; };
-		B3573479ED834F4A9C1B31B0 /* GesturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4557266F0B4D27B24DDB1B /* GesturesView.swift */; };
 		32E29F1DCC570DCC25D69ED7 /* HapticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E54202EF97E8C78A6B0BB189 /* HapticsView.swift */; };
 		339C0C2F81219637976C8449 /* SuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733674465CD135FB292C0FF9 /* SuggestionBar.swift */; };
+		353D5F18E6CC46DFF0943C01 /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688F20D6A1DC28696453D9F9 /* SwipeLexicon.swift */; };
 		36AA177AC13820058DB11221 /* ClipboardPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E6C9F76214DB0198BEBDDD0 /* ClipboardPanel.swift */; };
 		398923826CFA8C3E851F7697 /* ExtensionEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B29C8B699D584D8359017967 /* ExtensionEditorView.swift */; };
 		3B2696F741ECD17980F1EBB5 /* AccentMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0509D85BEBDDF08DDC933F33 /* AccentMap.swift */; };
@@ -103,6 +104,7 @@
 		6F4E4D37810033D3B2D5538E /* ThemePresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6959EF58425EE3D79388290 /* ThemePresets.swift */; };
 		6FA635783FB4FB984DBA0E87 /* Theme+Sakura.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0782ECAE008251748D18E1D1 /* Theme+Sakura.swift */; };
 		716494EE6D11F310FAF5ED15 /* Theme+Royal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F8C91666F857CFD1FDF518 /* Theme+Royal.swift */; };
+		7287D70847A44A67E59C5F89 /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05DEEB81EA4974F1D5FD0EB2 /* SwipeDecoder.swift */; };
 		73079549D701468C283EF9FF /* Theme+Matrix.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD96B2D63BE7BD3D16C2B4E /* Theme+Matrix.swift */; };
 		73D756CD03CB7CAFB9C0036F /* Theme+Paper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EEB32EB6E1B33701B50BBB7 /* Theme+Paper.swift */; };
 		754DB047E0FF88C281BAE70B /* Theme+LiquidLight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B77D38959AA685774F7DDB /* Theme+LiquidLight.swift */; };
@@ -135,6 +137,7 @@
 		8DEFA224BE4F09F5673289E9 /* OverlaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BAFE2A3EE0CAFE4F4E44E11 /* OverlaysView.swift */; };
 		8F6E5D4864A174BC64B937FE /* ActionPanelButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98BCE8C72329C3AC84F83958 /* ActionPanelButton.swift */; };
 		900F8AE00F7628457A93AEAF /* AdaptiveHitbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFC2DFBCF6935D26D76CBFF /* AdaptiveHitbox.swift */; };
+		916A04317AED6BEB79F0795A /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688F20D6A1DC28696453D9F9 /* SwipeLexicon.swift */; };
 		93C7B724742F3EBF59F3C840 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148AA47AC2638AB397929AF1 /* EmojiData.generated.swift */; };
 		93E2C093B23B3F16535C9840 /* KeySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B46A3DAD23518E0D767C90 /* KeySpec.swift */; };
 		945857F43FAD5D6EEC2ADCBE /* EmojiDeleteTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89603465B35CBE91068ED11D /* EmojiDeleteTile.swift */; };
@@ -154,8 +157,6 @@
 		A840AAB5E4434B6E3BDA24B9 /* ClinkExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = C16911509004C9842B649DDF /* ClinkExtension.swift */; };
 		A9A7D7A6D75B6F02F42BA672 /* PyAST.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C49EC9094961E6154402EA5 /* PyAST.swift */; };
 		AB406C8A0934B924102076E4 /* LogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6C36E725FD0C97028F25F5 /* LogoMark.swift */; };
-		29AF42A93DB741B7B9813BDD /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */; };
-		29AF42A93DB741B7B9813BDE /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */; };
 		AB58C4E13C3624393D1DBB74 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */; };
 		ABB5947EF710CBCEF688E5F4 /* Theme+Paper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EEB32EB6E1B33701B50BBB7 /* Theme+Paper.swift */; };
 		ABF159FD760D8E15C80CE747 /* Theme+Snobble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B732123D36D8014D00EF75 /* Theme+Snobble.swift */; };
@@ -166,8 +167,6 @@
 		B2B3412A14EFBD0845456778 /* EmojiDeleteTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89603465B35CBE91068ED11D /* EmojiDeleteTile.swift */; };
 		B33B6A8DC6575D746BB8645D /* PyLexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37238DB16E06F1D8AEBDA9A8 /* PyLexer.swift */; };
 		B38A6D011F2D2D6EE6174125 /* SkinTonePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70622CD9069B9679F09AF4A4 /* SkinTonePicker.swift */; };
-		E5E72F28EAE44B358EBDCECD /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */; };
-		E5E72F28EAE44B358EBDCECE /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */; };
 		B45E135416622CEBA9D57215 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */; };
 		B4D66C6F23137F6EF5B40B27 /* EmojiCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D744EEA3405072F1C9A6785 /* EmojiCell.swift */; };
 		B532614642A9CE9B54BC7C0B /* Theme+Lavender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC95A8FEBDFF602C7F928DF /* Theme+Lavender.swift */; };
@@ -206,6 +205,7 @@
 		DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
 		DE39DFC3C91301364011332B /* KeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E409F1A6F927F0EF03D8CC62 /* KeysView.swift */; };
 		DE8CCE9B5012754C8A6C7877 /* TuningPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91E48B211B55CCF9D4AF918 /* TuningPresets.swift */; };
+		DEFD16DE003B5AAC8387FDAD /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05DEEB81EA4974F1D5FD0EB2 /* SwipeDecoder.swift */; };
 		DF275470B09C2ADC1CF62EF7 /* ClipboardHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */; };
 		E161B3E7ECCF93E7608D15B0 /* ExtensionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 585A8994CBA82A350542C1CA /* ExtensionManager.swift */; };
 		E42BC9182B558D0C62C887A0 /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */; };
@@ -272,9 +272,8 @@
 /* Begin PBXFileReference section */
 		0160583BC8270DF57E31D4E4 /* NotepadNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadNote.swift; sourceTree = "<group>"; };
 		02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRow.swift; sourceTree = "<group>"; };
-		E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeDecoder.swift; sourceTree = "<group>"; };
-		E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeLexicon.swift; sourceTree = "<group>"; };
 		0509D85BEBDDF08DDC933F33 /* AccentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentMap.swift; sourceTree = "<group>"; };
+		05DEEB81EA4974F1D5FD0EB2 /* SwipeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeDecoder.swift; sourceTree = "<group>"; };
 		0687E21636A382CE51307EED /* Theme+LiquidDark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidDark.swift"; sourceTree = "<group>"; };
 		0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorPanel.swift; sourceTree = "<group>"; };
 		0782ECAE008251748D18E1D1 /* Theme+Sakura.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Sakura.swift"; sourceTree = "<group>"; };
@@ -340,6 +339,7 @@
 		64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCanvas.swift; sourceTree = "<group>"; };
 		6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardLiveState.swift; sourceTree = "<group>"; };
 		67497FB2052CC04E174075A2 /* PyEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PyEngine.swift; sourceTree = "<group>"; };
+		688F20D6A1DC28696453D9F9 /* SwipeLexicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeLexicon.swift; sourceTree = "<group>"; };
 		6AB771E75D52A5EC26A51EF5 /* Theme+Ocean.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Ocean.swift"; sourceTree = "<group>"; };
 		6E0A0CF368901524810FC2ED /* Theme+Coral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Coral.swift"; sourceTree = "<group>"; };
 		6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
@@ -363,6 +363,7 @@
 		8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionEngine.swift; sourceTree = "<group>"; };
 		8EEB32EB6E1B33701B50BBB7 /* Theme+Paper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Paper.swift"; sourceTree = "<group>"; };
 		904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCanvas.swift; sourceTree = "<group>"; };
+		90E70F4068777D9696762009 /* GesturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturesView.swift; sourceTree = "<group>"; };
 		91D10A388F860363D872978F /* KeyPopup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPopup.swift; sourceTree = "<group>"; };
 		934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsView.swift; sourceTree = "<group>"; };
 		948B52077B9A2F5C2149106D /* ThemeBackgroundStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeBackgroundStore.swift; sourceTree = "<group>"; };
@@ -399,7 +400,6 @@
 		DD86C87065DBFAD706F52315 /* Theme+LiquidMint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidMint.swift"; sourceTree = "<group>"; };
 		E10C790FE1162939E62BDAA3 /* Theme+Ember.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Ember.swift"; sourceTree = "<group>"; };
 		E409F1A6F927F0EF03D8CC62 /* KeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeysView.swift; sourceTree = "<group>"; };
-		9F4557266F0B4D27B24DDB1B /* GesturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturesView.swift; sourceTree = "<group>"; };
 		E54202EF97E8C78A6B0BB189 /* HapticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsView.swift; sourceTree = "<group>"; };
 		E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
 		E6027B59C7DE78F22A746853 /* LocalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationView.swift; sourceTree = "<group>"; };
@@ -506,9 +506,9 @@
 				E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */,
 				733674465CD135FB292C0FF9 /* SuggestionBar.swift */,
 				8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */,
+				05DEEB81EA4974F1D5FD0EB2 /* SwipeDecoder.swift */,
+				688F20D6A1DC28696453D9F9 /* SwipeLexicon.swift */,
 				02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */,
-				E83DEDC384FC42B2A5937139 /* SwipeDecoder.swift */,
-				E83DEDC384FC42B2A5937140 /* SwipeLexicon.swift */,
 				8927D850C4365DFDC1FD2FDA /* Theme.swift */,
 				5D24CE900607D42C32A1E6C6 /* Theme+Bubblegum.swift */,
 				50FFFE172039C44D7B2D4E80 /* Theme+Carbon.swift */,
@@ -662,7 +662,7 @@
 				C06DCCF18B498BC70F7B483D /* CursorView.swift */,
 				39FDB6FF761A1B9983D99D51 /* EmojiSettingsView.swift */,
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
-				9F4557266F0B4D27B24DDB1B /* GesturesView.swift */,
+				90E70F4068777D9696762009 /* GesturesView.swift */,
 				E54202EF97E8C78A6B0BB189 /* HapticsView.swift */,
 				39336F1F36906A928233A48F /* HitboxView.swift */,
 				6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */,
@@ -858,7 +858,7 @@
 				E161B3E7ECCF93E7608D15B0 /* ExtensionManager.swift in Sources */,
 				C2BC899668E8FE744D9C794A /* ExtensionsPanel.swift in Sources */,
 				B6F487000FBE6A9D1DCF0236 /* ExtensionsView.swift in Sources */,
-				B3573479ED834F4A9C1B31B0 /* GesturesView.swift in Sources */,
+				234FE56EB809D2AE6C4EDB4D /* GesturesView.swift in Sources */,
 				32E29F1DCC570DCC25D69ED7 /* HapticsView.swift in Sources */,
 				7C00707B35BE68B76E79C2D3 /* HitboxView.swift in Sources */,
 				9A449AEE3DC0530EA281DB64 /* InputViewHeight.swift in Sources */,
@@ -914,8 +914,8 @@
 				19F570798E632E414DD41A8F /* SuggestionBar.swift in Sources */,
 				CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */,
 				C59299C5E20E2AC1B22BB372 /* SuggestionsView.swift in Sources */,
-				29AF42A93DB741B7B9813BDD /* SwipeDecoder.swift in Sources */,
-				29AF42A93DB741B7B9813BDE /* SwipeLexicon.swift in Sources */,
+				DEFD16DE003B5AAC8387FDAD /* SwipeDecoder.swift in Sources */,
+				916A04317AED6BEB79F0795A /* SwipeLexicon.swift in Sources */,
 				AB58C4E13C3624393D1DBB74 /* SwipeRow.swift in Sources */,
 				B73F0240AA82BC2F30FCB75C /* Theme+Bubblegum.swift in Sources */,
 				4EF90BFEBDA0E1AD70BB7E27 /* Theme+Carbon.swift in Sources */,
@@ -1021,8 +1021,8 @@
 				30B323B0F36FED3B16754F0B /* SoundPlayer.swift in Sources */,
 				339C0C2F81219637976C8449 /* SuggestionBar.swift in Sources */,
 				5EA493BD6E3F05E3F7D12CCD /* SuggestionEngine.swift in Sources */,
-				E5E72F28EAE44B358EBDCECD /* SwipeDecoder.swift in Sources */,
-				E5E72F28EAE44B358EBDCECE /* SwipeLexicon.swift in Sources */,
+				7287D70847A44A67E59C5F89 /* SwipeDecoder.swift in Sources */,
+				353D5F18E6CC46DFF0943C01 /* SwipeLexicon.swift in Sources */,
 				B45E135416622CEBA9D57215 /* SwipeRow.swift in Sources */,
 				ED25A00327EED054A0E79CBC /* Theme+Bubblegum.swift in Sources */,
 				E7CEE5A0D037AF8CB8676B88 /* Theme+Carbon.swift in Sources */,

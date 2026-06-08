@@ -40,7 +40,7 @@ EXPORT_OPTIONS := ExportOptions.plist
 .PHONY: all project icon emoji build run sim install clean stop help test \
         device device-install device-launch build-device \
         device-showcase build-device-showcase \
-        archive package validate-asc upload-asc
+        archive package validate-asc upload-asc bump
 
 # Extra Swift compilation conditions for the showcase build. SHOWCASE flips the
 # app's root to the typing-simulator screen (Sources/Clink/UI/ShowcaseView.swift);
@@ -285,3 +285,9 @@ upload-asc: archive package validate-asc
 	xcrun altool --upload-app -f $(IPA) --type ios \
 		--apiKey $(ASC_KEY_ID) --apiIssuer $(ASC_ISSUER)
 	@echo "Uploaded $(APP_NAME) to App Store Connect."
+
+bump:
+	@CURRENT=$$(grep -m1 'CFBundleVersion:' project.yml | sed 's/[^0-9]//g'); \
+	NEXT=$$(( CURRENT + 1 )); \
+	sed -i '' "s/CFBundleVersion: \"$$CURRENT\"/CFBundleVersion: \"$$NEXT\"/g" project.yml; \
+	echo "CFBundleVersion: $$CURRENT -> $$NEXT"
