@@ -59,14 +59,12 @@ enum AppStage {
                 themeID: "liquid-dark", matchSystemAppearance: false)
 
         case "automation":
-            // Automation (auto-cap, smart punctuation) — Paper: clean, minimal.
             return KeyboardSettings(
-                themeID: "paper", matchSystemAppearance: false)
+                themeID: "liquid-dark", matchSystemAppearance: false)
 
         case "cursor":
-            // Cursor movement — Carbon: dark, focused, the space bar pops.
             return KeyboardSettings(
-                themeID: "carbon", matchSystemAppearance: false)
+                themeID: "liquid-dark", matchSystemAppearance: false)
 
         case "gestures":
             // Swipe typing — liquid glass + trail on shows off morph ripple.
@@ -76,15 +74,13 @@ enum AppStage {
                 swipeKeyMorph: true)
 
         case "haptics":
-            // Haptics — Graphite: mechanical feel matches the section.
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 hapticsEnabled: true)
 
         case "keys":
-            // Key size & shape — Midnight: keys read crisply on pure dark.
             return KeyboardSettings(
-                themeID: "midnight", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 keyPopupEnabled: true)
 
         case "popups":
@@ -94,60 +90,53 @@ enum AppStage {
                 keyPopupEnabled: true, liquidGlassPopup: true)
 
         case "sound", "sounds":
-            // Sound pack picker — Graphite, sound on so the toggle reads live.
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 soundEnabled: true)
 
         case "suggestions":
-            // Suggestion / autocorrect bar — Ocean: clean bar above the keys.
             return KeyboardSettings(
-                themeID: "ocean", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 suggestionsEnabled: true)
 
         // MARK: - Extensions
         case "clipboard":
-            // Clipboard history — Graphite with clipboard enabled.
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 clipboardEnabled: true)
 
         case "emoji":
-            // Emoji picker — Bubblegum: playful and colourful.
             return KeyboardSettings(
-                themeID: "bubblegum", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 emojiEnabled: true)
 
         case "notepad":
-            // Notepad — Snow: clean, writing-friendly.
             return KeyboardSettings(
-                themeID: "snow", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 notepadEnabled: true)
 
         case "calculator":
-            // Calculator — Mechanical: numeric feel.
             return KeyboardSettings(
-                themeID: "mechanical", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 calculatorEnabled: true)
 
         // MARK: - Advanced
         case "hitboxes":
-            // Hitbox overlay — Graphite with the overlay on.
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false,
+                themeID: "liquid-dark", matchSystemAppearance: false,
                 showHitboxOverlay: true)
 
         case "overlays":
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false)
+                themeID: "liquid-dark", matchSystemAppearance: false)
 
         case "performance":
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false)
+                themeID: "liquid-dark", matchSystemAppearance: false)
 
         case "response":
             return KeyboardSettings(
-                themeID: "graphite", matchSystemAppearance: false)
+                themeID: "liquid-dark", matchSystemAppearance: false)
 
         // MARK: - Onboarding
         case "setup":
@@ -162,14 +151,39 @@ enum AppStage {
 }
 
 /// Routes a staged launch straight to the screen we want to photograph, with
-/// the curated settings already applied by `AppModel`.
+/// the curated settings already applied by `AppModel`. Injects the same theme
+/// environment values `DetailHost` does — so `themePageBackground()` and all
+/// theme-aware components read the seeded theme rather than the system default.
 struct StagedRoot: View {
     let slug: String
+    @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var navBar = NavBarState()
+
+    private var resolvedTheme: Theme {
+        model.settings.resolvedTheme(dark: colorScheme == .dark)
+    }
 
     var body: some View {
+        stagedView
+            // Mirror DetailHost's full environment injection so themePageBackground()
+            // and every theme-aware component resolve against the seeded theme.
+            .tint(resolvedTheme.accent.color)
+            .environment(\.resolvedKeyboardTheme, resolvedTheme)
+            .environment(\.cardCornerRadius, model.settings.keyCornerRadius)
+            .environment(\.cardTint, resolvedTheme.keyFill.color)
+            .environment(\.useGlassCards, resolvedTheme.material == .liquidGlass)
+            .environment(\.specialKeyTint, resolvedTheme.specialKeyFill.color)
+            .environment(\.themeTextColor, resolvedTheme.keyText.color)
+            .environment(\.specialKeyTextColor, resolvedTheme.specialKeyText.color)
+            .environment(navBar)
+    }
+
+    @ViewBuilder
+    private var stagedView: some View {
         switch slug {
 
-        // Hero shots
+        // Hero shots — go through RootView so the full chrome is visible.
         case "glass":       StagedHeroView()
         case "hero":        RootView()
 

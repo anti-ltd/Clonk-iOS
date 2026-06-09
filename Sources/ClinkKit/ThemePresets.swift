@@ -13,11 +13,11 @@ public extension Theme {
         .liquidDark, .liquidLight, .liquidMint, .liquidEmber,
     ]
 
-    static let `default`: Theme = presets[0]
+    static let `default`: Theme = .liquidLight
 
     /// Defaults for the "match system" light/dark pair.
-    static var defaultDark: Theme { presets.first(where: \.isDark) ?? presets[0] }
-    static var defaultLight: Theme { presets.first(where: { !$0.isDark }) ?? presets[0] }
+    static var defaultDark: Theme { .liquidDark }
+    static var defaultLight: Theme { .liquidLight }
 
     static var lightPresets: [Theme] { presets.filter { !$0.isDark } }
     static var darkPresets: [Theme] { presets.filter(\.isDark) }
