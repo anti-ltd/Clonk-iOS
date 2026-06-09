@@ -17,7 +17,7 @@ struct GesturesView: View {
         PinnedPreviewLayout(settings: model.settings) {
             CardSection {
                 ToggleRow("Swipe typing",
-                          subtitle: "Glide your finger across the letters to trace a word — lift to insert it. Tapping keys still types normally.",
+                          subtitle: "Trace a word by gliding across the letters. Lift to insert it. Tapping still works normally.",
                           isOn: $model.settings.swipeTypingEnabled)
             }
 
@@ -39,7 +39,7 @@ struct GesturesView: View {
 
                 CardSection("Liquid glass") {
                     ToggleRow("Key ripple",
-                              subtitle: "On glass themes, keys swell under your finger as you glide — the glass flows along the trace. No effect on solid themes.",
+                              subtitle: "Keys swell under your finger as you glide on glass themes. No effect on solid themes.",
                               isOn: $model.settings.swipeKeyMorph)
                     if model.settings.swipeKeyMorph {
                         Divider()
@@ -51,7 +51,7 @@ struct GesturesView: View {
                         }
                         Divider()
                         SliderRow("Wave width",
-                                  tooltip: "Radius of the ripple effect — wider spreads the swell across more neighbouring keys.",
+                                  tooltip: "How wide the ripple spreads. Larger values swell more neighbouring keys.",
                                   value: $model.settings.swipeMorphRadius,
                                   in: 1.0...2.5, step: 0.1) {
                             String(format: "%.1f×", $0)

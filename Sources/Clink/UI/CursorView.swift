@@ -63,7 +63,7 @@ struct CursorView: View {
             }
             Divider()
             SliderRow("Scroll sensitivity",
-                      tooltip: "How far your finger needs to travel to move the cursor one character. Higher is more sensitive — lower it if the cursor jumps too fast.",
+                      tooltip: "How far your finger travels to move the cursor one character. If it jumps too fast, lower this.",
                       value: Binding(
                         get: { 30 - model.settings.spaceCursorStride },
                         set: { model.settings.spaceCursorStride = 30 - $0 }),
@@ -83,11 +83,11 @@ struct CursorView: View {
     private var cursorHelpText: String {
         switch model.settings.cursorMovementType {
         case .spacebar:
-            return "Slide on the space bar to move the cursor — left/right by characters, up/down by lines. Raise the activation time so the cursor only engages when you hold deliberately; lower the sensitivity if it still triggers by accident."
+            return "Slide on the space bar to move the cursor. Left/right moves by character, up/down by line. Raise the activation time so it only kicks in on a deliberate hold. Lower sensitivity if it still triggers by accident."
         case .trackpad:
-            return "Hold the space bar to turn the keyboard into a trackpad — drag to move the cursor (left/right by characters, up/down by lines), then lift to return to the keys. Raise the activation time so it only engages on a deliberate hold; lower the sensitivity if it triggers by accident."
+            return "Hold the space bar to turn the keyboard into a trackpad. Drag to move the cursor, then lift to return to the keys. Raise the activation time so it only engages on a deliberate hold. Lower sensitivity if it triggers by accident."
         case .combined:
-            return "Type as normal — but hold the space bar and the keys blank out and stop responding while you drag the cursor (left/right by characters, up/down by lines), with the space bar morphing. Lift to return to the keys."
+            return "Type normally, then hold the space bar to enter cursor mode. The keys blank out while you drag, and lift returns you to typing."
         }
     }
 }

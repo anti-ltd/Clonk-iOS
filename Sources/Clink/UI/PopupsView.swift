@@ -47,7 +47,7 @@ struct PopupsView: View {
                     }
                     Divider()
                     SliderRow("Springiness",
-                              tooltip: "Damping ratio — lower values give the popup a slight bounce on entry.",
+                              tooltip: "How much the popup bounces on entry. Lower values add more spring.",
                               value: $model.settings.popupSpringDamping,
                               in: 0.3...1.0, step: 0.05) {
                         $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)

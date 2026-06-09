@@ -34,7 +34,7 @@ struct ResponseView: View {
                           in: 120...700, step: 20) { "\(Int($0))ms" }
                 Divider()
                 SliderRow("Hold steadiness",
-                          tooltip: "How far your finger can drift during a hold before it's treated as a swipe instead of a long-press.",
+                          tooltip: "How much your finger can move during a hold before it registers as a swipe instead.",
                           value: $model.settings.accentMoveCancel,
                           in: 4...30, step: 2) { "\(Int($0))pt" }
             }
@@ -42,7 +42,7 @@ struct ResponseView: View {
             if model.settings.activateWithSlideUp {
                 CardSection("Slide up") {
                     SliderRow("Trigger distance",
-                              tooltip: "How far up you must drag the 123 key to open the panel picker — lower triggers more easily, higher prevents accidental opens.",
+                              tooltip: "How far up to drag the 123 key to open the panel. Lower triggers more easily, higher prevents accidents.",
                               value: $model.settings.dragUpThreshold,
                               in: 10...50, step: 2) { "\(Int($0))pt" }
                 }

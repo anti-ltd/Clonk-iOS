@@ -46,7 +46,7 @@ private struct GeneralHitboxControls: View {
         }
         CardSection("Values") {
             SliderRow("Hitbox size",
-                      tooltip: "Scales all key touch targets uniformly — increase if you miss keys, decrease for a tighter feel.",
+                      tooltip: "Scales all key touch targets at once. Raise it if you miss keys often.",
                       value: $model.settings.hitboxScale,
                       in: 0.75...1.25, step: 0.05) {
                 $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
@@ -56,7 +56,7 @@ private struct GeneralHitboxControls: View {
             if model.settings.suggestionsEnabled {
                 Divider()
                 SliderRow("Suggestion bar",
-                          tooltip: "Touch target height for suggestion chips — increase if you often miss a suggestion tap.",
+                          tooltip: "Touch target height for suggestion chips. Raise it if you often miss a tap.",
                           value: $model.settings.suggestionHitboxScale,
                           in: 0.75...1.5, step: 0.05) {
                     $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
@@ -65,7 +65,7 @@ private struct GeneralHitboxControls: View {
             if model.settings.activateWithIcon && panelIconAvailable {
                 Divider()
                 SliderRow("Panel icon",
-                          tooltip: "Touch target size for the panel button — increase if you frequently miss it.",
+                          tooltip: "Touch target size for the panel button. Raise it if you frequently miss it.",
                           value: $model.settings.panelButtonHitboxScale,
                           in: 0.75...1.5, step: 0.05) {
                     $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
@@ -89,7 +89,7 @@ private struct AdaptiveHitboxControls: View {
         @Bindable var model = model
         CardSection("Adaptive") {
             ToggleRow("Adaptive hitboxes",
-                      subtitle: "Predict your next letter and quietly enlarge the likely keys (and shrink the unlikely ones) without moving them — like the native keyboard",
+                      subtitle: "Predicts your next letter and silently enlarges likely keys without moving them, like the native keyboard.",
                       isOn: $model.settings.adaptiveHitboxes)
         }
         if model.settings.adaptiveHitboxes {
@@ -109,7 +109,7 @@ private struct AdaptiveHitboxControls: View {
                 }
                 Divider()
                 SliderRow("Prediction strength",
-                          tooltip: "How aggressively the model biases hitboxes — lower blends the prediction subtly, higher pushes it harder.",
+                          tooltip: "How strongly predictions affect the hitboxes. Lower is subtle, higher pushes the bias harder.",
                           value: $model.settings.adaptivePredictionWeight,
                           in: 0.0...1.0, step: 0.05) {
                     "\(Int(($0 * 100).rounded()))%"
@@ -117,7 +117,7 @@ private struct AdaptiveHitboxControls: View {
             }
             CardSection("Behaviour") {
                 ToggleRow("Predict at word start",
-                          subtitle: "Bias toward common opening letters before you've typed anything; off keeps the keys neutral until there's a letter to predict from",
+                          subtitle: "Bias toward common opening letters before you've typed anything. Off keeps keys neutral until there's a letter to predict from.",
                           isOn: $model.settings.adaptivePredictAtWordStart)
             }
         }

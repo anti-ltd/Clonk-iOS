@@ -64,11 +64,11 @@ struct AnimationView: View {
         @Bindable var model = model
         CardSection("Key press") {
             ToggleRow("Liquid key press",
-                      subtitle: "Bloom and warp each key when pressed — best on Liquid Glass.",
+                      subtitle: "Bloom and warp each key on press. Works best on Liquid Glass.",
                       isOn: $model.settings.keyPressWarp)
             Divider()
             ToggleRow("Instant highlight",
-                      subtitle: "Drop the press spring — keys snap to their bloom with zero animation, like the stock keyboard. Hides the speed/springiness controls below.",
+                      subtitle: "Keys snap instantly to their bloom size with no spring, like the stock keyboard.",
                       isOn: $model.settings.keyPressInstant)
             .disabled(!model.settings.keyPressWarp)
             .opacity(model.settings.keyPressWarp ? 1 : 0.4)
@@ -86,14 +86,14 @@ struct AnimationView: View {
             if !model.settings.keyPressInstant {
                 Divider()
                 SliderRow("Speed",
-                          tooltip: "Spring response time — lower is snappier, higher is more leisurely.",
+                          tooltip: "How fast the spring settles. Lower is snappier, higher is more relaxed.",
                           value: $model.settings.keySpringResponse,
                           in: 0.08...0.6, step: 0.02) {
                     String(format: "%.2fs", $0)
                 }
                 Divider()
                 SliderRow("Springiness",
-                          tooltip: "Damping ratio — lower values bounce more, 1.0 settles with no overshoot.",
+                          tooltip: "How much the spring bounces. Lower bounces more, 1.0 settles cleanly.",
                           value: $model.settings.keySpringDamping,
                           in: 0.3...1.0, step: 0.05) {
                     $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
@@ -120,14 +120,14 @@ struct AnimationView: View {
             }
             Divider()
             SliderRow("Speed",
-                      tooltip: "Spring response time for the space bar animation.",
+                      tooltip: "How fast the spring settles. Lower is snappier, higher is more relaxed.",
                       value: $model.settings.spaceSpringResponse,
                       in: 0.08...0.6, step: 0.02) {
                 String(format: "%.2fs", $0)
             }
             Divider()
             SliderRow("Springiness",
-                      tooltip: "Damping ratio — lower values bounce more, 1.0 settles with no overshoot.",
+                      tooltip: "How much the spring bounces. Lower bounces more, 1.0 settles cleanly.",
                       value: $model.settings.spaceSpringDamping,
                       in: 0.3...1.0, step: 0.05) {
                 $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
@@ -161,7 +161,7 @@ struct AnimationView: View {
                     }
                     Divider()
                     SliderRow("Springiness",
-                              tooltip: "Damping ratio — lower values give the popup a slight bounce on entry.",
+                              tooltip: "How much the popup bounces on entry. Lower values add more spring.",
                               value: $model.settings.popupSpringDamping,
                               in: 0.3...1.0, step: 0.05) {
                         $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
@@ -178,7 +178,7 @@ struct AnimationView: View {
         @Bindable var model = model
         CardSection("Key press") {
             SliderRow("Press linger",
-                      tooltip: "How long the pressed state is held before releasing — adds weight to each tap.",
+                      tooltip: "How long the key stays in its pressed state before bouncing back. Adds a weighted feel.",
                       value: $model.settings.keyPressLinger,
                       in: 0...0.4, step: 0.02) {
                 $0 < 0.005 ? "Off" : "\(Int(($0 * 1000).rounded()))ms"

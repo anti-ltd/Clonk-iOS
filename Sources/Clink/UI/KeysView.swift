@@ -45,22 +45,22 @@ struct KeysView: View {
 
         CardSection("Values") {
             SliderRow("Key height",
-                      tooltip: "Taller keys are easier to tap accurately; shorter keys give more screen real estate.",
+                      tooltip: "Taller keys are easier to tap accurately. Shorter keys give more screen room.",
                       value: $model.settings.keyHeight,
                       in: 38...58, step: 1) { "\(Int($0))pt" }
             Divider()
             SliderRow("Roundness",
-                      tooltip: "Corner radius of each key cap — 0 is square, higher values give a more pill-like shape.",
+                      tooltip: "Corner radius of each key. 0 is square, higher values make rounder caps.",
                       value: $model.settings.keyCornerRadius,
                       in: 0...22, step: 1) { "\(Int($0))pt" }
             Divider()
             SliderRow("Key width",
-                      tooltip: "Each letter key's width as a fraction of its natural grid cell — lower adds breathing room between keys.",
+                      tooltip: "Width of each letter key within its grid cell. Lower values add more space between keys.",
                       value: $model.settings.keyWidthFraction,
                       in: 0.6...1, step: 0.02) { "\(Int(($0 * 100).rounded()))%" }
             Divider()
             SliderRow("Space bar width",
-                      tooltip: "Width of the space bar expressed in key-widths — narrower leaves room for flanking keys.",
+                      tooltip: "Width of the space bar in key units. Narrower leaves room for keys on either side.",
                       value: $model.settings.spaceWidth,
                       in: 3...7, step: 0.5) { String(format: "%.1f keys", $0) }
             Divider()
@@ -114,21 +114,21 @@ struct KeysView: View {
             }
             Divider()
             SliderRow("Start speed",
-                      tooltip: "Interval between deletions at the beginning of a hold — higher is slower.",
+                      tooltip: "Time between each deletion when rapid-delete starts. Higher is slower.",
                       value: $model.settings.repeatInitialInterval,
                       in: 50...200, step: 10) {
                 "\(Int($0))ms"
             }
             Divider()
             SliderRow("Max speed",
-                      tooltip: "Fastest interval rapid-delete can reach after fully accelerating — lower is faster.",
+                      tooltip: "Fastest deletion rate after the key fully accelerates. Lower is faster.",
                       value: $model.settings.repeatMinInterval,
                       in: 20...80, step: 5) {
                 "\(Int($0))ms"
             }
             Divider()
             SliderRow("Acceleration",
-                      tooltip: "How much the interval shrinks per repeat step — higher ramps up to max speed sooner.",
+                      tooltip: "How quickly repeat accelerates to max speed. Higher gets there faster.",
                       value: $model.settings.repeatAccelStep,
                       in: 1...20, step: 1) {
                 "\(Int($0))ms/step"

@@ -41,7 +41,7 @@ struct HapticsView: View {
                     .padding(.vertical, UX.rowVPadding)
                     Divider()
                     SliderRow("Strength",
-                              tooltip: "Intensity of each haptic tap — higher feels punchier and more mechanical, lower is a faint tick.",
+                              tooltip: "Higher feels punchier and more mechanical. Lower is a faint tick.",
                               value: $model.settings.hapticIntensity,
                               in: 0.1...1.0, step: 0.05) {
                         "\(Int(($0 * 100).rounded()))%"
