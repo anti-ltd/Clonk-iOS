@@ -735,27 +735,28 @@ private struct ExtensionPickerContent: View {
             }
 
             CardSection("Panel access") {
-                Toggle("Top-left icon", isOn: $m.settings.activateWithIcon)
-                    .padding(.vertical, UX.rowVPadding)
+                ToggleRow("Top-left icon",
+                          subtitle: "Show a panel button in the top-left corner of the keyboard.",
+                          isOn: $m.settings.activateWithIcon)
                 Divider()
-                Toggle("Slide up on 123", isOn: $m.settings.activateWithSlideUp)
-                    .padding(.vertical, UX.rowVPadding)
+                ToggleRow("Slide up on 123",
+                          subtitle: "Drag up on the 123 key to open the panel picker.",
+                          isOn: $m.settings.activateWithSlideUp)
                 if enabledPanelCount >= 2 {
                     Divider()
-                    VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Picker style")
+                        Spacer()
                         Picker("Picker style", selection: $m.settings.panelPickerStyle) {
                             ForEach(PanelPickerStyle.allCases) { style in
                                 Text(style.label).tag(style)
                             }
                         }
-                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .pickerStyle(.menu)
                     }
                     .padding(.vertical, UX.rowVPadding)
                 }
-                Text("Open panels from the suggestion bar or by dragging the 123 key upward.")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, UX.rowVPadding)
             }
         }
         // Built-in panels added after a user's `extensionOrder` was first saved
@@ -861,12 +862,16 @@ private struct ExtensionReorderList: View {
             default:           return .constant(false)
             }
         }()
-        Toggle(isOn: binding) {
+        HStack {
             Label {
                 Text(name)
             } icon: {
                 Image(systemName: icon).foregroundStyle(themeAccent)
             }
+            Spacer()
+            Toggle("", isOn: binding)
+                .labelsHidden()
+                .toggleStyle(ThemedToggleStyle())
         }
         .padding(.trailing, 16)
     }

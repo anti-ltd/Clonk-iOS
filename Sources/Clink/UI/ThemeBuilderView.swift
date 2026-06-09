@@ -914,7 +914,7 @@ private struct GradientSlider: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(gradient)
                     .frame(height: 28)
-                Circle()
+                RoundedRectangle(cornerRadius: max(4, cornerRadius - 4), style: .continuous)
                     .fill(.white)
                     .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
                     .frame(width: 28, height: 28)

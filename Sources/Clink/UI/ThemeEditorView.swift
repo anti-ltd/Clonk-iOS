@@ -126,7 +126,7 @@ struct ThemeEditorView: View {
                 ShareSheet(items: urls)
             }
         }
-        .navTrailingButton("ellipsis.circle") { showOptions = true }
+        .navTrailingButton("ellipsis.circle") { showOptions.toggle() }
         .sheet(item: $builderTheme) { theme in
             ThemeBuilderView(theme: theme)
         }
@@ -280,17 +280,13 @@ private struct ThemeOptionsPopover: View {
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: 0) {
-            Toggle("Match system appearance", isOn: $model.settings.matchSystemAppearance)
-                .padding(.vertical, 12)
-            Text("Switch theme automatically with the system's light / dark mode.")
-                .font(.caption).foregroundStyle(.secondary)
-                .padding(.bottom, 12)
+            ToggleRow("Match system appearance",
+                      subtitle: "Switches theme automatically with the system light/dark mode.",
+                      isOn: $model.settings.matchSystemAppearance)
             Divider()
-            Toggle("Show background", isOn: $model.settings.backgroundVisible)
-                .padding(.vertical, 12)
-            Text("Paint the theme's background — a custom theme's photo, or its colour — behind the keys.")
-                .font(.caption).foregroundStyle(.secondary)
-                .padding(.bottom, 12)
+            ToggleRow("Show background",
+                      subtitle: "Draws the theme background colour or photo behind the keys.",
+                      isOn: $model.settings.backgroundVisible)
             Divider()
             menuButton("Create theme", systemImage: "plus.circle.fill", action: onCreate)
             Divider()

@@ -114,14 +114,16 @@ struct EmojiSettingsView: View {
     private func layoutTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Scroll") {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Scroll direction").foregroundStyle(.secondary).font(.subheadline)
+            HStack {
+                Text("Scroll direction")
+                Spacer()
                 Picker("Scroll direction", selection: $model.settings.emojiScrollDirection) {
                     ForEach(EmojiScrollDirection.allCases) { dir in
                         Text(dir.label).tag(dir)
                     }
                 }
-                .pickerStyle(.segmented)
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
             .padding(.vertical, UX.rowVPadding)
             if model.settings.emojiScrollDirection == .vertical {

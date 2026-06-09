@@ -92,22 +92,18 @@ struct ClipboardHistoryView: View {
             }
             if model.settings.clipboardEnabled {
                 Divider()
-                VStack(alignment: .leading, spacing: 10) {
+                HStack {
                     Text("Style")
-                        .font(.subheadline)
-                        .padding(.horizontal, 14)
-                        .padding(.top, 10)
+                    Spacer()
                     Picker("Style", selection: $model.settings.clipboardStyle) {
                         ForEach(ClipboardStyle.allCases) { style in
                             Text(style.label).tag(style)
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 14)
-                    styleCaption
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 10)
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
+                .padding(.vertical, UX.rowVPadding)
             }
         }
     }
@@ -182,17 +178,6 @@ struct ClipboardHistoryView: View {
     }
 
     // MARK: - Helpers
-
-    @ViewBuilder private var styleCaption: some View {
-        switch model.settings.clipboardStyle {
-        case .bar:
-            Text("Replaces the suggestion bar with a horizontal scroll of clips.")
-                .font(.caption).foregroundStyle(.secondary)
-        case .overlay:
-            Text("Shows a panel over the keys with cards and timestamps.")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
 
     private var emptyState: some View {
         VStack(spacing: 8) {

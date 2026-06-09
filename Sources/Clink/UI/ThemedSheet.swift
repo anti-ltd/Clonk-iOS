@@ -107,9 +107,19 @@ struct ThemedSheetOverlay<Content: View>: View {
                     handleBar
                     Divider().opacity(0.3)
                     ScrollView {
-                        content.padding(20)
+                        content
+                            .padding(20)
                     }
                 }
+                // Re-inject theme environment so sheets opened from outside
+                // the NavigationStack (e.g. SidebarSheetHost) get the correct
+                // tint and custom environment keys. Applied to the whole panel
+                // so the Done button and content both pick it up.
+                .tint(theme.accent.color)
+                .environment(\.cardCornerRadius, cornerRadius)
+                .environment(\.specialKeyTint, theme.specialKeyFill.color)
+                .environment(\.themeTextColor, theme.keyText.color)
+                .environment(\.useGlassCards, theme.material == .liquidGlass)
                 .frame(maxWidth: .infinity)
                 .frame(height: panelHeight)
                 .background { panelBackground(shape) }
