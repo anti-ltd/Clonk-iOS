@@ -11,7 +11,6 @@ public extension Theme {
         .ember, .crimson, .matrix, .royal, .sakura, .mint, .lavender,
         .solarizedLight, .bubblegum, .latte, .coral, .cinder,
         .liquidDark, .liquidLight, .liquidMint, .liquidEmber,
-        .dobble, .snobble,
     ]
 
     static let `default`: Theme = presets[0]

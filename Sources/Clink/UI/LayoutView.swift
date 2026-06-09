@@ -67,21 +67,23 @@ struct LayoutView: View {
     @ViewBuilder
     private func rowsTab(model: AppModel) -> some View {
         @Bindable var model = model
-        CardSection("Rows") {
+        CardSection("Number row") {
             ToggleRow("Number row",
                       subtitle: "Always show 1–0 above the letters.",
                       isOn: $model.settings.showNumberRow)
             if model.settings.showNumberRow {
                 Divider()
-                SliderRow("Number row height", value: $model.settings.numberRowHeightScale,
+                SliderRow("Height", value: $model.settings.numberRowHeightScale,
                           in: 0.5...1.2, step: 0.05) {
                     "\(Int((model.settings.keyHeight * $0).rounded()))pt"
                 }
                 Divider()
-                SliderRow("Number row text size", value: $model.settings.numberRowFontSize,
+                SliderRow("Text size", value: $model.settings.numberRowFontSize,
                           in: 14...30, step: 1) { "\(Int($0))pt" }
             }
-            Divider()
+        }
+
+        CardSection("Home row") {
             ToggleRow("Inset home row",
                       subtitle: "Indent the middle letter row, like the system keyboard.",
                       isOn: $model.settings.homeRowInset)

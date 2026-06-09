@@ -1,6 +1,6 @@
 /**
- Animation tuning screen. Two tabs — Spring, Timing — each with a
- preset chip row above the raw sliders in a `TunedSection` disclosure group.
+ Animation tuning screen. Two tabs — Spring, Timing. Spring tab shows three
+ cards (Keys, Space bar, Popup); the Popup card is hidden when popups are off.
  */
 import SwiftUI
 import iUXiOS
@@ -68,34 +68,42 @@ struct AnimationView: View {
                       isOn: $model.settings.keyPressWarp)
             Divider()
             ToggleRow("Instant highlight",
-                      subtitle: "Drop the press spring — keys snap to their bloom with zero animation, like the stock keyboard. Overrides the speed/springiness below.",
+                      subtitle: "Drop the press spring — keys snap to their bloom with zero animation, like the stock keyboard. Hides the speed/springiness controls below.",
                       isOn: $model.settings.keyPressInstant)
             .disabled(!model.settings.keyPressWarp)
             .opacity(model.settings.keyPressWarp ? 1 : 0.4)
         }
-        TunedSection(title: "Animation", presets: TuningPresets.animation) {
-            fineTuneHeader("Key press")
+        CardSection("Keys") {
+            PresetChips(presets: TuningPresets.animation)
+                .padding(.vertical, UX.rowVPadding)
+            Divider()
             SliderRow("Bloom", value: $model.settings.keyBloomScale,
                       in: 1.0...1.4, step: 0.02) {
                 $0 == 1.0 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
-            Divider()
-            SliderRow("Speed", value: $model.settings.keySpringResponse,
-                      in: 0.08...0.6, step: 0.02) {
-                String(format: "%.2fs", $0)
-            }
-            Divider()
-            SliderRow("Springiness", value: $model.settings.keySpringDamping,
-                      in: 0.3...1.0, step: 0.05) {
-                $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
+            if !model.settings.keyPressInstant {
+                Divider()
+                SliderRow("Speed", value: $model.settings.keySpringResponse,
+                          in: 0.08...0.6, step: 0.02) {
+                    String(format: "%.2fs", $0)
+                }
+                Divider()
+                SliderRow("Springiness", value: $model.settings.keySpringDamping,
+                          in: 0.3...1.0, step: 0.05) {
+                    $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
+                }
             }
             Divider()
             SliderRow("Tap flash", value: $model.settings.tapFlashStrength,
                       in: 0...0.7, step: 0.02) {
                 $0 < 0.005 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
-
-            fineTuneHeader("Space bar")
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.keyPressInstant)
+        CardSection("Space bar") {
+            PresetChips(presets: TuningPresets.spaceBar)
+                .padding(.vertical, UX.rowVPadding)
+            Divider()
             SliderRow("Bloom", value: $model.settings.spaceBloomScale,
                       in: 1.0...1.2, step: 0.01) {
                 $0 <= 1.001 ? "Off" : "\(Int(($0 * 100).rounded()))%"
@@ -120,18 +128,27 @@ struct AnimationView: View {
                       in: 0.7...1.0, step: 0.02) {
                 $0 >= 0.99 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
-
-            fineTuneHeader("Popup")
-            SliderRow("Speed", value: $model.settings.popupSpringResponse,
-                      in: 0.08...0.6, step: 0.02) {
-                String(format: "%.2fs", $0)
-            }
-            Divider()
-            SliderRow("Springiness", value: $model.settings.popupSpringDamping,
-                      in: 0.3...1.0, step: 0.05) {
-                $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
+        }
+        Group {
+            if model.settings.keyPopupEnabled {
+                CardSection("Popup") {
+                    PresetChips(presets: TuningPresets.popup)
+                        .padding(.vertical, UX.rowVPadding)
+                    Divider()
+                    SliderRow("Speed", value: $model.settings.popupSpringResponse,
+                              in: 0.08...0.6, step: 0.02) {
+                        String(format: "%.2fs", $0)
+                    }
+                    Divider()
+                    SliderRow("Springiness", value: $model.settings.popupSpringDamping,
+                              in: 0.3...1.0, step: 0.05) {
+                        $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.keyPopupEnabled)
     }
 
     @ViewBuilder
@@ -145,15 +162,6 @@ struct AnimationView: View {
         }
     }
 
-    @ViewBuilder
-    private func fineTuneHeader(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 14)
-            .padding(.bottom, 2)
-    }
 }
 
 #if DEBUG

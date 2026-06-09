@@ -322,8 +322,8 @@ private struct DetailHost: View {
         case .notepad:    NotepadView()
         case .emoji:      EmojiSettingsView()
         case .calculator: CalculatorSettingsView()
-        case .customActions: ExtensionsView()
-        case .customPanels: PanelsView()
+        case .customActions: if FeatureFlags.experimental { ExtensionsView() }
+        case .customPanels: if FeatureFlags.experimental { PanelsView() }
         // Placeholder pages — content to be built out.
         case .animation:   AnimationView()
         case .automation:  AutomationView()
@@ -437,11 +437,9 @@ private struct SidebarPanel: View {
 
     /// Customization pages, alphabetical. (Several are placeholders pending build-out.)
     private var customizationRows: [NavItem] {
-        [
+        var rows: [NavItem] = [
             NavItem(title: "Animation",   icon: "wand.and.stars",        dest: .animation),
             NavItem(title: "Automation",  icon: "gearshape.2",           dest: .automation),
-            NavItem(title: "Custom Actions", icon: "puzzlepiece.extension", dest: .customActions),
-            NavItem(title: "Custom Panels", icon: "square.grid.2x2",      dest: .customPanels),
             NavItem(title: "Cursor",      icon: "cursorarrow",           dest: .cursor),
             NavItem(title: "Gestures",    icon: "hand.draw",             dest: .gestures),
             NavItem(title: "Haptics",     icon: "hand.tap",                         dest: .haptics),
@@ -450,7 +448,14 @@ private struct SidebarPanel: View {
             NavItem(title: "Sounds",      icon: "speaker.wave.2",        dest: .sounds),
             NavItem(title: "Suggestions", icon: "text.cursor",            dest: .suggestions),
             NavItem(title: "Theme",       icon: "paintpalette",          dest: .theme),
-        ].sorted { $0.title < $1.title }
+        ]
+        if FeatureFlags.experimental {
+            rows += [
+                NavItem(title: "Custom Actions", icon: "puzzlepiece.extension", dest: .customActions),
+                NavItem(title: "Custom Panels",  icon: "square.grid.2x2",       dest: .customPanels),
+            ]
+        }
+        return rows.sorted { $0.title < $1.title }
     }
 
     /// Advanced pages, alphabetical. (Placeholders pending build-out.)
@@ -698,6 +703,13 @@ private struct ScrollEdgeTracker: ViewModifier {
     }
 }
 
+private struct DestCardHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 private let allExtensions: [ExtEntry] = [
     ExtEntry(id: .calculator, name: "Calculator", icon: "numbers.rectangle"),
     ExtEntry(id: .clipboard,  name: "Clipboard",  icon: "clipboard"),
@@ -908,20 +920,27 @@ private struct ClinkContent: View {
         DestCard(title: "Layout",       icon: "textformat.abc", description: "Key arrangement and row options",         dest: .layout),
     ]
 
-    private let customizationCards: [DestCard] = [
-        DestCard(title: "Animation",   icon: "wand.and.stars",                              description: "Spring physics and press timing",       dest: .animation),
-        DestCard(title: "Automation",  icon: "gearshape.2",                                 description: "Auto-capitalize and smart punctuation", dest: .automation),
-        DestCard(title: "Custom Actions", icon: "puzzlepiece.extension",                     description: "Write keyboard actions in Python",      dest: .customActions),
-        DestCard(title: "Custom Panels", icon: "square.grid.2x2",                            description: "Build custom keyboard UIs in Python",   dest: .customPanels),
-        DestCard(title: "Cursor",      icon: "cursorarrow",                                 description: "Movement style and feel",               dest: .cursor),
-        DestCard(title: "Gestures",    icon: "hand.draw",                                   description: "Swipe typing and the glide trail",      dest: .gestures),
-        DestCard(title: "Haptics",     icon: "hand.tap",                                    description: "Key press haptic feedback",             dest: .haptics),
-        DestCard(title: "Keys",        icon: "keyboard",                                    description: "Size, shape, and backspace repeat",     dest: .keys),
-        DestCard(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait",    description: "Popup style and Liquid Glass",          dest: .popups),
-        DestCard(title: "Sounds",      icon: "speaker.wave.2",                              description: "Sound pack and volume",                 dest: .sounds),
-        DestCard(title: "Suggestions", icon: "text.cursor",                                 description: "Autocorrect and suggestion bar",        dest: .suggestions),
-        DestCard(title: "Theme",       icon: "paintpalette",                                description: "Colors, materials, and themes",         dest: .theme),
-    ]
+    private var customizationCards: [DestCard] {
+        var cards: [DestCard] = [
+            DestCard(title: "Animation",   icon: "wand.and.stars",                              description: "Spring physics and press timing",       dest: .animation),
+            DestCard(title: "Automation",  icon: "gearshape.2",                                 description: "Auto-capitalize and smart punctuation", dest: .automation),
+            DestCard(title: "Cursor",      icon: "cursorarrow",                                 description: "Movement style and feel",               dest: .cursor),
+            DestCard(title: "Gestures",    icon: "hand.draw",                                   description: "Swipe typing and the glide trail",      dest: .gestures),
+            DestCard(title: "Haptics",     icon: "hand.tap",                                    description: "Key press haptic feedback",             dest: .haptics),
+            DestCard(title: "Keys",        icon: "keyboard",                                    description: "Size, shape, and backspace repeat",     dest: .keys),
+            DestCard(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait",    description: "Popup style and Liquid Glass",          dest: .popups),
+            DestCard(title: "Sounds",      icon: "speaker.wave.2",                              description: "Sound pack and volume",                 dest: .sounds),
+            DestCard(title: "Suggestions", icon: "text.cursor",                                 description: "Autocorrect and suggestion bar",        dest: .suggestions),
+            DestCard(title: "Theme",       icon: "paintpalette",                                description: "Colors, materials, and themes",         dest: .theme),
+        ]
+        if FeatureFlags.experimental {
+            cards += [
+                DestCard(title: "Custom Actions", icon: "puzzlepiece.extension", description: "Write keyboard actions in Python", dest: .customActions),
+                DestCard(title: "Custom Panels",  icon: "square.grid.2x2",       description: "Build custom keyboard UIs in Python", dest: .customPanels),
+            ]
+        }
+        return cards
+    }
 
     private let advancedCards: [DestCard] = [
         DestCard(title: "Hitboxes",    icon: "square.dashed",                                  description: "Touch target size and presets",      dest: .hitboxes),
@@ -942,7 +961,8 @@ private struct ClinkContent: View {
         }
     }
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    @State private var cardHeight: CGFloat = 0
 
     var body: some View {
         ScrollView {
@@ -967,6 +987,7 @@ private struct ClinkContent: View {
             }
             .padding(UX.screenPadding)
         }
+        .onPreferenceChange(DestCardHeightKey.self) { cardHeight = $0 }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navTrailingButton("ellipsis.circle") { showBackupSheet = true }
@@ -1017,7 +1038,7 @@ private struct ClinkContent: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
             }
-            .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(12)
             .background(cardTint ?? Color(.secondarySystemBackground),
                         in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
@@ -1029,6 +1050,10 @@ private struct ClinkContent: View {
             }
         }
         .buttonStyle(.plain)
+        .frame(height: cardHeight > 0 ? cardHeight : nil)
+        .background(GeometryReader { geo in
+            Color.clear.preference(key: DestCardHeightKey.self, value: geo.size.height)
+        })
     }
 
 }

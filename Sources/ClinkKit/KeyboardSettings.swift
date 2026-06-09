@@ -512,7 +512,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         clipboardStyle: ClipboardStyle = .bar,
         clipboardCloseOnPaste: Bool = false,
         clipboardDeleteOnPaste: Bool = false,
-        clipboardIgnorePinsOnDelete: Bool = true,
+        clipboardIgnorePinsOnDelete: Bool = false,
         autoCopyOnKeyboardOpen: Bool = false,
         autoCopyOnClipboardOpen: Bool = false,
         notepadEnabled: Bool = false,
@@ -739,7 +739,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         clipboardStyle = (try? c.decodeIfPresent(ClipboardStyle.self, forKey: .clipboardStyle)) ?? .bar
         clipboardCloseOnPaste = try c.decodeIfPresent(Bool.self, forKey: .clipboardCloseOnPaste) ?? false
         clipboardDeleteOnPaste = try c.decodeIfPresent(Bool.self, forKey: .clipboardDeleteOnPaste) ?? false
-        clipboardIgnorePinsOnDelete = try c.decodeIfPresent(Bool.self, forKey: .clipboardIgnorePinsOnDelete) ?? true
+        clipboardIgnorePinsOnDelete = try c.decodeIfPresent(Bool.self, forKey: .clipboardIgnorePinsOnDelete) ?? false
         autoCopyOnKeyboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnKeyboardOpen) ?? false
         autoCopyOnClipboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnClipboardOpen) ?? false
         notepadEnabled = try c.decodeIfPresent(Bool.self, forKey: .notepadEnabled) ?? false

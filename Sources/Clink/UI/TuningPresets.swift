@@ -110,6 +110,62 @@ enum TuningPresets {
         }, detail: "No bloom · no lean · firm 0.12s springs — flattest, most static."),
     ]
 
+    /// Space bar spring character — bloom, speed, springiness, lean, cursor shrink.
+    static let spaceBar: [Preset] = [
+        Preset(name: "Default", apply: { s in
+            s.spaceBloomScale = 1.04; s.spaceSpringResponse = 0.28; s.spaceSpringDamping = 0.78
+            s.spaceLeanMultiplier = 0.14; s.spaceCursorDragScale = 0.90
+        }, matches: { s in
+            aeq(s.spaceBloomScale, 1.04) && aeq(s.spaceSpringResponse, 0.28) && aeq(s.spaceSpringDamping, 0.78)
+            && aeq(s.spaceLeanMultiplier, 0.14) && aeq(s.spaceCursorDragScale, 0.90)
+        }, detail: "0.28s · 0.78 · lean 0.14 · bloom 104%."),
+        Preset(name: "Snappy", apply: { s in
+            s.spaceBloomScale = 1.02; s.spaceSpringResponse = 0.16; s.spaceSpringDamping = 0.88
+            s.spaceLeanMultiplier = 0.08; s.spaceCursorDragScale = 0.95
+        }, matches: { s in
+            aeq(s.spaceBloomScale, 1.02) && aeq(s.spaceSpringResponse, 0.16) && aeq(s.spaceSpringDamping, 0.88)
+            && aeq(s.spaceLeanMultiplier, 0.08) && aeq(s.spaceCursorDragScale, 0.95)
+        }, detail: "0.16s · 0.88 · lean 0.08 · bloom 102% — fast & firm."),
+        Preset(name: "Bouncy", apply: { s in
+            s.spaceBloomScale = 1.08; s.spaceSpringResponse = 0.36; s.spaceSpringDamping = 0.55
+            s.spaceLeanMultiplier = 0.20; s.spaceCursorDragScale = 0.85
+        }, matches: { s in
+            aeq(s.spaceBloomScale, 1.08) && aeq(s.spaceSpringResponse, 0.36) && aeq(s.spaceSpringDamping, 0.55)
+            && aeq(s.spaceLeanMultiplier, 0.20) && aeq(s.spaceCursorDragScale, 0.85)
+        }, detail: "0.36s · 0.55 · lean 0.20 · bloom 108% — loose & springy."),
+        Preset(name: "Minimal", apply: { s in
+            s.spaceBloomScale = 1.0; s.spaceSpringResponse = 0.12; s.spaceSpringDamping = 1.0
+            s.spaceLeanMultiplier = 0.0; s.spaceCursorDragScale = 1.0
+        }, matches: { s in
+            aeq(s.spaceBloomScale, 1.0) && aeq(s.spaceSpringResponse, 0.12) && aeq(s.spaceSpringDamping, 1.0)
+            && aeq(s.spaceLeanMultiplier, 0.0) && aeq(s.spaceCursorDragScale, 1.0)
+        }, detail: "0.12s · firm · no lean · no bloom."),
+    ]
+
+    /// Popup emerge spring — speed and springiness only.
+    static let popup: [Preset] = [
+        Preset(name: "Default", apply: { s in
+            s.popupSpringResponse = 0.32; s.popupSpringDamping = 0.62
+        }, matches: { s in
+            aeq(s.popupSpringResponse, 0.32) && aeq(s.popupSpringDamping, 0.62)
+        }, detail: "0.32s · 0.62."),
+        Preset(name: "Snappy", apply: { s in
+            s.popupSpringResponse = 0.20; s.popupSpringDamping = 0.85
+        }, matches: { s in
+            aeq(s.popupSpringResponse, 0.20) && aeq(s.popupSpringDamping, 0.85)
+        }, detail: "0.20s · 0.85 — quick pop."),
+        Preset(name: "Bouncy", apply: { s in
+            s.popupSpringResponse = 0.40; s.popupSpringDamping = 0.48
+        }, matches: { s in
+            aeq(s.popupSpringResponse, 0.40) && aeq(s.popupSpringDamping, 0.48)
+        }, detail: "0.40s · 0.48 — pronounced bounce."),
+        Preset(name: "Minimal", apply: { s in
+            s.popupSpringResponse = 0.16; s.popupSpringDamping = 1.0
+        }, matches: { s in
+            aeq(s.popupSpringResponse, 0.16) && aeq(s.popupSpringDamping, 1.0)
+        }, detail: "0.16s · firm snap."),
+    ]
+
     /// Press linger + backspace auto-repeat timing.
     static let timing: [Preset] = [
         Preset(name: "Default", apply: { s in

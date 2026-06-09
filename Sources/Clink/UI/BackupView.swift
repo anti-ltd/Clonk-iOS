@@ -33,6 +33,7 @@ struct BackupView: View {
 /// The save / import / reset controls, shared by the pushed screen and the sheet.
 struct BackupControls: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
 
     @State private var confirmResetAdvanced = false
     @State private var confirmResetAll = false
@@ -69,11 +70,13 @@ struct BackupControls: View {
             }
 
             CardSection("Reset") {
-                Button("Reset advanced settings") { confirmResetAdvanced = true }
+                Button("Reset advanced settings", role: .destructive) { confirmResetAdvanced = true }
+                    .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, UX.rowVPadding)
                 Divider()
                 Button("Reset all settings", role: .destructive) { confirmResetAll = true }
+                    .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, UX.rowVPadding)
             }
@@ -92,17 +95,17 @@ struct BackupControls: View {
                 Text("Couldn’t prepare the configuration for export.").padding()
             }
         }
-        .confirmationDialog("Reset advanced settings to their defaults?",
-                            isPresented: $confirmResetAdvanced, titleVisibility: .visible) {
-            Button("Reset advanced settings", role: .destructive) {
+        .alert("Reset advanced settings to their defaults?",
+               isPresented: $confirmResetAdvanced) {
+            Button("Reset", role: .destructive) {
                 model.resetAdvancedSettings()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Restores hitbox size, cursor scroll sensitivity, and all physics values. Other settings are untouched.")
         }
-        .confirmationDialog("Reset all settings to their defaults?",
-                            isPresented: $confirmResetAll, titleVisibility: .visible) {
+        .alert("Reset all settings to their defaults?",
+               isPresented: $confirmResetAll) {
             Button("Reset all settings", role: .destructive) {
                 model.resetAllSettings()
             }
@@ -134,7 +137,7 @@ struct BackupControls: View {
             .font(.body.weight(.medium))
             .padding(14)
             .frame(maxWidth: .infinity)
-            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
     }

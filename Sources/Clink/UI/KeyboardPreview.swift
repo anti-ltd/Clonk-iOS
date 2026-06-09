@@ -246,6 +246,7 @@ struct KeyboardPreview: View {
     let settings: KeyboardSettings
     var showHitboxOverlay: Bool = false
     @State private var typed: String = ""
+    @State private var cursorPos: Int = 0
     // Sample suggestions so the preview shows the autocomplete bar populated.
     @State private var live = KeyboardLiveState(suggestions: ["clink", "keyboard", "hello"])
 
@@ -264,17 +265,34 @@ struct KeyboardPreview: View {
         return LinearGradient(colors: [c1, c2, c3], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
+    private var displayText: AttributedString {
+        guard !typed.isEmpty else { return AttributedString() }
+        let pos = min(cursorPos, typed.count)
+        let idx = typed.index(typed.startIndex, offsetBy: pos)
+        var result = AttributedString(typed[..<idx])
+        var cursor = AttributedString("│")
+        cursor.foregroundColor = UIColor(envTheme.accent.color)
+        result += cursor
+        result += AttributedString(typed[idx...])
+        return result
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Faux text field showing what's been typed.
+            // Faux text field showing what's been typed, with a cursor marker
+            // at the current position so cursor-mode drags are visible.
             HStack {
-                Text(typed.isEmpty ? "Try it out…" : typed)
-                    .foregroundStyle(typed.isEmpty ? .secondary : .primary)
-                    .lineLimit(1)
-                    .truncationMode(.head)
+                if typed.isEmpty {
+                    Text("Try it out…").foregroundStyle(.secondary)
+                } else {
+                    Text(displayText).lineLimit(1).truncationMode(.middle)
+                }
                 Spacer(minLength: 0)
                 if !typed.isEmpty {
-                    Button { typed = "" } label: {
+                    Button {
+                        typed = ""
+                        cursorPos = 0
+                    } label: {
                         Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
@@ -292,9 +310,45 @@ struct KeyboardPreview: View {
                 settings: settings,
                 live: live,
                 showHitboxOverlay: showHitboxOverlay,
-                onInsert: { typed.append($0) },
-                onBackspace: { if !typed.isEmpty { typed.removeLast() } },
-                onSuggestion: { typed += $0 + " " }
+                onInsert: { text in
+                    let idx = typed.index(typed.startIndex, offsetBy: min(cursorPos, typed.count))
+                    typed.insert(contentsOf: text, at: idx)
+                    cursorPos = min(typed.count, cursorPos + text.count)
+                },
+                onBackspace: {
+                    guard cursorPos > 0, !typed.isEmpty else { return }
+                    let pos = min(cursorPos, typed.count)
+                    let idx = typed.index(typed.startIndex, offsetBy: pos - 1)
+                    typed.remove(at: idx)
+                    cursorPos = pos - 1
+                },
+                onAnyTap: {
+                    guard settings.hapticsEnabled else { return }
+                    let style: UIImpactFeedbackGenerator.FeedbackStyle = {
+                        switch settings.hapticStyle {
+                        case .light:  return .light
+                        case .medium: return .medium
+                        case .heavy:  return .heavy
+                        case .rigid:  return .rigid
+                        case .soft:   return .soft
+                        }
+                    }()
+                    let gen = UIImpactFeedbackGenerator(style: style)
+                    gen.impactOccurred(intensity: settings.hapticIntensity)
+                },
+                onSuggestion: { text in
+                    typed += text + " "
+                    cursorPos = typed.count
+                },
+                onCursorMove: { delta in
+                    // Seed sample text on first cursor drag so there's something
+                    // to navigate through.
+                    if typed.isEmpty {
+                        typed = "The quick brown fox"
+                        cursorPos = typed.count
+                    }
+                    cursorPos = max(0, min(typed.count, cursorPos + delta))
+                }
             )
             // Pin to the same content height the extension uses, so the preview
             // has no indefinite-height gap below the keys.

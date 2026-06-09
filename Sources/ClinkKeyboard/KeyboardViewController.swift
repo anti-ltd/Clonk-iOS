@@ -507,10 +507,11 @@ final class KeyboardViewController: UIInputViewController {
                 self.scheduleSuggestionUpdate()
             },
             onRunExtension: { [weak self] ext in
+                guard FeatureFlags.experimental else { return }
                 self?.runExtension(ext)
             },
             onPanelInsert: { [weak self] text in
-                guard let self, !text.isEmpty else { return }
+                guard FeatureFlags.experimental, let self, !text.isEmpty else { return }
                 self.isApplyingEdit = true
                 self.insertMirrored(text)
                 self.isApplyingEdit = false
@@ -674,6 +675,7 @@ final class KeyboardViewController: UIInputViewController {
     /// output is inserted at the cursor. Runs synchronously — PyMini is
     /// step-budget bounded so it can't hang the keyboard.
     private func runExtension(_ ext: ClinkExtension) {
+        guard FeatureFlags.experimental else { return }
         let word = currentPartialWord
         let input: String
         switch ext.input {

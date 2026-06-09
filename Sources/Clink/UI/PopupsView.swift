@@ -14,29 +14,45 @@ struct PopupsView: View {
                 ToggleRow("Key popups",
                           subtitle: "Show an enlarged bubble when a key is pressed.",
                           isOn: $model.settings.keyPopupEnabled)
-                Divider()
-                HStack {
-                    Text("Popup style")
-                    Spacer()
-                    Picker("Popup style", selection: $model.settings.keyPopupStyle) {
-                        ForEach(KeyPopupStyle.allCases) { style in
-                            Text(style.label).tag(style)
+                if model.settings.keyPopupEnabled {
+                    Divider()
+                    HStack {
+                        Text("Popup style")
+                        Spacer()
+                        Picker("Popup style", selection: $model.settings.keyPopupStyle) {
+                            ForEach(KeyPopupStyle.allCases) { style in
+                                Text(style.label).tag(style)
+                            }
                         }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
+                    .padding(.vertical, UX.rowVPadding)
+                    Divider()
+                    ToggleRow("Liquid Glass popups",
+                              subtitle: "Render key popups as glass on Liquid Glass themes.",
+                              isOn: $model.settings.liquidGlassPopup)
                 }
-                .padding(.vertical, UX.rowVPadding)
-                .disabled(!model.settings.keyPopupEnabled)
-                .opacity(model.settings.keyPopupEnabled ? 1 : 0.4)
-                Divider()
-                ToggleRow("Liquid Glass popups",
-                          subtitle: "Render key popups as glass on Liquid Glass themes.",
-                          isOn: $model.settings.liquidGlassPopup)
-                .disabled(!model.settings.keyPopupEnabled)
-                .opacity(model.settings.keyPopupEnabled ? 1 : 0.4)
+            }
+            if model.settings.keyPopupEnabled {
+                CardSection("Animation") {
+                    PresetChips(presets: TuningPresets.popup)
+                        .padding(.vertical, UX.rowVPadding)
+                    Divider()
+                    SliderRow("Speed", value: $model.settings.popupSpringResponse,
+                              in: 0.08...0.6, step: 0.02) {
+                        String(format: "%.2fs", $0)
+                    }
+                    Divider()
+                    SliderRow("Springiness", value: $model.settings.popupSpringDamping,
+                              in: 0.3...1.0, step: 0.05) {
+                        $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.keyPopupEnabled)
         .navigationTitle("Popups")
         .navigationBarTitleDisplayMode(.inline)
     }

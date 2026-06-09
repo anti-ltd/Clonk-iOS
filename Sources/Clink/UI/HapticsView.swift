@@ -15,6 +15,10 @@ struct HapticsView: View {
     var body: some View {
         @Bindable var model = model
         PinnedPreviewLayout(settings: model.settings) {
+            if !model.hasFullAccess {
+                fullAccessNotice
+            }
+
             CardSection {
                 ToggleRow("Key press haptics",
                           subtitle: "A tap on each keypress.",
@@ -47,10 +51,6 @@ struct HapticsView: View {
                         "\(Int(($0 * 100).rounded()))%"
                     }
                 }
-            }
-
-            if model.settings.hapticsEnabled && !model.hasFullAccess {
-                fullAccessNotice
             }
         }
         .tint(themeAccent)

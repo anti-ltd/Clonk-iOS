@@ -52,14 +52,14 @@ struct GesturesView: View {
                         }
                     }
                 }
+            }
 
-                CardSection("How it works") {
-                    Text("Swipe decoding runs fully offline against the keyboard language's word list — no network, no Full Access. The first letter is typed the instant you touch down, then replaced by the recognised word once the glide is read.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, UX.rowVPadding)
-                }
+            CardSection("How it works") {
+                Text("Swipe decoding runs fully offline against the keyboard language's word list — no network, no Full Access. The first letter is typed the instant you touch down, then replaced by the recognised word once the glide is read.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, UX.rowVPadding)
             }
         }
         .tint(themeAccent)

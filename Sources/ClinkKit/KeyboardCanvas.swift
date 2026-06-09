@@ -358,16 +358,18 @@ public struct KeyboardCanvas: View {
         }
         // Custom actions / panels live outside `extensionOrder`; append when
         // enabled and the user has at least one enabled item.
-        if settings.userExtensionsEnabled && !extensions.enabledItems.isEmpty {
-            result.append(.extensions)
-        }
-        if settings.customPanelsEnabled {
-            // Standalone custom panels become their own entries; the rest are
-            // collapsed behind a single grouped "Panels" entry.
-            for p in standaloneCustomPanels {
-                result.append(.customPanel(id: p.id, name: p.name, icon: p.icon))
+        if FeatureFlags.experimental {
+            if settings.userExtensionsEnabled && !extensions.enabledItems.isEmpty {
+                result.append(.extensions)
             }
-            if !groupedCustomPanels.isEmpty { result.append(.customPanels) }
+            if settings.customPanelsEnabled {
+                // Standalone custom panels become their own entries; the rest are
+                // collapsed behind a single grouped "Panels" entry.
+                for p in standaloneCustomPanels {
+                    result.append(.customPanel(id: p.id, name: p.name, icon: p.icon))
+                }
+                if !groupedCustomPanels.isEmpty { result.append(.customPanels) }
+            }
         }
         return result
     }
@@ -757,35 +759,41 @@ public struct KeyboardCanvas: View {
                         onBack: { backToPicker() }
                     )
                 case .extensions:
-                    ExtensionsPanel(
-                        extensions: extensions.enabledItems,
-                        theme: theme,
-                        cornerRadius: CGFloat(settings.keyCornerRadius),
-                        onRun: { ext in onRunExtension(ext) },
-                        onDismiss: { closePanel() },
-                        onBack: { backToPicker() }
-                    )
+                    if FeatureFlags.experimental {
+                        ExtensionsPanel(
+                            extensions: extensions.enabledItems,
+                            theme: theme,
+                            cornerRadius: CGFloat(settings.keyCornerRadius),
+                            onRun: { ext in onRunExtension(ext) },
+                            onDismiss: { closePanel() },
+                            onBack: { backToPicker() }
+                        )
+                    }
                 case .customPanels:
-                    CustomPanelsContainer(
-                        panels: groupedCustomPanels,
-                        standalone: nil,
-                        theme: theme,
-                        cornerRadius: CGFloat(settings.keyCornerRadius),
-                        onInsert: { text in onPanelInsert(text) },
-                        onDismiss: { closePanel() },
-                        onBack: { backToPicker() }
-                    )
+                    if FeatureFlags.experimental {
+                        CustomPanelsContainer(
+                            panels: groupedCustomPanels,
+                            standalone: nil,
+                            theme: theme,
+                            cornerRadius: CGFloat(settings.keyCornerRadius),
+                            onInsert: { text in onPanelInsert(text) },
+                            onDismiss: { closePanel() },
+                            onBack: { backToPicker() }
+                        )
+                    }
                 case .customPanel:
-                    // A standalone custom panel — open straight to it.
-                    CustomPanelsContainer(
-                        panels: [],
-                        standalone: panels.items.first { $0.id == overlay.panelID },
-                        theme: theme,
-                        cornerRadius: CGFloat(settings.keyCornerRadius),
-                        onInsert: { text in onPanelInsert(text) },
-                        onDismiss: { closePanel() },
-                        onBack: { backToPicker() }
-                    )
+                    if FeatureFlags.experimental {
+                        // A standalone custom panel — open straight to it.
+                        CustomPanelsContainer(
+                            panels: [],
+                            standalone: panels.items.first { $0.id == overlay.panelID },
+                            theme: theme,
+                            cornerRadius: CGFloat(settings.keyCornerRadius),
+                            onInsert: { text in onPanelInsert(text) },
+                            onDismiss: { closePanel() },
+                            onBack: { backToPicker() }
+                        )
+                    }
                 }
             } else if pickerCardsActive {
                 // Cards picker: full-keyboard switcher, one card per panel.

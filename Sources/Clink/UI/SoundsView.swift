@@ -1,12 +1,15 @@
 /**
- Sounds settings — key sounds toggle, volume, and sound pack selection.
+ Sounds settings — two tabs: General (toggle + volume) and Sound pack (pack list).
  */
 import SwiftUI
 import iUXiOS
 
 struct SoundsView: View {
+    private enum Tab { case general, soundPack }
+
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedTab: Tab = .general
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
@@ -14,34 +17,59 @@ struct SoundsView: View {
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings) {
-            CardSection {
-                ToggleRow("Key sounds",
-                          subtitle: "Play a sound on every keypress.",
-                          isOn: $model.settings.soundEnabled)
-                Divider()
-                SliderRow.percent("Volume", value: $model.settings.soundVolume)
-                    .disabled(!model.settings.soundEnabled)
-                    .opacity(model.settings.soundEnabled ? 1 : 0.4)
+        PinnedPreviewLayout(settings: model.settings,
+                            bottomBar: AnyView(
+                                ThemedTabPicker(
+                                    options: [("General", Tab.general), ("Sound pack", Tab.soundPack)],
+                                    selection: $selectedTab)
+                            )) {
+            switch selectedTab {
+            case .general:
+                generalTab(model: model)
+            case .soundPack:
+                soundPackTab(model: model)
             }
-
-            if needsFullAccess && !model.hasFullAccess {
-                fullAccessNotice
-            }
-
-            CardSection("Sound pack") {
-                ForEach(Array(SoundPack.presets.enumerated()), id: \.element.id) { idx, pack in
-                    if idx > 0 { Divider() }
-                    packRow(pack)
-                }
-            }
-            .opacity(model.settings.soundEnabled ? 1 : 0.4)
-            .disabled(!model.settings.soundEnabled)
         }
         .tint(themeAccent)
         .navigationTitle("Sounds")
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    // MARK: - Tabs
+
+    @ViewBuilder
+    private func generalTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        CardSection {
+            ToggleRow("Key sounds",
+                      subtitle: "Play a sound on every keypress.",
+                      isOn: $model.settings.soundEnabled)
+            if model.settings.soundEnabled {
+                Divider()
+                SliderRow.percent("Volume", value: $model.settings.soundVolume)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.soundEnabled)
+    }
+
+    @ViewBuilder
+    private func soundPackTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        if needsFullAccess && !model.hasFullAccess {
+            fullAccessNotice
+        }
+        CardSection("Sound pack") {
+            ForEach(Array(SoundPack.presets.enumerated()), id: \.element.id) { idx, pack in
+                if idx > 0 { Divider() }
+                packRow(pack)
+            }
+        }
+        .opacity(model.settings.soundEnabled ? 1 : 0.4)
+        .disabled(!model.settings.soundEnabled)
+    }
+
+    // MARK: - Helpers
 
     private var needsFullAccess: Bool {
         model.settings.soundEnabled && model.settings.soundPack.needsFullAccess

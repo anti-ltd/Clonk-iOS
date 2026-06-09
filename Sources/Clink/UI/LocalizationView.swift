@@ -59,13 +59,11 @@ struct LocalizationView: View {
         ScrollView {
             VStack(spacing: UX.cardSpacing) {
                 searchField
-                    .padding(.horizontal, UX.screenPadding)
 
                 Text("Choose the language your typing suggestions, autocomplete, and auto-correction use. Only languages your device can spell-check are listed. Picking a language also switches the key layout to match (e.g. French → AZERTY, Russian → ЙЦУКЕН).")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, UX.screenPadding)
 
                 CardSection("Input") {
                     ToggleRow("Accent popups",
@@ -94,9 +92,10 @@ struct LocalizationView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, UX.screenPadding)
             }
-            .padding(.vertical, UX.cardSpacing)
+            .padding(.horizontal, UX.screenPadding)
+            .padding(.top, UX.cardSpacing)
+            .padding(.bottom, UX.screenPadding)
         }
         .navigationTitle("Localization")
         .navigationBarTitleDisplayMode(.inline)

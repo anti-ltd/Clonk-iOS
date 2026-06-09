@@ -1,24 +1,24 @@
 /**
- Emoji settings: scroll direction, recent-emoji toggle, global skin tone default,
- and the per-emoji skin-tone reset.
+ Emoji settings split across three tabs: General (enable/key), Layout (scroll,
+ grid, recent, size), and Skin Tones (default tone + per-emoji reset).
  */
 import SwiftUI
 import iUXiOS
 
-/// Emoji preferences — the default skin tone applied to tone-capable emoji, plus
-/// a reset for the per-emoji choices made by long-pressing in the keyboard.
-///
-/// Precedence at type time: a per-emoji choice wins; otherwise the global
-/// default here applies; otherwise the neutral (yellow) base.
 struct EmojiSettingsView: View {
+    private enum Tab { case general, layout, skinTones }
+
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.specialKeyTint) private var specialKeyTint
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @State private var selectedTab: Tab = .general
 
-    private var themeAccent: Color {
-        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    private var resolvedTheme: Theme {
+        model.settings.resolvedTheme(dark: colorScheme == .dark)
     }
+    private var themeAccent: Color { resolvedTheme.accent.color }
 
-    /// The emoji shown in the swatch picker — a tone-capable hand.
     private let sample = "👋"
 
     var body: some View {
@@ -34,137 +34,169 @@ struct EmojiSettingsView: View {
                 .padding(.bottom, UX.cardSpacing)
                 .overlay(alignment: .bottom) { Divider().opacity(0.4) }
             }
-            controls
+
+            ScrollView {
+                VStack(spacing: UX.cardSpacing) {
+                    switch selectedTab {
+                    case .general:   generalTab(model: model)
+                    case .layout:    layoutTab(model: model)
+                    case .skinTones: skinTonesTab(model: model)
+                    }
+                }
+                .padding(.horizontal, UX.screenPadding)
+                .padding(.top, UX.cardSpacing)
+                .padding(.bottom, UX.screenPadding)
+            }
+            .id(selectedTab)
+
+            ThemedTabPicker(
+                options: [("General", Tab.general), ("Layout", Tab.layout), ("Skin Tones", Tab.skinTones)],
+                selection: $selectedTab
+            )
+            .tint(themeAccent)
+            .environment(\.specialKeyTint, specialKeyTint ?? resolvedTheme.specialKeyFill.color)
+            .environment(\.cardCornerRadius, cardCornerRadius)
+            .padding(.horizontal, UX.screenPadding)
+            .padding(.vertical, 12)
+            .overlay(alignment: .top) { Divider().opacity(0.4) }
         }
         .navigationTitle("Emoji")
         .navigationBarTitleDisplayMode(.inline)
         .themePageBackground()
     }
 
-    private var controls: some View {
-        @Bindable var model = model
-        return ScrollView {
-            VStack(spacing: UX.cardSpacing) {
-                CardSection("Emoji panel") {
-                    ToggleRow("Emoji keyboard",
-                              subtitle: "Reach emoji from the panel button or by sliding up on 123. Off removes emoji entirely.",
-                              isOn: $model.settings.emojiEnabled)
-                    if model.settings.emojiEnabled {
-                        Divider()
-                        ToggleRow("Emoji key next to 123",
-                                  subtitle: "Add a dedicated 🙂 key beside the 123 key. This removes emoji from the panel picker.",
-                                  isOn: $model.settings.emojiKeyInRow)
-                    }
-                }
+    // MARK: - Tabs
 
-                CardSection("Layout") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Scroll direction").foregroundStyle(.secondary).font(.subheadline)
-                        Picker("Scroll direction", selection: $model.settings.emojiScrollDirection) {
-                            ForEach(EmojiScrollDirection.allCases) { dir in
-                                Text(dir.label).tag(dir)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+    @ViewBuilder
+    private func generalTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        CardSection("Emoji panel") {
+            ToggleRow("Emoji keyboard",
+                      subtitle: "Reach emoji from the panel button or by sliding up on 123. Off removes emoji entirely.",
+                      isOn: $model.settings.emojiEnabled)
+            if model.settings.emojiEnabled {
+                Divider()
+                ToggleRow("Emoji key next to 123",
+                          subtitle: "Add a dedicated 🙂 key beside the 123 key. This removes emoji from the panel picker.",
+                          isOn: $model.settings.emojiKeyInRow)
+            }
+        }
+        CardSection("Recent") {
+            ToggleRow("Show recent emoji",
+                      subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
+                      isOn: $model.settings.showRecentEmoji)
+            if model.settings.showRecentEmoji {
+                Divider()
+                Button(role: .destructive) {
+                    model.settings.recentEmoji.removeAll()
+                } label: {
+                    HStack {
+                        Text("Clear recent emoji")
+                        Spacer()
+                        Text("\(model.settings.recentEmoji.count)")
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, UX.rowVPadding)
-                    if model.settings.emojiScrollDirection == .vertical {
-                        Divider()
-                        Stepper(value: $model.settings.emojiColumnCount, in: 4...12) {
-                            HStack {
-                                Text("Columns")
-                                Spacer()
-                                Text("\(model.settings.emojiColumnCount)")
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                            }
-                            .padding(.vertical, UX.rowVPadding)
-                        }
-                    }
-                    if model.settings.emojiScrollDirection == .horizontal {
-                        Divider()
-                        Stepper(value: $model.settings.emojiRowCount, in: 2...8) {
-                            HStack {
-                                Text("Rows")
-                                Spacer()
-                                Text("\(model.settings.emojiRowCount)")
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                            }
-                            .padding(.vertical, UX.rowVPadding)
-                        }
-                    }
-                    Divider()
-                    ToggleRow("Show recent emoji",
-                              subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
-                              isOn: $model.settings.showRecentEmoji)
-                    if model.settings.showRecentEmoji {
-                        Divider()
-                        Button(role: .destructive) {
-                            model.settings.recentEmoji.removeAll()
-                        } label: {
-                            HStack {
-                                Text("Clear recent emoji")
-                                Spacer()
-                                Text("\(model.settings.recentEmoji.count)")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.vertical, UX.rowVPadding)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(model.settings.recentEmoji.isEmpty)
-                        .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(model.settings.recentEmoji.isEmpty)
+                .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.showRecentEmoji)
+    }
+
+    @ViewBuilder
+    private func layoutTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        CardSection("Scroll") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Scroll direction").foregroundStyle(.secondary).font(.subheadline)
+                Picker("Scroll direction", selection: $model.settings.emojiScrollDirection) {
+                    ForEach(EmojiScrollDirection.allCases) { dir in
+                        Text(dir.label).tag(dir)
                     }
                 }
-
-                CardSection("Size & spacing") {
-                    sliderRow(title: "Emoji size",
-                              value: $model.settings.emojiGlyphScale,
-                              range: 0.4...1.3,
-                              display: "\(Int((model.settings.emojiGlyphScale * 100).rounded()))%")
-                    Divider()
-                    sliderRow(title: "Cell spacing",
-                              value: $model.settings.emojiCellSpacing,
-                              range: 0...14,
-                              display: "\(Int(model.settings.emojiCellSpacing.rounded()))")
-                }
-
-                CardSection("Default skin tone") {
-                    Text("Applied to emoji that can take a skin tone, unless you’ve set one for that emoji by holding it down in the keyboard.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, UX.rowVPadding)
-                    Divider()
-                    swatches
-                        .padding(.vertical, UX.rowVPadding)
-                }
-
-                CardSection("Per-emoji tones") {
-                    Button(role: .destructive) {
-                        model.settings.emojiSkinTones.removeAll()
-                    } label: {
-                        HStack {
-                            Text("Reset saved emoji skin tones")
-                            Spacer()
-                            Text("\(model.settings.emojiSkinTones.count)")
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, UX.rowVPadding)
-                        .contentShape(Rectangle())
+                .pickerStyle(.segmented)
+            }
+            .padding(.vertical, UX.rowVPadding)
+            if model.settings.emojiScrollDirection == .vertical {
+                Divider()
+                Stepper(value: $model.settings.emojiColumnCount, in: 4...12) {
+                    HStack {
+                        Text("Columns")
+                        Spacer()
+                        Text("\(model.settings.emojiColumnCount)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
-                    .buttonStyle(.plain)
-                    .disabled(model.settings.emojiSkinTones.isEmpty)
-                    .opacity(model.settings.emojiSkinTones.isEmpty ? 0.4 : 1)
+                    .padding(.vertical, UX.rowVPadding)
                 }
             }
-            .padding(UX.screenPadding)
+            if model.settings.emojiScrollDirection == .horizontal {
+                Divider()
+                Stepper(value: $model.settings.emojiRowCount, in: 2...8) {
+                    HStack {
+                        Text("Rows")
+                        Spacer()
+                        Text("\(model.settings.emojiRowCount)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    .padding(.vertical, UX.rowVPadding)
+                }
+            }
+        }
+
+        CardSection("Size & spacing") {
+            sliderRow(title: "Emoji size",
+                      value: $model.settings.emojiGlyphScale,
+                      range: 0.4...1.3,
+                      display: "\(Int((model.settings.emojiGlyphScale * 100).rounded()))%")
+            Divider()
+            sliderRow(title: "Cell spacing",
+                      value: $model.settings.emojiCellSpacing,
+                      range: 0...14,
+                      display: "\(Int(model.settings.emojiCellSpacing.rounded()))")
         }
     }
 
-    /// A labelled slider row: title + live value on top, the slider beneath. Used
-    /// for the emoji size / spacing controls, tinted to the theme accent.
+    @ViewBuilder
+    private func skinTonesTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        CardSection("Default skin tone") {
+            Text("Applied to emoji that can take a skin tone, unless you’ve set one for that emoji by holding it down in the keyboard.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, UX.rowVPadding)
+            Divider()
+            swatches
+                .padding(.vertical, UX.rowVPadding)
+        }
+
+        CardSection("Per-emoji tones") {
+            Button(role: .destructive) {
+                model.settings.emojiSkinTones.removeAll()
+            } label: {
+                HStack {
+                    Text("Reset saved emoji skin tones")
+                    Spacer()
+                    Text("\(model.settings.emojiSkinTones.count)")
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, UX.rowVPadding)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(model.settings.emojiSkinTones.isEmpty)
+            .opacity(model.settings.emojiSkinTones.isEmpty ? 0.4 : 1)
+        }
+    }
+
+    // MARK: - Helpers
+
     private func sliderRow<V: BinaryFloatingPoint>(
         title: String, value: Binding<V>, range: ClosedRange<V>, display: String
     ) -> some View where V.Stride: BinaryFloatingPoint {
@@ -190,11 +222,11 @@ struct EmojiSettingsView: View {
                         .font(.system(size: 30))
                         .frame(maxWidth: .infinity, minHeight: 46)
                         .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                                 .fill(selected ? themeAccent.opacity(0.18) : Color(.secondarySystemBackground))
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                                 .strokeBorder(selected ? themeAccent : .clear, lineWidth: 2)
                         )
                         .contentShape(Rectangle())

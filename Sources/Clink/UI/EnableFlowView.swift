@@ -9,9 +9,15 @@ import iUXiOS
 /// Full Access (off by default — it's only needed for custom sounds/haptics).
 struct EnableFlowView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
     /// Navigation title — "Setup" when pushed from the Setup page, "Permissions"
     /// when shown as the onboarding Permissions page.
     var title: String = "Setup"
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
 
     var body: some View {
         ScrollView {
@@ -20,12 +26,15 @@ struct EnableFlowView: View {
 
                 CardSection("1 · Add the keyboard") {
                     step("Open the Settings app.")
+                    Divider()
                     step("General → Keyboard → Keyboards → Add New Keyboard…")
+                    Divider()
                     step("Add Clink under Third-Party Keyboards.")
                 }
 
-                CardSection("2 · Use emoji") {
+                CardSection("2 · Switch to Clink") {
                     step("In any app, tap the 🌐 globe key to switch to Clink.")
+                    Divider()
                     step("Tap the emoji key (or swipe up from 123) to browse emoji right inside Clink — no extra keyboard needed.")
                 }
 
@@ -43,12 +52,12 @@ struct EnableFlowView: View {
                     openSettings()
                 } label: {
                     Label("Open Settings", systemImage: "arrow.up.forward.app")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(ThemedFillButtonStyle(fill: themeAccent, corner: cardCornerRadius))
             }
-            .padding(UX.screenPadding)
+            .padding(.horizontal, UX.screenPadding)
+            .padding(.top, UX.cardSpacing)
+            .padding(.bottom, UX.screenPadding)
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)

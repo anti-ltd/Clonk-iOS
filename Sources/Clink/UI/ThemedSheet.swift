@@ -1,11 +1,18 @@
 /**
- Themed bottom-sheet system. Opens at content's natural height, slides in/out,
- drag handle to dismiss.
+ Themed bottom-sheet system. Opens at content's natural height, slides in/out.
+ Handle bar gestures:
+  • Swipe up  → expand to full height
+  • Swipe down (natural height) → dismiss
+  • Swipe down (expanded) → restore to natural height
 
  Two-pass render approach:
   • An invisible fixedSize overlay measures content's natural height immediately.
   • The visible panel starts off-screen and slides in once height is known.
   • The overlay owns its open/close animation so the parent just toggles isPresented.
+
+ Height stability: panelHeight is @State updated only via explicit withAnimation calls,
+ never via computed properties. This prevents re-renders from dragOffset changes
+ from accidentally triggering height recalculations.
  */
 import SwiftUI
 import iUXiOS
@@ -58,17 +65,24 @@ struct ThemedSheetOverlay<Content: View>: View {
 
     @Environment(\.resolvedKeyboardTheme) private var theme
 
-    @GestureState private var dragOffset: CGFloat = 0
-    @State private var measuredHeight: CGFloat = 0
+    @State private var dragOffset: CGFloat = 0
+    @State private var isGesturing = false
     @State private var screenHeight: CGFloat = 0
+    @State private var safeAreaTop: CGFloat = 0
+    /// The rendered frame height — set once from measurement, then only changed
+    /// via explicit withAnimation when expanding/collapsing. Never recomputed
+    /// from dragOffset renders.
+    @State private var panelHeight: CGFloat = 300
+    /// Locked to naturalHeight after first measurement so expand/collapse can restore it.
+    @State private var naturalHeight: CGFloat = 300
     /// Drives slide-in / slide-out — set true once content is measured, false on dismiss.
     @State private var isIn = false
+    @State private var isExpanded = false
 
     private let headerHeight: CGFloat = 56
-
-    private var panelHeight: CGFloat {
-        guard measuredHeight > 0, screenHeight > 0 else { return 300 }
-        return min(measuredHeight + headerHeight + 40, screenHeight - 80)
+    /// Max sheet height: leaves room for the 44pt nav button bar + safe area + 8pt gap.
+    private var maxSheetHeight: CGFloat {
+        screenHeight - safeAreaTop - 44 - 8
     }
 
     var body: some View {
@@ -102,7 +116,13 @@ struct ThemedSheetOverlay<Content: View>: View {
                 .clipShape(shape)
                 .overlay(shape.strokeBorder(.primary.opacity(0.12), lineWidth: 0.5))
                 .shadow(color: .black.opacity(0.18), radius: 20, y: -4)
-                .offset(y: isIn ? max(0, dragOffset) : panelHeight + 60)
+                .offset(y: isIn ? dragOffset : panelHeight + 60)
+                // Kill animation during live drag so the panel tracks the finger instantly.
+                // Spring-back in onEnded uses withAnimation after isGesturing = false,
+                // so the spring is preserved for release.
+                .transaction(value: dragOffset) { t in
+                    if isGesturing { t.animation = nil }
+                }
 
                 // Invisible measurement pass — renders content at natural height to get real size.
                 // fixedSize(vertical:true) gives SwiftUI unbounded vertical space so content
@@ -124,11 +144,19 @@ struct ThemedSheetOverlay<Content: View>: View {
                             )
                     }
             }
-            .animation(.spring(response: 0.35, dampingFraction: 0.88), value: isIn)
-            .onAppear { screenHeight = geo.size.height }
+            .onAppear {
+                screenHeight = geo.size.height
+                safeAreaTop = geo.safeAreaInsets.top
+            }
             .onPreferenceChange(ContentHeightKey.self) { h in
                 guard h > 0, !isIn else { return }
-                measuredHeight = h
+                // screenHeight may not be set yet if preference fires before onAppear;
+                // use uncapped height in that case — expand gesture will cap correctly once
+                // screenHeight is available.
+                let cap = screenHeight > 0 ? maxSheetHeight : .infinity
+                let computed = min(h + headerHeight + 40, cap)
+                naturalHeight = computed
+                panelHeight = computed
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
                     isIn = true
                 }
@@ -151,6 +179,7 @@ struct ThemedSheetOverlay<Content: View>: View {
     }
 
     private func dismiss() {
+        isExpanded = false
         withAnimation(.spring(response: 0.3)) { isIn = false }
         // Let the slide-out animation complete before removing the overlay.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onDismiss() }
@@ -175,11 +204,49 @@ struct ThemedSheetOverlay<Content: View>: View {
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 6)
-                .updating($dragOffset) { value, state, _ in
-                    state = value.translation.height
+                .onChanged { value in
+                    isGesturing = true
+                    let dy = value.translation.height
+                    dragOffset = dy < 0
+                        ? (isExpanded ? 0 : dy * 0.15)
+                        : dy
                 }
                 .onEnded { value in
-                    if value.translation.height > 80 { dismiss() }
+                    isGesturing = false
+                    let dy = value.translation.height
+                    // predictedEndTranslation is in the same coordinate space as translation
+                    // (positive = downward), unlike velocity.height whose sign is unreliable.
+                    let predicted = value.predictedEndTranslation.height
+                    if isExpanded {
+                        if dy > 60 || predicted > 150 {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                isExpanded = false
+                                panelHeight = naturalHeight
+                                dragOffset = 0
+                            }
+                        } else {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                                dragOffset = 0
+                            }
+                        }
+                    } else {
+                        if dy < -60 || predicted < -150 {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                isExpanded = true
+                                panelHeight = maxSheetHeight
+                                dragOffset = 0
+                            }
+                        } else if dy > 80 || predicted > 200 {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                                dragOffset = 0
+                            }
+                            dismiss()
+                        } else {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                                dragOffset = 0
+                            }
+                        }
+                    }
                 }
         )
     }

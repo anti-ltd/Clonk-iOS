@@ -376,10 +376,15 @@ private struct ThemeSwatch: View {
         .padding(8)
         .background(cardTint ?? Color(.secondarySystemBackground),
                     in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
-        .overlay(
+        .overlay {
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(Color.primary.opacity(UX.Glass.outlineOpacity),
+                              lineWidth: UX.Glass.outlineWidth)
+        }
+        .overlay {
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                 .strokeBorder(selected ? AnyShapeStyle(theme.accent.color) : AnyShapeStyle(.clear), lineWidth: 2)
-        )
+        }
         .contentShape(Rectangle())
     }
 
