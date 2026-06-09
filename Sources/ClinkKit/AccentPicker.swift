@@ -12,6 +12,7 @@ struct AccentPicker: View {
     let options: [String]
     let selected: Int
     let theme: Theme
+    let cornerRadius: CGFloat
 
     static let swatch: CGFloat = 42
     static let hPadding: CGFloat = 8
@@ -38,8 +39,8 @@ struct AccentPicker: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        let swatchShape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let swatchShape = RoundedRectangle(cornerRadius: max(2, cornerRadius - 5), style: .continuous)
         let idx = max(0, min(selected, options.count - 1))
         // Centre of the highlighted swatch, measured from the bar's left edge.
         let hlCenterX = Self.hPadding + Self.swatch * (CGFloat(idx) + 0.5)

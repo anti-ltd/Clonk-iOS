@@ -954,7 +954,7 @@ public struct KeyboardCanvas: View {
                     let w = AccentPicker.width(count: count)
                     let left = AccentPicker.barLeft(keyMidX: keyRect.midX, count: count,
                                                     containerWidth: proxy.size.width)
-                    AccentPicker(options: touch.accentOptions, selected: touch.accentIndex, theme: theme)
+                    AccentPicker(options: touch.accentOptions, selected: touch.accentIndex, theme: theme, cornerRadius: CGFloat(settings.keyCornerRadius))
                         .position(x: left + w / 2,
                                   y: max(AccentPicker.height / 2 + 2, keyRect.minY - AccentPicker.height / 2 - 6))
                 }

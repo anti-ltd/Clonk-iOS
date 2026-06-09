@@ -161,6 +161,10 @@ struct ClipboardHistoryView: View {
                     ], openID: $openRow, onTap: copy, cardBackground: {
                         RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                             .fill(Color(.secondarySystemGroupedBackground))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                            )
                     }) {
                         ClipboardEntryRow(entry: entry, isCopied: copiedIndex == index)
                     }

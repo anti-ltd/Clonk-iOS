@@ -55,6 +55,9 @@ final class SidebarState {
     /// Jump to a destination from inside a content page (the onboarding "next
     /// step" buttons). Wired up by `RootView`.
     var navigate: ((RootView.SidebarDestination) -> Void)?
+    /// Last visible section on the home page — persisted so scroll position
+    /// is restored when the user navigates away and returns.
+    var homeScrollAnchor: String? = nil
 }
 
 private struct NavDepthModifier: ViewModifier {
@@ -99,6 +102,8 @@ struct RootView: View {
         // Advanced placeholders.
         case hitboxes, overlays, response, performance
         case clipboard, notepad, emoji, calculator
+        /// Full-page extension manager (same content as the gear-icon sheet).
+        case manageExtensions
         /// The Python extension SDK — author / manage custom keyboard actions.
         case customActions
         /// Custom panels — author / manage full custom keyboard UIs.
@@ -331,6 +336,7 @@ private struct DetailHost: View {
         case .notepad:    NotepadView()
         case .emoji:      EmojiSettingsView()
         case .calculator: CalculatorSettingsView()
+        case .manageExtensions: ExtensionManagerPage()
         case .customActions: if FeatureFlags.experimental { ExtensionsView() }
         case .customPanels: if FeatureFlags.experimental { PanelsView() }
         // Placeholder pages — content to be built out.
@@ -577,6 +583,10 @@ private struct SidebarPanel: View {
                 select(ext.id)
             }
         }
+        SidebarRow("Manage", icon: "gearshape", selected: destination == .manageExtensions) {
+            select(.manageExtensions)
+        }
+        .opacity(0.5)
     }
 
     private var brandHeader: some View {
@@ -727,6 +737,22 @@ private let allExtensions: [ExtEntry] = [
 ]
 
 // MARK: - Extension picker sheet
+
+// MARK: - Extension manager page
+
+/// Full-page wrapper around `ExtensionPickerContent` — reached from the
+/// "Manage" ghost card/row. The gear-icon sheet continues to work unchanged.
+private struct ExtensionManagerPage: View {
+    var body: some View {
+        ScrollView {
+            ExtensionPickerContent()
+                .padding(UX.screenPadding)
+        }
+        .navigationTitle("Extensions")
+        .navigationBarTitleDisplayMode(.inline)
+        .themePageBackground()
+    }
+}
 
 private struct ExtensionPickerContent: View {
     @Environment(AppModel.self) private var model
@@ -926,6 +952,10 @@ private struct ClinkContent: View {
         let icon: String
         let description: String
         let dest: RootView.SidebarDestination
+        /// Renders the card with ghost styling (dashed border, no fill).
+        var ghost: Bool = false
+        /// When set, calls this closure instead of navigating to `dest`.
+        var action: (() -> Void)? = nil
     }
 
     private let generalCards: [DestCard] = [
@@ -964,7 +994,7 @@ private struct ClinkContent: View {
     ]
 
     private var extensionCards: [DestCard] {
-        model.settings.extensionOrder.compactMap { id in
+        var cards = model.settings.extensionOrder.compactMap { id -> DestCard? in
             switch id {
             case "calculator": return DestCard(title: "Calculator", icon: "numbers.rectangle", description: "Built-in calculator panel",       dest: .calculator)
             case "clipboard":  return DestCard(title: "Clipboard",  icon: "clipboard",         description: "Recent clipboard history",        dest: .clipboard)
@@ -973,11 +1003,16 @@ private struct ClinkContent: View {
             default:           return nil
             }
         }
+        cards.append(DestCard(title: "Manage", icon: "gearshape",
+                              description: "Add, remove, and reorder extensions",
+                              dest: .manageExtensions, ghost: true))
+        return cards
     }
 
     @State private var cardHeight: CGFloat = 0
 
     var body: some View {
+        @Bindable var sidebar = sidebar
         ScrollView {
             VStack(alignment: .leading, spacing: UX.cardSpacing) {
                 VStack(spacing: 6) {
@@ -992,14 +1027,16 @@ private struct ClinkContent: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
+                .id("header")
 
-                gridSection("General", cards: generalCards)
-                gridSection("Customization", cards: customizationCards)
-                gridSection("Extensions", cards: extensionCards, gearAction: { showExtensionPicker = true })
-                gridSection("Advanced", cards: advancedCards)
+                gridSection("General", cards: generalCards).id("general")
+                gridSection("Customization", cards: customizationCards).id("customization")
+                gridSection("Extensions", cards: extensionCards, gearAction: { showExtensionPicker = true }).id("extensions")
+                gridSection("Advanced", cards: advancedCards).id("advanced")
             }
             .padding(UX.screenPadding)
         }
+        .scrollPosition(id: $sidebar.homeScrollAnchor)
         .onPreferenceChange(DestCardHeightKey.self) { cardHeight = $0 }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -1048,35 +1085,40 @@ private struct ClinkContent: View {
     }
 
     private func destCard(_ card: DestCard) -> some View {
-        Button { sidebar.navigate?(card.dest) } label: {
+        let isGhost = card.ghost
+        return Button { card.action?() ?? sidebar.navigate?(card.dest) } label: {
             VStack(alignment: .leading, spacing: 6) {
                 Image(systemName: card.icon)
                     .font(.title2)
-                    .foregroundStyle(themeAccent)
+                    .foregroundStyle(isGhost ? AnyShapeStyle(.secondary) : AnyShapeStyle(themeAccent))
                     .frame(height: 28, alignment: .center)
                 Text(card.title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(isGhost ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
                     .lineLimit(1)
                 Text(card.description)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
                     .lineLimit(3)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(12)
-            .background(cardTint ?? Color(.secondarySystemBackground),
-                        in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
-            // Subtle hairline edge, matching CardSection's `GlassSurface` outline.
+            .background {
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                    .fill(isGhost ? Color.clear : (cardTint ?? Color(.secondarySystemBackground)))
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(UX.Glass.outlineOpacity),
-                                  lineWidth: UX.Glass.outlineWidth)
+                    .strokeBorder(
+                        isGhost ? Color.primary.opacity(0.18) : Color.primary.opacity(UX.Glass.outlineOpacity),
+                        style: isGhost ? StrokeStyle(lineWidth: 1, dash: [5, 3]) : StrokeStyle(lineWidth: UX.Glass.outlineWidth)
+                    )
             }
+            .contentShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .frame(height: cardHeight > 0 ? cardHeight : nil)
-        .background(GeometryReader { geo in
+        .background(isGhost ? nil : GeometryReader { geo in
             Color.clear.preference(key: DestCardHeightKey.self, value: geo.size.height)
         })
     }

@@ -118,13 +118,8 @@ private struct CursorModePreview: View {
             }
         }
         .frame(height: 90)
-        // Remount the view (restarting the animation) when mode changes.
-        .id(mode)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                phase = 1
-            }
-        }
+        .onAppear { startAnimation() }
+        .onChange(of: mode) { phase = 0; startAnimation() }
     }
 
     // MARK: Spacebar — cursor beam slides left ↔ right inside the space bar
@@ -239,6 +234,12 @@ private struct CursorModePreview: View {
     }
 
     // MARK: Helpers
+
+    private func startAnimation() {
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            phase = 1
+        }
+    }
 
     private func keyBox(width: CGFloat, height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: min(cornerRadius, 6), style: .continuous)

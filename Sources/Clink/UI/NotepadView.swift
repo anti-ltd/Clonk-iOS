@@ -60,19 +60,15 @@ struct NotepadView: View {
             if model.settings.notepadEnabled {
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Mode")
+                    Text("Style")
                         .font(.subheadline)
-                        .padding(.horizontal, 14)
                         .padding(.top, 4)
                     OptionChips(
                         options: NotepadMode.allCases.map { ($0.label, $0) },
                         selection: $model.settings.notepadMode
                     )
                     .tint(themeAccent)
-                    .padding(.horizontal, 14)
-                    modeCaption
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 4)
+                    .padding(.bottom, 4)
                 }
             }
         }
@@ -109,6 +105,10 @@ struct NotepadView: View {
                            cardBackground: {
                             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                                 .fill(Color(.secondarySystemGroupedBackground))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                                )
                         }) {
                             noteRow(note)
                         }
@@ -125,17 +125,6 @@ struct NotepadView: View {
     }
 
     // MARK: - Helpers
-
-    @ViewBuilder private var modeCaption: some View {
-        switch model.settings.notepadMode {
-        case .scratchpad:
-            Text("A single buffer you jot into and pull from.")
-                .font(.caption).foregroundStyle(.secondary)
-        case .notes:
-            Text("The same buffer, plus a saved-notes archive you store snippets in.")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
 
     private func noteRow(_ note: NotepadNote) -> some View {
         VStack(alignment: .leading, spacing: 3) {
