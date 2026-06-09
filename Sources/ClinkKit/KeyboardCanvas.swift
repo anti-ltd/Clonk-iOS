@@ -111,6 +111,10 @@ public struct KeyboardCanvas: View {
     /// user can see exactly which area maps to each key. Used by the Advanced
     /// settings view; false for normal use.
     private let showHitboxOverlay: Bool
+    /// When true, pretend `spaceCursorActive` is set — used by the in-app preview
+    /// to render the cursor-mode visual (keys blanked for trackpad, letters blanked
+    /// for combined) without needing real touch input.
+    private let previewCursorActive: Bool
     /// Whether the keyboard extension currently has Full Access. Gating
     /// clipboard (which reads UIPasteboard) on this prevents a sandboxed crash.
     private let hasFullAccess: Bool
@@ -142,6 +146,7 @@ public struct KeyboardCanvas: View {
         panels: PanelManager = PanelManager(),
         hasFullAccess: Bool = false,
         showHitboxOverlay: Bool = false,
+        previewCursorActive: Bool = false,
         onInsert: @escaping (String) -> Void,
         onBackspace: @escaping () -> Void,
         onAnyTap: @escaping () -> Void = {},
@@ -169,6 +174,7 @@ public struct KeyboardCanvas: View {
         self.panels = panels
         self.hasFullAccess = hasFullAccess
         self.showHitboxOverlay = showHitboxOverlay
+        self.previewCursorActive = previewCursorActive
         self.onInsert = onInsert
         self.onBackspace = onBackspace
         self.onAnyTap = onAnyTap
@@ -329,7 +335,8 @@ public struct KeyboardCanvas: View {
     /// keyboard's backdrop. The touch surface stays live underneath (it is never
     /// faded), so the in-progress drag keeps tracking.
     private var trackpadActive: Bool {
-        settings.cursorMovementType == .trackpad && touch.spaceCursorActive
+        settings.cursorMovementType == .trackpad &&
+            (touch.spaceCursorActive || previewCursorActive)
     }
 
     /// Combined cursor mode WHILE the space bar is held into cursor drag: the keys
@@ -337,7 +344,8 @@ public struct KeyboardCanvas: View {
     /// morphs. The keyboard is fully normal otherwise. Distinct from
     /// `trackpadActive`, which hides the keyboard entirely.
     private var combinedActive: Bool {
-        settings.cursorMovementType == .combined && touch.spaceCursorActive
+        settings.cursorMovementType == .combined &&
+            (touch.spaceCursorActive || previewCursorActive)
     }
 
     // MARK: - Action panels (clipboard / notepad)

@@ -230,11 +230,12 @@ struct EmojiSettingsView: View {
                         .frame(maxWidth: .infinity, minHeight: 46)
                         .background(
                             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                                .fill(selected ? themeAccent.opacity(0.18) : Color(.secondarySystemBackground))
+                                .fill(selected ? themeAccent.opacity(0.18) : specialKeyTint ?? Color(.secondarySystemBackground))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                                .strokeBorder(selected ? themeAccent : .clear, lineWidth: 2)
+                                .strokeBorder(selected ? themeAccent : Color.primary.opacity(0.1),
+                                              lineWidth: selected ? 2 : 0.5)
                         )
                         .contentShape(Rectangle())
                 }

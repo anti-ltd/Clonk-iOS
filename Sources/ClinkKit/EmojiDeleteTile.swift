@@ -17,6 +17,7 @@ import UIKit
 
 struct DeleteTile: View {
     let theme: Theme
+    let cornerRadius: CGFloat
     let pressWarp: Bool
     let onBackspace: () -> Void
     let onAnyTap: () -> Void
@@ -31,7 +32,7 @@ struct DeleteTile: View {
     @State private var repeatTask: Task<Void, Never>?
 
     var body: some View {
-        let shape = Capsule(style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         let tint = pressed ? Self.destructiveTint : theme.specialKeyFill.color
         let label = Image(systemName: "delete.left")
             .font(.system(size: 17, weight: .medium))

@@ -17,6 +17,10 @@ struct PinnedPreviewLayout<Content: View>: View {
     let settings: KeyboardSettings
     var showHitboxOverlay: Bool = false
     var previewColorScheme: ColorScheme? = nil
+    var previewCursorActive: Bool = false
+    /// When set, the preview field is pre-filled and key taps are disabled so only
+    /// cursor drags work — used by the Cursor settings page.
+    var lockedPreviewText: String? = nil
     /// Optional bar pinned to the BOTTOM, below the scrolling controls (e.g. the
     /// Theme editor's Light/Dark tab). Stays fixed while the content scrolls.
     var bottomBar: AnyView? = nil
@@ -24,7 +28,9 @@ struct PinnedPreviewLayout<Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            KeyboardPreview(settings: settings, showHitboxOverlay: showHitboxOverlay)
+            KeyboardPreview(settings: settings, showHitboxOverlay: showHitboxOverlay,
+                            previewCursorActive: previewCursorActive,
+                            lockedText: lockedPreviewText)
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.screenPadding)
                 .padding(.bottom, UX.cardSpacing)
@@ -249,9 +255,14 @@ struct KeyboardPreview: View {
     @Environment(\.cardCornerRadius) private var cardCornerRadius
     let settings: KeyboardSettings
     var showHitboxOverlay: Bool = false
+    var previewCursorActive: Bool = false
+    /// When set the field is pre-filled with this text on appear and key taps
+    /// (insert, backspace, suggestions) become no-ops — only cursor drags work.
+    var lockedText: String? = nil
     @State private var typed: String = ""
     @State private var cursorPos: Int = 0
     // Sample suggestions so the preview shows the autocomplete bar populated.
+    // Cleared when the field is locked so tapping a chip can't mutate the text.
     @State private var live = KeyboardLiveState(suggestions: ["clink", "keyboard", "hello"])
 
     /// Triadic gradient derived from the theme accent — vibrant enough to give
@@ -292,7 +303,9 @@ struct KeyboardPreview: View {
                     Text(displayText).lineLimit(1).truncationMode(.middle)
                 }
                 Spacer(minLength: 0)
-                if !typed.isEmpty {
+                // Clear button is hidden in locked mode so the sample text
+                // can't be erased and cursor drags always have text to navigate.
+                if !typed.isEmpty && lockedText == nil {
                     Button {
                         typed = ""
                         cursorPos = 0
@@ -312,14 +325,17 @@ struct KeyboardPreview: View {
             // background and simply cover it.
             KeyboardCanvas(
                 settings: settings,
-                live: live,
+                live: lockedText != nil ? KeyboardLiveState() : live,
                 showHitboxOverlay: showHitboxOverlay,
+                previewCursorActive: previewCursorActive,
                 onInsert: { text in
+                    guard lockedText == nil else { return }
                     let idx = typed.index(typed.startIndex, offsetBy: min(cursorPos, typed.count))
                     typed.insert(contentsOf: text, at: idx)
                     cursorPos = min(typed.count, cursorPos + text.count)
                 },
                 onBackspace: {
+                    guard lockedText == nil else { return }
                     guard cursorPos > 0, !typed.isEmpty else { return }
                     let pos = min(cursorPos, typed.count)
                     let idx = typed.index(typed.startIndex, offsetBy: pos - 1)
@@ -341,16 +357,11 @@ struct KeyboardPreview: View {
                     gen.impactOccurred(intensity: settings.hapticIntensity)
                 },
                 onSuggestion: { text in
+                    guard lockedText == nil else { return }
                     typed += text + " "
                     cursorPos = typed.count
                 },
                 onCursorMove: { delta in
-                    // Seed sample text on first cursor drag so there's something
-                    // to navigate through.
-                    if typed.isEmpty {
-                        typed = "The quick brown fox"
-                        cursorPos = typed.count
-                    }
                     cursorPos = max(0, min(typed.count, cursorPos + delta))
                 }
             )
@@ -358,6 +369,14 @@ struct KeyboardPreview: View {
             // has no indefinite-height gap below the keys.
             .frame(height: KeyboardCanvas.preferredHeight(for: settings))
             .background { backdropGradient }
+        }
+        .onAppear {
+            // In locked mode, pre-fill the field with the sample text and place
+            // the cursor in the middle so there's room to drag in either direction.
+            if let lockedText, typed.isEmpty {
+                typed = lockedText
+                cursorPos = lockedText.count / 2
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .overlay(

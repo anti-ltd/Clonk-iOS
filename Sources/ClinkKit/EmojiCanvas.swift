@@ -206,7 +206,7 @@ public struct EmojiCanvas: View {
     // MARK: - Search field (always visible)
 
     private var searchField: some View {
-        let shape = Capsule(style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         let content = HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15, weight: .semibold))
@@ -281,7 +281,7 @@ public struct EmojiCanvas: View {
         ForEach(emoji, id: \.self) { e in
             EmojiCell(
                 glyph: displayGlyph(for: e),
-                simulatedPressed: controller.pressedEmoji == e || picking?.base == e,
+                simulatedPressed: controller.pressedEmoji == e,
                 glyphSize: metrics.glyph,
                 fixedWidth: metrics.side,
                 fixedHeight: metrics.side,
@@ -526,7 +526,8 @@ public struct EmojiCanvas: View {
                 let y = placeAbove
                     ? cell.minY - SkinTonePicker.height / 2 - gap
                     : cell.maxY + SkinTonePicker.height / 2 + gap
-                SkinTonePicker(base: pick.base, highlighted: pick.tone, theme: theme)
+                SkinTonePicker(base: pick.base, highlighted: pick.tone, theme: theme,
+                               cornerRadius: cornerRadius)
                     .frame(width: SkinTonePicker.width, height: SkinTonePicker.height)
                     // Global → overlay-local.
                     .position(x: pick.centerX - origin.x, y: y - origin.y)
@@ -596,6 +597,8 @@ public struct EmojiCanvas: View {
     // UIKit touch surface and backspace through `DeleteTile`, since standalone
     // SwiftUI button taps are silently dropped in the keyboard extension.
 
+    private var cornerRadius: CGFloat { CGFloat(settings.keyCornerRadius) }
+
     private var tabBar: some View {
         HStack(spacing: 8) {
             // ABC — return to the letter keyboard (merged-keyboard mode). Shown
@@ -611,6 +614,7 @@ public struct EmojiCanvas: View {
             // Backspace — pinned (never scrolls), twice as wide as it is tall, and
             // wired to the same hold-to-repeat behaviour as the letter keyboard.
             DeleteTile(theme: theme,
+                       cornerRadius: cornerRadius,
                        pressWarp: settings.keyPressWarp,
                        onBackspace: onBackspace,
                        onAnyTap: onAnyTap)
@@ -693,7 +697,7 @@ public struct EmojiCanvas: View {
     /// so it morphs into its neighbours within the glass container.
     private func categoryTab(_ idx: Int) -> some View {
         let selected = idx == category
-        let shape = Capsule(style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         return ZStack {
             // A faint glass base on every tile gives the container material to
             // morph between as the highlight passes.
@@ -732,8 +736,8 @@ public struct EmojiCanvas: View {
         .allowsHitTesting(false)
     }
 
-    /// A tinted glass capsule — a solid fill off the glass themes.
-    @ViewBuilder private func tabGlass(tint: Color, in shape: Capsule) -> some View {
+    /// A tinted glass tile — solid fill off glass themes; shape follows theme rounding.
+    @ViewBuilder private func tabGlass<S: InsettableShape>(tint: Color, in shape: S) -> some View {
         if theme.material == .liquidGlass, #available(iOS 26.0, *) {
             Color.clear.glassEffect(.regular.tint(tint), in: shape)
         } else {
@@ -747,7 +751,7 @@ public struct EmojiCanvas: View {
     /// surface for reliability.
     private func fixedTile(systemName: String, width: CGFloat, fontSize: CGFloat = 17,
                            action: @escaping () -> Void) -> some View {
-        let shape = Capsule(style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         let label = Image(systemName: systemName)
             .font(.system(size: fontSize, weight: .medium))
             .foregroundStyle(theme.specialKeyText.color)

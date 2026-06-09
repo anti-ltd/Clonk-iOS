@@ -17,6 +17,7 @@ struct SkinTonePicker: View {
     let base: String
     let highlighted: SkinTone
     let theme: Theme
+    let cornerRadius: CGFloat
 
     static let swatch: CGFloat = 44
     static let hPadding: CGFloat = 8
@@ -35,8 +36,8 @@ struct SkinTonePicker: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-        let swatchShape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let swatchShape = RoundedRectangle(cornerRadius: max(2, cornerRadius - 5), style: .continuous)
         let hlIndex = SkinTone.allCases.firstIndex(of: highlighted) ?? 0
         // Centre of the highlighted swatch, measured from the bar's left edge.
         let hlCenterX = Self.hPadding + Self.swatch * (CGFloat(hlIndex) + 0.5)
@@ -54,8 +55,6 @@ struct SkinTonePicker: View {
                 let isPicked = tone == highlighted
                 Text(EmojiSkinTone.applied(tone, to: base))
                     .font(.system(size: 28))
-                    .scaleEffect(isPicked ? 1.5 : 1, anchor: .center)
-                    .zIndex(isPicked ? 1 : 0)
                     .frame(width: Self.swatch, height: Self.swatch)
             }
         }

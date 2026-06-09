@@ -975,7 +975,6 @@ private struct ClinkContent: View {
         }
     }
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
     @State private var cardHeight: CGFloat = 0
 
     var body: some View {
@@ -1028,9 +1027,21 @@ private struct ClinkContent: View {
                 }
             }
 
-            LazyVGrid(columns: columns, spacing: 10) {
-                ForEach(cards, id: \.title) { card in
-                    destCard(card)
+            // Non-lazy pairs so every card is always rendered and measured,
+            // which lets DestCardHeightKey capture the true global maximum
+            // on the very first layout pass — LazyVGrid would miss off-screen rows.
+            VStack(spacing: 10) {
+                ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { i in
+                    HStack(spacing: 10) {
+                        destCard(cards[i])
+                        if i + 1 < cards.count {
+                            destCard(cards[i + 1])
+                        } else {
+                            // Odd-count section: phantom cell keeps the real card
+                            // at the correct 50 % width instead of stretching full.
+                            Color.clear.frame(maxWidth: .infinity)
+                        }
+                    }
                 }
             }
         }
@@ -1052,7 +1063,7 @@ private struct ClinkContent: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(3)
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(12)
             .background(cardTint ?? Color(.secondarySystemBackground),
                         in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
