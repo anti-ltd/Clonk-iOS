@@ -45,7 +45,9 @@ private struct GeneralHitboxControls: View {
                 .padding(.vertical, UX.rowVPadding)
         }
         CardSection("Values") {
-            SliderRow("Hitbox size", value: $model.settings.hitboxScale,
+            SliderRow("Hitbox size",
+                      tooltip: "Scales all key touch targets uniformly — increase if you miss keys, decrease for a tighter feel.",
+                      value: $model.settings.hitboxScale,
                       in: 0.75...1.25, step: 0.05) {
                 $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
             }
@@ -53,14 +55,18 @@ private struct GeneralHitboxControls: View {
             // multipliers — only offered when each element is actually shown.
             if model.settings.suggestionsEnabled {
                 Divider()
-                SliderRow("Suggestion bar", value: $model.settings.suggestionHitboxScale,
+                SliderRow("Suggestion bar",
+                          tooltip: "Touch target height for suggestion chips — increase if you often miss a suggestion tap.",
+                          value: $model.settings.suggestionHitboxScale,
                           in: 0.75...1.5, step: 0.05) {
                     $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
                 }
             }
             if model.settings.activateWithIcon && panelIconAvailable {
                 Divider()
-                SliderRow("Panel icon", value: $model.settings.panelButtonHitboxScale,
+                SliderRow("Panel icon",
+                          tooltip: "Touch target size for the panel button — increase if you frequently miss it.",
+                          value: $model.settings.panelButtonHitboxScale,
                           in: 0.75...1.5, step: 0.05) {
                     $0 == 1.0 ? "Default" : "\(Int(($0 * 100).rounded()))%"
                 }
@@ -88,17 +94,23 @@ private struct AdaptiveHitboxControls: View {
         }
         if model.settings.adaptiveHitboxes {
             CardSection("Fine tuning") {
-                SliderRow("Grow likely keys", value: $model.settings.adaptiveGrow,
+                SliderRow("Grow likely keys",
+                          tooltip: "How much the predicted next-letter keys expand beyond their normal size.",
+                          value: $model.settings.adaptiveGrow,
                           in: 1.0...1.6, step: 0.05) {
                     $0 == 1.0 ? "Off" : "+\(Int((($0 - 1) * 100).rounded()))%"
                 }
                 Divider()
-                SliderRow("Shrink unlikely keys", value: $model.settings.adaptiveShrink,
+                SliderRow("Shrink unlikely keys",
+                          tooltip: "How much low-probability keys shrink to make room for the likely ones.",
+                          value: $model.settings.adaptiveShrink,
                           in: 0.6...1.0, step: 0.05) {
                     $0 == 1.0 ? "Off" : "−\(Int(((1 - $0) * 100).rounded()))%"
                 }
                 Divider()
-                SliderRow("Prediction strength", value: $model.settings.adaptivePredictionWeight,
+                SliderRow("Prediction strength",
+                          tooltip: "How aggressively the model biases hitboxes — lower blends the prediction subtly, higher pushes it harder.",
+                          value: $model.settings.adaptivePredictionWeight,
                           in: 0.0...1.0, step: 0.05) {
                     "\(Int(($0 * 100).rounded()))%"
                 }

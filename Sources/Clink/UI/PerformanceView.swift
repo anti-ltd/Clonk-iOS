@@ -55,16 +55,24 @@ struct PerformanceView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, UX.rowVPadding)
             Divider()
-            SliderRow("Hold delay", value: $model.settings.repeatHoldDelay,
+            SliderRow("Hold delay",
+                      tooltip: "How long you must hold backspace before rapid-delete kicks in.",
+                      value: $model.settings.repeatHoldDelay,
                       in: 150...800, step: 25) { "\(Int($0))ms" }
             Divider()
-            SliderRow("Start speed", value: $model.settings.repeatInitialInterval,
+            SliderRow("Start speed",
+                      tooltip: "Interval between deletions at the beginning of a hold — higher is slower.",
+                      value: $model.settings.repeatInitialInterval,
                       in: 40...250, step: 10) { "\(Int($0))ms" }
             Divider()
-            SliderRow("Fastest speed", value: $model.settings.repeatMinInterval,
+            SliderRow("Fastest speed",
+                      tooltip: "Fastest interval rapid-delete can reach after fully accelerating — lower is faster.",
+                      value: $model.settings.repeatMinInterval,
                       in: 15...120, step: 5) { "\(Int($0))ms" }
             Divider()
-            SliderRow("Acceleration", value: $model.settings.repeatAccelStep,
+            SliderRow("Acceleration",
+                      tooltip: "How much the interval shrinks per repeat step — higher ramps up to max speed sooner.",
+                      value: $model.settings.repeatAccelStep,
                       in: 0...20, step: 1) {
                 $0 < 1 ? "Off" : "\(Int($0))ms/step"
             }
@@ -85,6 +93,7 @@ struct PerformanceView: View {
                 .padding(.vertical, UX.rowVPadding)
             Divider()
             SliderRow("Compute delay",
+                      tooltip: "Idle time after a keystroke before suggestions are recalculated — longer saves CPU during fast typing, shorter keeps the bar more responsive.",
                       value: $model.settings.suggestionDebounceDelay,
                       in: 20...300, step: 10) { "\(Int($0))ms" }
         }

@@ -29,13 +29,19 @@ struct ResponseView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, UX.rowVPadding)
                 Divider()
-                SliderRow("Accent delay", value: $model.settings.accentHoldDelay,
+                SliderRow("Accent delay",
+                          tooltip: "How long to hold a letter key before the accent picker appears.",
+                          value: $model.settings.accentHoldDelay,
                           in: 150...900, step: 25) { "\(Int($0))ms" }
                 Divider()
-                SliderRow("Emoji tone delay", value: $model.settings.emojiToneHoldDelay,
+                SliderRow("Emoji tone delay",
+                          tooltip: "How long to hold an emoji before the skin tone picker appears.",
+                          value: $model.settings.emojiToneHoldDelay,
                           in: 120...700, step: 20) { "\(Int($0))ms" }
                 Divider()
-                SliderRow("Hold steadiness", value: $model.settings.accentMoveCancel,
+                SliderRow("Hold steadiness",
+                          tooltip: "How far your finger can drift during a hold before it's treated as a swipe instead of a long-press.",
+                          value: $model.settings.accentMoveCancel,
                           in: 4...30, step: 2) { "\(Int($0))pt" }
             }
 
@@ -46,7 +52,9 @@ struct ResponseView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, UX.rowVPadding)
                 Divider()
-                SliderRow("Trigger distance", value: $model.settings.dragUpThreshold,
+                SliderRow("Trigger distance",
+                          tooltip: "How far up you must drag the 123 key to open the panel picker — lower triggers more easily, higher prevents accidental opens.",
+                          value: $model.settings.dragUpThreshold,
                           in: 10...50, step: 2) { "\(Int($0))pt" }
             }
         }

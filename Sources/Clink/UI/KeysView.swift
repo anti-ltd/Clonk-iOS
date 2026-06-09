@@ -44,25 +44,39 @@ struct KeysView: View {
         }
 
         CardSection("Values") {
-            SliderRow("Key height", value: $model.settings.keyHeight,
+            SliderRow("Key height",
+                      tooltip: "Taller keys are easier to tap accurately; shorter keys give more screen real estate.",
+                      value: $model.settings.keyHeight,
                       in: 38...58, step: 1) { "\(Int($0))pt" }
             Divider()
-            SliderRow("Roundness", value: $model.settings.keyCornerRadius,
+            SliderRow("Roundness",
+                      tooltip: "Corner radius of each key cap — 0 is square, higher values give a more pill-like shape.",
+                      value: $model.settings.keyCornerRadius,
                       in: 0...22, step: 1) { "\(Int($0))pt" }
             Divider()
-            SliderRow("Key width", value: $model.settings.keyWidthFraction,
+            SliderRow("Key width",
+                      tooltip: "Each letter key's width as a fraction of its natural grid cell — lower adds breathing room between keys.",
+                      value: $model.settings.keyWidthFraction,
                       in: 0.6...1, step: 0.02) { "\(Int(($0 * 100).rounded()))%" }
             Divider()
-            SliderRow("Space bar width", value: $model.settings.spaceWidth,
+            SliderRow("Space bar width",
+                      tooltip: "Width of the space bar expressed in key-widths — narrower leaves room for flanking keys.",
+                      value: $model.settings.spaceWidth,
                       in: 3...7, step: 0.5) { String(format: "%.1f keys", $0) }
             Divider()
-            SliderRow("Shift & delete width", value: $model.settings.funcKeyWidth,
+            SliderRow("Shift & delete width",
+                      tooltip: "Width of the shift and backspace keys relative to a standard letter key.",
+                      value: $model.settings.funcKeyWidth,
                       in: 1...2, step: 0.1) { String(format: "%.1f keys", $0) }
             Divider()
-            SliderRow("Key spacing", value: $model.settings.keySpacing,
+            SliderRow("Key spacing",
+                      tooltip: "Horizontal gap between adjacent keys in the same row.",
+                      value: $model.settings.keySpacing,
                       in: 1...12, step: 1) { "\(Int($0))pt" }
             Divider()
-            SliderRow("Row spacing", value: $model.settings.rowSpacing,
+            SliderRow("Row spacing",
+                      tooltip: "Vertical gap between rows of keys.",
+                      value: $model.settings.rowSpacing,
                       in: 0...16, step: 1) { "\(Int($0))pt" }
         }
     }
@@ -77,10 +91,14 @@ struct KeysView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, UX.rowVPadding)
             Divider()
-            SliderRow("Top padding", value: $model.settings.keyboardTopPadding,
+            SliderRow("Top padding",
+                      tooltip: "Space between the suggestion bar and the top row of keys.",
+                      value: $model.settings.keyboardTopPadding,
                       in: 0...48, step: 1) { "\(Int($0))pt" }
             Divider()
-            SliderRow("Bottom padding", value: $model.settings.keyboardBottomPadding,
+            SliderRow("Bottom padding",
+                      tooltip: "Lifts the entire keyboard up from the bottom edge of the keyboard extension.",
+                      value: $model.settings.keyboardBottomPadding,
                       in: 0...64, step: 1) { "\(Int($0))pt" }
         }
     }
@@ -100,22 +118,30 @@ struct KeysView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, UX.rowVPadding)
             Divider()
-            SliderRow("Hold delay", value: $model.settings.repeatHoldDelay,
+            SliderRow("Hold delay",
+                      tooltip: "How long you must hold backspace before rapid-delete kicks in.",
+                      value: $model.settings.repeatHoldDelay,
                       in: 150...800, step: 25) {
                 "\(Int($0))ms"
             }
             Divider()
-            SliderRow("Start speed", value: $model.settings.repeatInitialInterval,
+            SliderRow("Start speed",
+                      tooltip: "Interval between deletions at the beginning of a hold — higher is slower.",
+                      value: $model.settings.repeatInitialInterval,
                       in: 50...200, step: 10) {
                 "\(Int($0))ms"
             }
             Divider()
-            SliderRow("Max speed", value: $model.settings.repeatMinInterval,
+            SliderRow("Max speed",
+                      tooltip: "Fastest interval rapid-delete can reach after fully accelerating — lower is faster.",
+                      value: $model.settings.repeatMinInterval,
                       in: 20...80, step: 5) {
                 "\(Int($0))ms"
             }
             Divider()
-            SliderRow("Acceleration", value: $model.settings.repeatAccelStep,
+            SliderRow("Acceleration",
+                      tooltip: "How much the interval shrinks per repeat step — higher ramps up to max speed sooner.",
+                      value: $model.settings.repeatAccelStep,
                       in: 1...20, step: 1) {
                 "\(Int($0))ms/step"
             }

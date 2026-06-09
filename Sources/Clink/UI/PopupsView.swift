@@ -39,12 +39,16 @@ struct PopupsView: View {
                     PresetChips(presets: TuningPresets.popup)
                         .padding(.vertical, UX.rowVPadding)
                     Divider()
-                    SliderRow("Speed", value: $model.settings.popupSpringResponse,
+                    SliderRow("Speed",
+                              tooltip: "Spring response time for the popup appearing and disappearing.",
+                              value: $model.settings.popupSpringResponse,
                               in: 0.08...0.6, step: 0.02) {
                         String(format: "%.2fs", $0)
                     }
                     Divider()
-                    SliderRow("Springiness", value: $model.settings.popupSpringDamping,
+                    SliderRow("Springiness",
+                              tooltip: "Damping ratio — lower values give the popup a slight bounce on entry.",
+                              value: $model.settings.popupSpringDamping,
                               in: 0.3...1.0, step: 0.05) {
                         $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
                     }
