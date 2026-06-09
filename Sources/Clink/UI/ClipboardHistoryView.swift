@@ -92,16 +92,15 @@ struct ClipboardHistoryView: View {
             }
             if model.settings.clipboardEnabled {
                 Divider()
-                HStack {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Style")
-                    Spacer()
-                    Picker("Style", selection: $model.settings.clipboardStyle) {
-                        ForEach(ClipboardStyle.allCases) { style in
-                            Text(style.label).tag(style)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
+                        .font(.subheadline)
+                        .padding(.top, 4)
+                    OptionChips(
+                        options: ClipboardStyle.allCases.map { ($0.label, $0) },
+                        selection: $model.settings.clipboardStyle
+                    )
+                    .padding(.bottom, 4)
                 }
                 .padding(.vertical, UX.rowVPadding)
             }

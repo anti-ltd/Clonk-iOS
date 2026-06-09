@@ -256,15 +256,19 @@ struct RootView: View {
 
     private var navButtonLayer: some View {
         HStack(spacing: 0) {
-            ThemeNavButton(systemName: "sidebar.left") {
-                // If a text field is editing (e.g. the localization search), the
-                // first tap just dismisses its keyboard — don't also yank the
-                // sidebar open. `sendAction` returns true when a responder handled
-                // the resign, i.e. a keyboard was up.
-                let dismissedKeyboard = UIApplication.shared.sendAction(
-                    #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                if !dismissedKeyboard {
-                    withAnimation(sidebarAnim) { sidebar.isOpen.toggle() }
+            Group {
+                if destination == .clink {
+                    ThemeNavButton(systemName: "sidebar.left") {
+                        let dismissedKeyboard = UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        if !dismissedKeyboard {
+                            withAnimation(sidebarAnim) { sidebar.isOpen.toggle() }
+                        }
+                    }
+                } else {
+                    ThemeNavButton(systemName: "house") {
+                        destination = .clink
+                    }
                 }
             }
             .opacity(sidebar.navigationDepth > 0 ? 0 : 1)

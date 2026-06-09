@@ -15,6 +15,8 @@ struct LocalizationView: View {
     @Environment(AppModel.self) private var model
     @Environment(SidebarState.self) private var sidebar
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(\.specialKeyTint) private var specialKeyTint
     @State private var search = ""
 
     private var themeAccent: Color {
@@ -128,8 +130,8 @@ struct LocalizationView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .fill(specialKeyTint ?? Color(.secondarySystemBackground))
         )
     }
 

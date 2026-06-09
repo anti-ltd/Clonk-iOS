@@ -12,8 +12,6 @@ struct NotepadView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius
-    @Environment(\.specialKeyTint) private var specialKeyTint
-
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
     }
@@ -61,22 +59,20 @@ struct NotepadView: View {
                       isOn: $model.settings.notepadEnabled)
             if model.settings.notepadEnabled {
                 Divider()
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Mode")
                         .font(.subheadline)
                         .padding(.horizontal, 14)
-                        .padding(.top, 10)
-                    ThemedTabPicker(
+                        .padding(.top, 4)
+                    OptionChips(
                         options: NotepadMode.allCases.map { ($0.label, $0) },
                         selection: $model.settings.notepadMode
                     )
                     .tint(themeAccent)
-                    .environment(\.specialKeyTint, specialKeyTint)
-                    .environment(\.cardCornerRadius, cardCornerRadius)
                     .padding(.horizontal, 14)
                     modeCaption
                         .padding(.horizontal, 14)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 4)
                 }
             }
         }

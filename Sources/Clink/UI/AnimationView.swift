@@ -10,9 +10,7 @@ struct AnimationView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(NavBarState.self) private var navBar
     @State private var selectedTab: Tab = .spring
-    @State private var previewDark: Bool = false
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
@@ -21,9 +19,7 @@ struct AnimationView: View {
     var body: some View {
         @Bindable var model = model
         PinnedPreviewLayout(settings: model.settings,
-                            previewColorScheme: model.settings.matchSystemAppearance
-                                ? (previewDark ? .dark : .light)
-                                : nil,
+                            previewColorScheme: nil,
                             bottomBar: AnyView(
                                 ThemedTabPicker(
                                     options: [("Spring", Tab.spring), ("Timing", Tab.timing)],
@@ -39,22 +35,6 @@ struct AnimationView: View {
         .navigationTitle("Animation")
         .navigationBarTitleDisplayMode(.inline)
         .tint(themeAccent)
-        .onAppear {
-            previewDark = colorScheme == .dark
-            if model.settings.matchSystemAppearance {
-                navBar.trailingIcon = previewDark ? "moon.fill" : "sun.max"
-                navBar.trailingAction = { previewDark.toggle() }
-            }
-        }
-        .onChange(of: previewDark) { _, new in
-            if model.settings.matchSystemAppearance {
-                navBar.trailingIcon = new ? "moon.fill" : "sun.max"
-            }
-        }
-        .onChange(of: model.settings.matchSystemAppearance) { _, match in
-            navBar.trailingIcon = match ? (previewDark ? "moon.fill" : "sun.max") : nil
-            navBar.trailingAction = match ? { previewDark.toggle() } : nil
-        }
     }
 
     // MARK: - Tabs

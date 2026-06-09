@@ -114,43 +114,40 @@ struct EmojiSettingsView: View {
     private func layoutTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Scroll") {
-            HStack {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Scroll direction")
-                Spacer()
-                Picker("Scroll direction", selection: $model.settings.emojiScrollDirection) {
-                    ForEach(EmojiScrollDirection.allCases) { dir in
-                        Text(dir.label).tag(dir)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
+                    .font(.subheadline)
+                    .padding(.top, 4)
+                OptionChips(
+                    options: EmojiScrollDirection.allCases.map { ($0.label, $0) },
+                    selection: $model.settings.emojiScrollDirection
+                )
+                .padding(.bottom, 4)
             }
             .padding(.vertical, UX.rowVPadding)
             if model.settings.emojiScrollDirection == .vertical {
                 Divider()
-                Stepper(value: $model.settings.emojiColumnCount, in: 4...12) {
-                    HStack {
-                        Text("Columns")
-                        Spacer()
-                        Text("\(model.settings.emojiColumnCount)")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                    .padding(.vertical, UX.rowVPadding)
+                HStack {
+                    Text("Columns")
+                    Spacer()
+                    Text("\(model.settings.emojiColumnCount)")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                    ThemedStepper(value: $model.settings.emojiColumnCount, in: 4...12)
                 }
+                .padding(.vertical, UX.rowVPadding)
             }
             if model.settings.emojiScrollDirection == .horizontal {
                 Divider()
-                Stepper(value: $model.settings.emojiRowCount, in: 2...8) {
-                    HStack {
-                        Text("Rows")
-                        Spacer()
-                        Text("\(model.settings.emojiRowCount)")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                    .padding(.vertical, UX.rowVPadding)
+                HStack {
+                    Text("Rows")
+                    Spacer()
+                    Text("\(model.settings.emojiRowCount)")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                    ThemedStepper(value: $model.settings.emojiRowCount, in: 2...8)
                 }
+                .padding(.vertical, UX.rowVPadding)
             }
         }
 
@@ -205,13 +202,18 @@ struct EmojiSettingsView: View {
     private func sliderRow<V: BinaryFloatingPoint>(
         title: String, value: Binding<V>, range: ClosedRange<V>, display: String
     ) -> some View where V.Stride: BinaryFloatingPoint {
-        VStack(alignment: .leading, spacing: 4) {
+        let doubleBinding = Binding<Double>(
+            get: { Double(value.wrappedValue) },
+            set: { value.wrappedValue = V($0) }
+        )
+        let doubleRange = Double(range.lowerBound)...Double(range.upperBound)
+        return VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(title)
                 Spacer()
                 Text(display).foregroundStyle(.secondary).monospacedDigit()
             }
-            Slider(value: value, in: range).tint(themeAccent)
+            ThemedSlider(value: doubleBinding, in: doubleRange)
         }
         .padding(.vertical, UX.rowVPadding)
     }
