@@ -685,6 +685,39 @@ struct ThemeNavButtonStyle: ButtonStyle {
     }
 }
 
+/// Text-label variant of `ThemeNavButtonStyle` — auto-sizes to the label width
+/// instead of using the fixed 36×36 icon frame.
+struct ThemeNavTextButtonStyle: ButtonStyle {
+    let useGlass: Bool
+    let cornerRadius: CGFloat
+    let fill: Color
+    let accent: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        Group {
+            if useGlass {
+                if #available(iOS 26.0, *) {
+                    configuration.label
+                        .padding(.horizontal, 14).padding(.vertical, 7)
+                        .background { Color.clear.glassEffect(.regular.interactive(), in: shape) }
+                        .overlay(shape.strokeBorder(accent.opacity(0.4), lineWidth: 1))
+                } else {
+                    configuration.label
+                        .padding(.horizontal, 14).padding(.vertical, 7)
+                        .background(fill.opacity(0.15), in: shape)
+                        .overlay(shape.strokeBorder(accent.opacity(0.5), lineWidth: 1))
+                }
+            } else {
+                configuration.label
+                    .padding(.horizontal, 14).padding(.vertical, 7)
+                    .background(fill, in: shape)
+            }
+        }
+        .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
 // MARK: - Xcode preview support
 
 #if DEBUG

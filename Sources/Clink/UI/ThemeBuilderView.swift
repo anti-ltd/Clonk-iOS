@@ -86,8 +86,8 @@ struct ThemeBuilderView: View {
                     backgroundCard
                 },
             ])
-            .navigationTitle(isExisting ? "Edit Theme" : "New Theme")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .onChange(of: photoItem) { _, item in importPhoto(item) }
             .onChange(of: keyPhotoItem) { _, item in importKeyPhoto(item) }
             .sheet(isPresented: $showBgGradientEditor) {
@@ -100,14 +100,7 @@ struct ThemeBuilderView: View {
                     GradientEditorView(initial: g) { draft.keyGradient = $0 }
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { cancel() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                }
-            }
+            .safeAreaInset(edge: .top, spacing: 0) { customNavBar }
         }
         // Environment on the NavigationStack so both page content AND the color
         // picker overlay share the same theme values.
@@ -120,6 +113,30 @@ struct ThemeBuilderView: View {
         .environment(\.useGlassCards, draft.material == .liquidGlass)
         .environment(\.colorPickerPresenter, colorPicker)
         .themedColorPicker(colorPicker)
+    }
+
+    private var customNavBar: some View {
+        HStack {
+            Button("Cancel") { cancel() }
+                .buttonStyle(ThemeNavTextButtonStyle(
+                    useGlass: draft.material == .liquidGlass,
+                    cornerRadius: min(cardCornerRadius, 22),
+                    fill: draft.specialKeyFill.color,
+                    accent: draft.accent.color))
+            Spacer()
+            Text(isExisting ? "Edit Theme" : "New Theme")
+                .font(.headline)
+            Spacer()
+            Button("Save") { save() }
+                .fontWeight(.semibold)
+                .buttonStyle(ThemeNavTextButtonStyle(
+                    useGlass: draft.material == .liquidGlass,
+                    cornerRadius: min(cardCornerRadius, 22),
+                    fill: draft.accent.color,
+                    accent: draft.accent.color))
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 44)
     }
 
     private var styleCard: some View {
@@ -439,7 +456,7 @@ struct ThemeBuilderView: View {
             Spacer(minLength: 12)
             ColorSwatchButton(color: binding, width: 56, height: 30)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     /// Load the picked photo, downscale it to a keyboard-sized JPEG, store it in
