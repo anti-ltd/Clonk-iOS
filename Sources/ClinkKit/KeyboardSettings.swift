@@ -154,6 +154,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// painted behind the keys; when off (the default) the keyboard stays
     /// transparent and the keys float. Applies to every theme uniformly.
     public var backgroundVisible: Bool
+    /// When true, the app's settings UI adopts the keyboard's active theme.
+    /// When false (default), the app uses Liquid Light / Liquid Dark regardless
+    /// of which keyboard theme the user has selected.
+    public var themeApp: Bool
     // Mechanics
     public var layoutID: String
     /// The language the suggestion bar, autocomplete, and auto-correction run in,
@@ -485,6 +489,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         darkThemeID: String = Theme.preset(id: "liquid-dark").id,
         customThemes: [Theme] = [],
         backgroundVisible: Bool = false,
+        themeApp: Bool = false,
         layoutID: String = KeyboardLayout.default.id,
         keyboardLanguage: String = "en_US",
         accentPopupsEnabled: Bool = true,
@@ -594,6 +599,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.darkThemeID = darkThemeID
         self.customThemes = customThemes
         self.backgroundVisible = backgroundVisible
+        self.themeApp = themeApp
         self.layoutID = layoutID
         self.keyboardLanguage = keyboardLanguage
         self.accentPopupsEnabled = accentPopupsEnabled
@@ -710,6 +716,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         darkThemeID = try c.decodeIfPresent(String.self, forKey: .darkThemeID) ?? Theme.defaultDark.id
         customThemes = try c.decodeIfPresent([Theme].self, forKey: .customThemes) ?? []
         backgroundVisible = try c.decodeIfPresent(Bool.self, forKey: .backgroundVisible) ?? false
+        themeApp = try c.decodeIfPresent(Bool.self, forKey: .themeApp) ?? false
         layoutID = try c.decodeIfPresent(String.self, forKey: .layoutID) ?? KeyboardLayout.default.id
         keyboardLanguage = try c.decodeIfPresent(String.self, forKey: .keyboardLanguage) ?? "en_US"
         accentPopupsEnabled = try c.decodeIfPresent(Bool.self, forKey: .accentPopupsEnabled) ?? true

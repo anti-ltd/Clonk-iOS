@@ -306,7 +306,16 @@ private struct DetailHost: View {
     let destination: RootView.SidebarDestination
 
     private var resolvedTheme: Theme {
-        model.settings.resolvedTheme(dark: colorScheme == .dark)
+        guard model.settings.themeApp else {
+            return colorScheme == .dark ? Theme.defaultDark : Theme.defaultLight
+        }
+        return model.settings.resolvedTheme(dark: colorScheme == .dark)
+    }
+
+    /// Standard corner radius used when `themeApp` is off — matches the default
+    /// key radius so the app looks consistent with Liquid Light / Dark.
+    private var appCornerRadius: Double {
+        model.settings.themeApp ? model.settings.keyCornerRadius : 13.0
     }
 
     var body: some View {
@@ -315,7 +324,7 @@ private struct DetailHost: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .tint(resolvedTheme.accent.color)
                 .environment(\.resolvedKeyboardTheme, resolvedTheme)
-                .environment(\.cardCornerRadius, model.settings.keyCornerRadius)
+                .environment(\.cardCornerRadius, appCornerRadius)
                 .environment(\.specialKeyTint, resolvedTheme.specialKeyFill.color)
                 .environment(\.themeTextColor, resolvedTheme.keyText.color)
                 .environment(\.useGlassCards, resolvedTheme.material == .liquidGlass)
@@ -1013,6 +1022,7 @@ private struct ClinkContent: View {
 
     var body: some View {
         @Bindable var sidebar = sidebar
+        @Bindable var model = model
         ScrollView {
             VStack(alignment: .leading, spacing: UX.cardSpacing) {
                 VStack(spacing: 6) {
@@ -1028,6 +1038,12 @@ private struct ClinkContent: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .id("header")
+
+                CardSection {
+                    ToggleRow("Theme app with keyboard",
+                              subtitle: "Apply your keyboard theme to the Clink settings UI. Off uses Liquid Light / Dark.",
+                              isOn: $model.settings.themeApp)
+                }
 
                 gridSection("General", cards: generalCards).id("general")
                 gridSection("Customization", cards: customizationCards).id("customization")
