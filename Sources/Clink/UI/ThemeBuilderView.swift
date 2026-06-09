@@ -29,9 +29,9 @@ struct ThemeBuilderView: View {
 
     // Gradient editor state
     @State private var showBgGradientEditor = false
-    @State private var editingBgGradient: ThemeGradient?
+    @State private var editingBgGradient: ThemeGradient = .seed(from: RGBA(0.5, 0.5, 0.5, 1))
     @State private var showKeyGradientEditor = false
-    @State private var editingKeyGradient: ThemeGradient?
+    @State private var editingKeyGradient: ThemeGradient = .seed(from: RGBA(0.5, 0.5, 0.5, 1))
 
     @State private var colorPicker = ColorPickerPresenter()
 
@@ -89,17 +89,29 @@ struct ThemeBuilderView: View {
             .toolbar(.hidden, for: .navigationBar)
             .onChange(of: photoItem) { _, item in importPhoto(item) }
             .onChange(of: keyPhotoItem) { _, item in importKeyPhoto(item) }
-            .sheet(isPresented: $showBgGradientEditor) {
-                if let g = editingBgGradient {
-                    GradientEditorView(initial: g) { draft.backgroundGradient = $0 }
-                }
-            }
-            .sheet(isPresented: $showKeyGradientEditor) {
-                if let g = editingKeyGradient {
-                    GradientEditorView(initial: g) { draft.keyGradient = $0 }
-                }
-            }
             .safeAreaInset(edge: .top, spacing: 0) { customNavBar }
+            .overlay {
+                if showBgGradientEditor {
+                    ThemedSheetOverlay(
+                        cornerRadius: cardCornerRadius,
+                        title: "Gradient",
+                        maxHeightFraction: 0.42,
+                        onDone: { draft.backgroundGradient = editingBgGradient },
+                        onDismiss: { showBgGradientEditor = false }
+                    ) { GradientEditorView(draft: $editingBgGradient) }
+                }
+            }
+            .overlay {
+                if showKeyGradientEditor {
+                    ThemedSheetOverlay(
+                        cornerRadius: cardCornerRadius,
+                        title: "Gradient",
+                        maxHeightFraction: 0.42,
+                        onDone: { draft.keyGradient = editingKeyGradient },
+                        onDismiss: { showKeyGradientEditor = false }
+                    ) { GradientEditorView(draft: $editingKeyGradient) }
+                }
+            }
         }
         // Environment on the NavigationStack so both page content AND the color
         // picker overlay share the same theme values.
@@ -523,46 +535,21 @@ struct ThemeBuilderView: View {
 
 // MARK: - Gradient editor
 
-/// Full-screen gradient editor sheet. Edits a local copy of `ThemeGradient` and
-/// calls `onSave` with the result when the user taps Done; Cancel discards.
+/// Gradient editor content — rendered inside a ThemedSheetOverlay by ThemeBuilderView.
+/// Reads colorPickerPresenter from the environment (injected by the parent).
 struct GradientEditorView: View {
-    let onSave: (ThemeGradient) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @Binding var draft: ThemeGradient
     @Environment(\.cardCornerRadius) private var cardCornerRadius
-    @State private var draft: ThemeGradient
-    @State private var colorPicker = ColorPickerPresenter()
-
-    init(initial: ThemeGradient, onSave: @escaping (ThemeGradient) -> Void) {
-        _draft = State(initialValue: initial)
-        self.onSave = onSave
-    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    preview
-                    typeCard
-                    if draft.type != .radial { angleCard }
-                    stopsCard
-                }
-                .padding(.horizontal, UX.screenPadding)
-                .padding(.vertical, UX.cardSpacing)
-            }
-            .background(.clear)
-            .navigationTitle("Gradient")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onSave(draft); dismiss() }
-                }
-            }
+        VStack(spacing: UX.cardSpacing) {
+            preview
+            typeCard
+            if draft.type != .radial { angleCard }
+            stopsCard
         }
-        .environment(\.colorPickerPresenter, colorPicker)
-        .themedColorPicker(colorPicker)
+        .padding(.horizontal, UX.screenPadding)
+        .padding(.vertical, UX.cardSpacing)
     }
 
     private var preview: some View {

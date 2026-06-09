@@ -151,7 +151,7 @@ struct ClipboardHistoryView: View {
                             if copiedIndex == index { copiedIndex = nil }
                         }
                     }
-                    SwipeRow(id: index, actions: [
+                    SwipeRow(id: index, cornerRadius: cardCornerRadius, actions: [
                         SwipeAction(icon: "doc.on.doc.fill", label: "Copy",
                                     tint: .gray) { copy() },
                         SwipeAction(icon: entry.pinned ? "pin.slash.fill" : "pin.fill",

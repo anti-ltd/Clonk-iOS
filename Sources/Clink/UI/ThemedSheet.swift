@@ -62,6 +62,8 @@ struct ThemedSheetOverlay<Content: View>: View {
     var title: String? = nil
     /// Caps the initial natural height as a fraction of the available sheet height (0–1).
     var maxHeightFraction: CGFloat = 1.0
+    /// Called when the user explicitly taps Done (before onDismiss). Swipe/scrim dismissal skips this.
+    var onDone: (() -> Void)? = nil
     let onDismiss: () -> Void
     @ViewBuilder let content: Content
 
@@ -207,7 +209,7 @@ struct ThemedSheetOverlay<Content: View>: View {
             HStack {
                 if let title { Text(title).font(.headline) }
                 Spacer()
-                Button("Done", action: dismiss).fontWeight(.semibold)
+                Button("Done") { onDone?(); dismiss() }.fontWeight(.semibold)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 8)

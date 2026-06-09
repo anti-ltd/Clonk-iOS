@@ -7,9 +7,16 @@ import SwiftUI
 import iUXiOS
 
 struct NotepadView: View {
-    private enum Tab { case general, scratch, notes }
+    private enum Tab { case general, notes }
 
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(\.specialKeyTint) private var specialKeyTint
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
     @State private var selectedTab: Tab = .general
     @State private var openRow: Int? = nil
 
@@ -21,7 +28,6 @@ struct NotepadView: View {
                 VStack(spacing: UX.cardSpacing) {
                     switch selectedTab {
                     case .general: generalTab(model: model)
-                    case .scratch: scratchTab(notepad: notepad, model: model)
                     case .notes:   notesTab(notepad: notepad, model: model)
                     }
                 }
@@ -31,9 +37,9 @@ struct NotepadView: View {
             .id(selectedTab)
 
             ThemedTabPicker(
-                options: [("General", Tab.general), ("Scratch", Tab.scratch), ("Notes", Tab.notes)],
+                options: [("General", Tab.general), ("Notes", Tab.notes)],
                 selection: $selectedTab,
-                disabledTags: model.settings.notepadEnabled ? [] : [.scratch, .notes]
+                disabledTags: model.settings.notepadEnabled ? [] : [.notes]
             )
             .padding(.horizontal, UX.screenPadding)
             .padding(.vertical, 12)
@@ -60,64 +66,19 @@ struct NotepadView: View {
                         .font(.subheadline)
                         .padding(.horizontal, 14)
                         .padding(.top, 10)
-                    Picker("Mode", selection: $model.settings.notepadMode) {
-                        ForEach(NotepadMode.allCases) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    ThemedTabPicker(
+                        options: NotepadMode.allCases.map { ($0.label, $0) },
+                        selection: $model.settings.notepadMode
+                    )
+                    .tint(themeAccent)
+                    .environment(\.specialKeyTint, specialKeyTint)
+                    .environment(\.cardCornerRadius, cardCornerRadius)
                     .padding(.horizontal, 14)
                     modeCaption
                         .padding(.horizontal, 14)
                         .padding(.bottom, 10)
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func scratchTab(notepad: NotepadManager, model: AppModel) -> some View {
-        @Bindable var notepad = notepad
-        CardSection("Scratch") {
-            VStack(alignment: .leading, spacing: 10) {
-                TextEditor(text: $notepad.scratch)
-                    .frame(minHeight: 120)
-                    .font(.body)
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(Color(.tertiarySystemGroupedBackground),
-                                in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(alignment: .topLeading) {
-                        if notepad.scratch.isEmpty {
-                            Text("Type to jot a note…")
-                                .foregroundStyle(.tertiary)
-                                .padding(.horizontal, 13)
-                                .padding(.vertical, 16)
-                                .allowsHitTesting(false)
-                        }
-                    }
-                HStack {
-                    if model.settings.notepadMode == .notes {
-                        Button {
-                            model.notepad.addNote(notepad.scratch)
-                            notepad.scratch = ""
-                        } label: {
-                            Label("Save as note", systemImage: "plus")
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(notepad.scratch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                    Spacer()
-                    Button(role: .destructive) {
-                        notepad.scratch = ""
-                    } label: {
-                        Label("Clear", systemImage: "xmark")
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(notepad.scratch.isEmpty)
-                }
-            }
-            .padding(14)
         }
     }
 
@@ -142,7 +103,7 @@ struct NotepadView: View {
                     .padding(.horizontal, 4)
                 VStack(spacing: 8) {
                     ForEach(Array(model.notepad.notes.enumerated()), id: \.element.id) { index, note in
-                        SwipeRow(id: index, actions: [
+                        SwipeRow(id: index, cornerRadius: cardCornerRadius, actions: [
                             SwipeAction(icon: "pencil", label: "Load",
                                         tint: .blue) { notepad.scratch = note.text },
                             SwipeAction(icon: "trash.fill", label: "Delete",
@@ -150,7 +111,7 @@ struct NotepadView: View {
                         ], openID: $openRow,
                            onTap: { notepad.scratch = note.text },
                            cardBackground: {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                                 .fill(Color(.secondarySystemGroupedBackground))
                         }) {
                             noteRow(note)
@@ -161,10 +122,9 @@ struct NotepadView: View {
             Button(role: .destructive) {
                 model.notepad.clearNotes()
             } label: {
-                Text("Clear All").frame(maxWidth: .infinity)
+                Text("Clear All")
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.red.opacity(0.85))
+            .buttonStyle(ThemedFillButtonStyle(fill: .red.opacity(0.85), corner: cardCornerRadius))
         }
     }
 

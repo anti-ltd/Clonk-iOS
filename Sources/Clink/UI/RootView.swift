@@ -294,20 +294,25 @@ private struct DetailHost: View {
     @Environment(AppModel.self) private var model
     @Environment(SidebarState.self) private var sidebar
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.themeTextColor) private var themeTextColor
     let destination: RootView.SidebarDestination
 
-    private var themeAccent: Color {
-        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    private var resolvedTheme: Theme {
+        model.settings.resolvedTheme(dark: colorScheme == .dark)
     }
 
     var body: some View {
         NavigationStack {
             destinationView
                 .navigationBarTitleDisplayMode(.inline)
+                .tint(resolvedTheme.accent.color)
+                .environment(\.resolvedKeyboardTheme, resolvedTheme)
+                .environment(\.cardCornerRadius, model.settings.keyCornerRadius)
+                .environment(\.specialKeyTint, resolvedTheme.specialKeyFill.color)
+                .environment(\.themeTextColor, resolvedTheme.keyText.color)
+                .environment(\.useGlassCards, resolvedTheme.material == .liquidGlass)
+                .environment(\.cardTint, resolvedTheme.keyFill.color)
+                .environment(\.specialKeyTextColor, resolvedTheme.specialKeyText.color)
         }
-        .tint(themeAccent)
-        .foregroundColor(themeTextColor)
     }
 
     @ViewBuilder
