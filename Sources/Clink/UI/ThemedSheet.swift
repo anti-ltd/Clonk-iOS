@@ -60,6 +60,8 @@ private struct ThemedSheetModifier<SheetContent: View>: ViewModifier {
 struct ThemedSheetOverlay<Content: View>: View {
     let cornerRadius: CGFloat
     var title: String? = nil
+    /// Caps the initial natural height as a fraction of the available sheet height (0–1).
+    var maxHeightFraction: CGFloat = 1.0
     let onDismiss: () -> Void
     @ViewBuilder let content: Content
 
@@ -160,11 +162,11 @@ struct ThemedSheetOverlay<Content: View>: View {
             }
             .onPreferenceChange(ContentHeightKey.self) { h in
                 guard h > 0, !isIn else { return }
-                // screenHeight may not be set yet if preference fires before onAppear;
-                // use uncapped height in that case — expand gesture will cap correctly once
-                // screenHeight is available.
-                let cap = screenHeight > 0 ? maxSheetHeight : .infinity
-                let computed = min(h + headerHeight + 40, cap)
+                // Use UIScreen as fallback when preference fires before onAppear sets screenHeight.
+                let sh = screenHeight > 0 ? screenHeight : UIScreen.main.bounds.height
+                let sat = safeAreaTop > 0 ? safeAreaTop : 0
+                let maxH = (sh - sat - 44 - 8) * maxHeightFraction
+                let computed = min(h + headerHeight + 40, maxH)
                 naturalHeight = computed
                 panelHeight = computed
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {

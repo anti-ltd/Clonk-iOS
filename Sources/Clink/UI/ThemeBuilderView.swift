@@ -79,7 +79,6 @@ struct ThemeBuilderView: View {
                     colorsCard
                     if draft.material == .liquidGlass {
                         keyImageCard
-                        glassHint
                     }
                 },
                 PreviewTab("Background") {
@@ -118,8 +117,9 @@ struct ThemeBuilderView: View {
     private var customNavBar: some View {
         HStack {
             Button("Cancel") { cancel() }
+                .foregroundStyle(Color.primary)
                 .buttonStyle(ThemeNavTextButtonStyle(
-                    useGlass: draft.material == .liquidGlass,
+                    useGlass: false,
                     cornerRadius: min(cardCornerRadius, 22),
                     fill: draft.specialKeyFill.color,
                     accent: draft.accent.color))
@@ -129,14 +129,16 @@ struct ThemeBuilderView: View {
             Spacer()
             Button("Save") { save() }
                 .fontWeight(.semibold)
+                .foregroundStyle(Color.white)
                 .buttonStyle(ThemeNavTextButtonStyle(
-                    useGlass: draft.material == .liquidGlass,
+                    useGlass: false,
                     cornerRadius: min(cardCornerRadius, 22),
                     fill: draft.accent.color,
                     accent: draft.accent.color))
         }
         .padding(.horizontal, 16)
-        .frame(height: 44)
+        .padding(.top, 10)
+        .frame(height: 54)
     }
 
     private var styleCard: some View {
@@ -215,10 +217,6 @@ struct ThemeBuilderView: View {
             backgroundGradientRow
             Divider()
             photoRow
-            Divider()
-            Text("Visible only when Show Background is on. Photo overrides gradient; gradient overrides colour.")
-                .font(.caption).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -252,17 +250,17 @@ struct ThemeBuilderView: View {
                 }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     @ViewBuilder private var backgroundGradientThumbnail: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: max(4, cardCornerRadius - 4), style: .continuous)
         Group {
             if let gradient = draft.backgroundGradient {
                 gradient.makeView()
             } else {
-                shape.fill(.secondary.opacity(0.12))
-                    .overlay(Image(systemName: "paintpalette").foregroundStyle(.secondary))
+                shape.fill(draft.specialKeyFill.color)
+                    .overlay(Image(systemName: "paintpalette").foregroundStyle(draft.specialKeyText.color))
             }
         }
         .frame(width: 52, height: 38)
@@ -297,19 +295,19 @@ struct ThemeBuilderView: View {
                 }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     /// A small preview of the chosen photo (or a placeholder tile).
     @ViewBuilder private var backgroundThumbnail: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: max(4, cardCornerRadius - 4), style: .continuous)
         Group {
             if let id = draft.backgroundImageID,
                let image = ThemeBackgroundStore.shared.image(for: id) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                shape.fill(draft.background.color)
-                    .overlay(Image(systemName: "photo").foregroundStyle(.secondary))
+                shape.fill(draft.specialKeyFill.color)
+                    .overlay(Image(systemName: "photo").foregroundStyle(draft.specialKeyText.color))
             }
         }
         .frame(width: 52, height: 38)
@@ -324,10 +322,6 @@ struct ThemeBuilderView: View {
             keyGradientRow
             Divider()
             keyPhotoRow
-            Divider()
-            Text("Each key reveals the portion of the photo/gradient behind it, refracted through the glass. Photo overrides gradient.")
-                .font(.caption).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -361,17 +355,17 @@ struct ThemeBuilderView: View {
                 }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     @ViewBuilder private var keyGradientThumbnail: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: max(4, cardCornerRadius - 4), style: .continuous)
         Group {
             if let gradient = draft.keyGradient {
                 gradient.makeView()
             } else {
-                shape.fill(.secondary.opacity(0.12))
-                    .overlay(Image(systemName: "paintpalette").foregroundStyle(.secondary))
+                shape.fill(draft.specialKeyFill.color)
+                    .overlay(Image(systemName: "paintpalette").foregroundStyle(draft.specialKeyText.color))
             }
         }
         .frame(width: 52, height: 38)
@@ -406,18 +400,18 @@ struct ThemeBuilderView: View {
                 }
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     @ViewBuilder private var keyImageThumbnail: some View {
-        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: max(4, cardCornerRadius - 4), style: .continuous)
         Group {
             if let id = draft.keyImageID,
                let image = ThemeBackgroundStore.shared.image(for: id) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                shape.fill(.secondary.opacity(0.15))
-                    .overlay(Image(systemName: "square.grid.3x3").foregroundStyle(.secondary))
+                shape.fill(draft.specialKeyFill.color)
+                    .overlay(Image(systemName: "square.grid.3x3").foregroundStyle(draft.specialKeyText.color))
             }
         }
         .frame(width: 52, height: 38)
@@ -437,13 +431,6 @@ struct ThemeBuilderView: View {
             Divider()
             colorRow("Accent / pressed", \.accent)
         }
-    }
-
-    private var glassHint: some View {
-        Text("Liquid Glass uses the fills as translucent tints — lower their opacity so the keys stay glassy.")
-            .font(.caption).foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
     }
 
     private func colorRow(_ label: String, _ keyPath: WritableKeyPath<Theme, RGBA>) -> some View {
@@ -758,6 +745,7 @@ private struct ThemedColorPickerModifier: ViewModifier {
                 ThemedSheetOverlay(
                     cornerRadius: cardCornerRadius,
                     title: "Color",
+                    maxHeightFraction: 0.42,
                     onDismiss: { withAnimation(.spring(response: 0.35)) { presenter.dismiss() } }
                 ) {
                     ColorPickerContent(presenter: presenter)
