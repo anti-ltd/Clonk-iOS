@@ -102,7 +102,10 @@ public final class KeyTouchRouter {
 
     /// keyID → frame in the grid's coordinate space.
     fileprivate var frames: [String: CGRect] = [:]
-    /// keyID → its current spec (rebuilt by the canvas, reflecting plane/shift).
+    /// keyID → its current spec. Resolved on demand at touch time so it always
+    /// reads the *live* plane/shift (a sticky-shift flip mid-burst must affect the
+    /// very next touch). The canvas memoizes the underlying build, so this closure
+    /// is an O(1) dictionary lookup in the common case — see `currentKeySpecs`.
     fileprivate var resolveSpec: (String) -> KeySpec? = { _ in nil }
     /// Fired on every key-down — the host plays the clink + haptic here.
     fileprivate var onPressDown: () -> Void = {}

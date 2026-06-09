@@ -46,6 +46,31 @@ private struct PanelRowFrameKey: PreferenceKey {
     }
 }
 
+/// Holds the last-built keyspec map for a given plane/shift so repeated touch-time
+/// resolutions are O(1). A reference type (held in `@State`) so the value-type
+/// `KeyboardCanvas` can mutate it from a non-mutating context. Plane/shift are the
+/// only inputs that change while typing; every other input invalidates explicitly.
+@MainActor
+final class KeySpecCache {
+    private var plane: KeyboardController.Plane?
+    private var shift: KeyboardController.Shift?
+    private var specs: [String: KeySpec] = [:]
+    private var valid = false
+
+    func resolve(plane: KeyboardController.Plane,
+                 shift: KeyboardController.Shift,
+                 build: () -> [String: KeySpec]) -> [String: KeySpec] {
+        if valid, plane == self.plane, shift == self.shift { return specs }
+        specs = build()
+        self.plane = plane
+        self.shift = shift
+        valid = true
+        return specs
+    }
+
+    func invalidate() { valid = false }
+}
+
 public struct KeyboardCanvas: View {
     private let settings: KeyboardSettings
     private let onInsert: (String) -> Void
@@ -172,6 +197,10 @@ public struct KeyboardCanvas: View {
     /// overlapping presses register independently (see `KeyTouchRouter`). Each
     /// `KeyView` reads its pressed / warp state back out of this.
     @State private var touch = KeyTouchRouter()
+
+    /// Memoizes `currentKeySpecs()` so the per-touch hit-test/adaptive/swipe loops
+    /// don't rebuild the whole keyboard's specs on every key resolution.
+    @State private var keySpecCache = KeySpecCache()
 
     /// Track whether the last key pressed was sentence punctuation, so we can
     /// return to letters when the space bar is tapped (rather than immediately).
@@ -998,6 +1027,19 @@ public struct KeyboardCanvas: View {
             guard new == .clipboard, settings.autoCopyOnClipboardOpen, hasFullAccess else { return }
             clipboard.captureFromPasteboard()
         }
+        // Invalidate the keyspec cache when anything other than plane/shift (which
+        // the cache keys on directly) changes the keys: settings, the host-driven
+        // return-key label, or whether any panel is enabled (drives the 123 key's
+        // slide-up handlers).
+        .onChange(of: settings) { keySpecCache.invalidate() }
+        .onChange(of: keySpecExternalsSignature) { keySpecCache.invalidate() }
+    }
+
+    /// A cheap Equatable fingerprint of the non-plane/shift inputs to the keyspecs
+    /// (the return-key label + whether any panel is enabled). Changing it clears
+    /// the cache so the next resolve rebuilds.
+    private var keySpecExternalsSignature: String {
+        "\(live.returnKeySymbol ?? "")|\(live.returnKeyTitle)|\(live.returnKeyProminent)|\(enabledPanels.isEmpty)"
     }
 
     /// One key's glyph for the on-top glyph layer (text or animated symbol).
@@ -1292,7 +1334,16 @@ public struct KeyboardCanvas: View {
     /// render with — so the multitouch router can resolve a hit-tested key back to
     /// its current spec (action + behaviour). Rebuilt on demand at touch time, so
     /// it always reflects the live plane / shift. Mirrors `rowStack` exactly.
+    /// keyID → spec for the live plane/shift. Resolved on every touch (often many
+    /// times per gesture by the hit-test / adaptive / swipe loops), so it's
+    /// memoized: rebuilt only when the plane or shift actually changes (the inputs
+    /// that vary while typing). Settings / return-key / panel changes invalidate
+    /// the cache from the body's `.onChange` handlers.
     private func currentKeySpecs() -> [String: KeySpec] {
+        keySpecCache.resolve(plane: plane, shift: shift) { buildKeySpecs() }
+    }
+
+    private func buildKeySpecs() -> [String: KeySpec] {
         var map: [String: KeySpec] = [:]
         func add(_ specs: [KeySpec], _ rowID: String) {
             for (i, s) in specs.enumerated() { map["\(rowID)-\(i)"] = s }
