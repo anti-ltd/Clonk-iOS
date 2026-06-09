@@ -135,6 +135,7 @@ struct CalculatorPanel: View {
         Button { handleTap(label) } label: {
             btnBody(label)
                 .frame(width: w, height: h)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

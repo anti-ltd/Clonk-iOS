@@ -24,16 +24,14 @@ struct EmojiSettingsView: View {
     var body: some View {
         @Bindable var model = model
         VStack(spacing: 0) {
-            if model.settings.emojiEnabled {
-                EmojiPreview(
-                    settings: model.settings,
-                    onSetSkinTone: { base, tone in model.settings.emojiSkinTones[base] = tone }
-                )
-                .padding(.horizontal, UX.screenPadding)
-                .padding(.top, UX.screenPadding)
-                .padding(.bottom, UX.cardSpacing)
-                .overlay(alignment: .bottom) { Divider().opacity(0.4) }
-            }
+            EmojiPreview(
+                settings: model.settings,
+                onSetSkinTone: { base, tone in model.settings.emojiSkinTones[base] = tone }
+            )
+            .padding(.horizontal, UX.screenPadding)
+            .padding(.top, UX.screenPadding)
+            .padding(.bottom, UX.cardSpacing)
+            .overlay(alignment: .bottom) { Divider().opacity(0.4) }
 
             ScrollView {
                 VStack(spacing: UX.cardSpacing) {
@@ -46,12 +44,14 @@ struct EmojiSettingsView: View {
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.cardSpacing)
                 .padding(.bottom, UX.screenPadding)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.emojiEnabled)
             }
             .id(selectedTab)
 
             ThemedTabPicker(
                 options: [("General", Tab.general), ("Layout", Tab.layout), ("Skin Tones", Tab.skinTones)],
-                selection: $selectedTab
+                selection: $selectedTab,
+                disabledTags: model.settings.emojiEnabled ? [] : [.layout, .skinTones]
             )
             .tint(themeAccent)
             .environment(\.specialKeyTint, specialKeyTint ?? resolvedTheme.specialKeyFill.color)
@@ -81,30 +81,33 @@ struct EmojiSettingsView: View {
                           isOn: $model.settings.emojiKeyInRow)
             }
         }
-        CardSection("Recent") {
-            ToggleRow("Show recent emoji",
-                      subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
-                      isOn: $model.settings.showRecentEmoji)
-            if model.settings.showRecentEmoji {
-                Divider()
-                Button(role: .destructive) {
-                    model.settings.recentEmoji.removeAll()
-                } label: {
-                    HStack {
-                        Text("Clear recent emoji")
-                        Spacer()
-                        Text("\(model.settings.recentEmoji.count)")
-                            .foregroundStyle(.secondary)
+        if model.settings.emojiEnabled {
+            CardSection("Recent") {
+                ToggleRow("Show recent emoji",
+                          subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
+                          isOn: $model.settings.showRecentEmoji)
+                if model.settings.showRecentEmoji {
+                    Divider()
+                    Button(role: .destructive) {
+                        model.settings.recentEmoji.removeAll()
+                    } label: {
+                        HStack {
+                            Text("Clear recent emoji")
+                            Spacer()
+                            Text("\(model.settings.recentEmoji.count)")
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, UX.rowVPadding)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.vertical, UX.rowVPadding)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .disabled(model.settings.recentEmoji.isEmpty)
+                    .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
                 }
-                .buttonStyle(.plain)
-                .disabled(model.settings.recentEmoji.isEmpty)
-                .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
             }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.showRecentEmoji)
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.showRecentEmoji)
     }
 
     @ViewBuilder

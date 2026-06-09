@@ -211,11 +211,13 @@ struct ThemedTabPicker<Tag: Hashable>: View {
     @Environment(\.specialKeyTint) private var specialKeyTint
     let options: [(label: String, tag: Tag)]
     @Binding var selection: Tag
+    var disabledTags: Set<Tag> = []
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(options, id: \.tag) { option in
                 let isSelected = selection == option.tag
+                let isDisabled = disabledTags.contains(option.tag)
                 Button { selection = option.tag } label: {
                     Text(option.label)
                         .font(.subheadline.weight(.medium))
@@ -226,8 +228,10 @@ struct ThemedTabPicker<Tag: Hashable>: View {
                             in: RoundedRectangle(cornerRadius: max(2, cornerRadius - 4), style: .continuous)
                         )
                         .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                        .opacity(isDisabled ? 0.4 : 1)
                 }
                 .buttonStyle(.plain)
+                .disabled(isDisabled)
                 .animation(.easeInOut(duration: 0.15), value: isSelected)
             }
         }
