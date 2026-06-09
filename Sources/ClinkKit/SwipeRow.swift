@@ -165,7 +165,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                             action.action()
                             close()
                         } label: {
-                            Color.clear.contentShape(Circle())
+                            Color.clear.contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(action.label)
@@ -365,11 +365,12 @@ public struct SwipeRow<Content: View, Background: View>: View {
     /// The tinted circle behind a glyph: an interactive (morphing) glass lens when
     /// the theme is glass, a solid tinted fill otherwise.
     @ViewBuilder private func lensSurface(_ tint: Color) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if glass, #available(iOS 26.0, *) {
-            Circle().fill(.clear)
-                .glassEffect(.regular.tint(tint).interactive(), in: Circle())
+            shape.fill(.clear)
+                .glassEffect(.regular.tint(tint).interactive(), in: shape)
         } else {
-            Circle().fill(tint)
+            shape.fill(tint)
         }
     }
 
