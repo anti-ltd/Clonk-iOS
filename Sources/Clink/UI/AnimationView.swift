@@ -77,24 +77,32 @@ struct AnimationView: View {
             PresetChips(presets: TuningPresets.animation)
                 .padding(.vertical, UX.rowVPadding)
             Divider()
-            SliderRow("Bloom", value: $model.settings.keyBloomScale,
+            SliderRow("Bloom",
+                      tooltip: "How much a key scales up when pressed. Higher values give a more exaggerated pop.",
+                      value: $model.settings.keyBloomScale,
                       in: 1.0...1.4, step: 0.02) {
                 $0 == 1.0 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
             if !model.settings.keyPressInstant {
                 Divider()
-                SliderRow("Speed", value: $model.settings.keySpringResponse,
+                SliderRow("Speed",
+                          tooltip: "Spring response time — lower is snappier, higher is more leisurely.",
+                          value: $model.settings.keySpringResponse,
                           in: 0.08...0.6, step: 0.02) {
                     String(format: "%.2fs", $0)
                 }
                 Divider()
-                SliderRow("Springiness", value: $model.settings.keySpringDamping,
+                SliderRow("Springiness",
+                          tooltip: "Damping ratio — lower values bounce more, 1.0 settles with no overshoot.",
+                          value: $model.settings.keySpringDamping,
                           in: 0.3...1.0, step: 0.05) {
                     $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
                 }
             }
             Divider()
-            SliderRow("Tap flash", value: $model.settings.tapFlashStrength,
+            SliderRow("Tap flash",
+                      tooltip: "Brightness burst on the key cap at the moment of the press.",
+                      value: $model.settings.tapFlashStrength,
                       in: 0...0.7, step: 0.02) {
                 $0 < 0.005 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
@@ -104,27 +112,37 @@ struct AnimationView: View {
             PresetChips(presets: TuningPresets.spaceBar)
                 .padding(.vertical, UX.rowVPadding)
             Divider()
-            SliderRow("Bloom", value: $model.settings.spaceBloomScale,
+            SliderRow("Bloom",
+                      tooltip: "How much the space bar expands when tapped.",
+                      value: $model.settings.spaceBloomScale,
                       in: 1.0...1.2, step: 0.01) {
                 $0 <= 1.001 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
             Divider()
-            SliderRow("Speed", value: $model.settings.spaceSpringResponse,
+            SliderRow("Speed",
+                      tooltip: "Spring response time for the space bar animation.",
+                      value: $model.settings.spaceSpringResponse,
                       in: 0.08...0.6, step: 0.02) {
                 String(format: "%.2fs", $0)
             }
             Divider()
-            SliderRow("Springiness", value: $model.settings.spaceSpringDamping,
+            SliderRow("Springiness",
+                      tooltip: "Damping ratio — lower values bounce more, 1.0 settles with no overshoot.",
+                      value: $model.settings.spaceSpringDamping,
                       in: 0.3...1.0, step: 0.05) {
                 $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
             }
             Divider()
-            SliderRow("Lean", value: $model.settings.spaceLeanMultiplier,
+            SliderRow("Lean",
+                      tooltip: "How much the space bar tilts in the direction you're sliding the cursor.",
+                      value: $model.settings.spaceLeanMultiplier,
                       in: 0...0.3, step: 0.01) {
                 $0 == 0 ? "Off" : String(format: "%.2f×", $0)
             }
             Divider()
-            SliderRow("Cursor shrink", value: $model.settings.spaceCursorDragScale,
+            SliderRow("Cursor shrink",
+                      tooltip: "How much the cursor narrows while you drag it across the space bar.",
+                      value: $model.settings.spaceCursorDragScale,
                       in: 0.7...1.0, step: 0.02) {
                 $0 >= 0.99 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
@@ -135,12 +153,16 @@ struct AnimationView: View {
                     PresetChips(presets: TuningPresets.popup)
                         .padding(.vertical, UX.rowVPadding)
                     Divider()
-                    SliderRow("Speed", value: $model.settings.popupSpringResponse,
+                    SliderRow("Speed",
+                              tooltip: "Spring response time for the popup appearing and disappearing.",
+                              value: $model.settings.popupSpringResponse,
                               in: 0.08...0.6, step: 0.02) {
                         String(format: "%.2fs", $0)
                     }
                     Divider()
-                    SliderRow("Springiness", value: $model.settings.popupSpringDamping,
+                    SliderRow("Springiness",
+                              tooltip: "Damping ratio — lower values give the popup a slight bounce on entry.",
+                              value: $model.settings.popupSpringDamping,
                               in: 0.3...1.0, step: 0.05) {
                         $0 >= 0.99 ? "Firm" : String(format: "%.2f", $0)
                     }
@@ -155,7 +177,9 @@ struct AnimationView: View {
     private func timingTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Key press") {
-            SliderRow("Press linger", value: $model.settings.keyPressLinger,
+            SliderRow("Press linger",
+                      tooltip: "How long the pressed state is held before releasing — adds weight to each tap.",
+                      value: $model.settings.keyPressLinger,
                       in: 0...0.4, step: 0.02) {
                 $0 < 0.005 ? "Off" : "\(Int(($0 * 1000).rounded()))ms"
             }

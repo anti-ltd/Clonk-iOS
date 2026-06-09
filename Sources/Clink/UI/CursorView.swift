@@ -56,12 +56,14 @@ struct CursorView: View {
 
         CardSection("Values") {
             SliderRow("Activation time",
+                      tooltip: "How long you must hold the space bar before cursor mode engages. Raise it if the cursor triggers accidentally while typing.",
                       value: $model.settings.spaceCursorActivationDelay,
                       in: 0...500, step: 25) {
                 $0 < 5 ? "Instant" : "\(Int($0))ms"
             }
             Divider()
             SliderRow("Scroll sensitivity",
+                      tooltip: "How far your finger needs to travel to move the cursor one character. Higher is more sensitive — lower it if the cursor jumps too fast.",
                       value: Binding(
                         get: { 30 - model.settings.spaceCursorStride },
                         set: { model.settings.spaceCursorStride = 30 - $0 }),
@@ -70,6 +72,7 @@ struct CursorView: View {
             }
             Divider()
             SliderRow("Line length",
+                      tooltip: "Characters per line used to calculate vertical cursor jumps when you drag up or down.",
                       value: $model.settings.cursorLineStride,
                       in: 5...80, step: 5) {
                 "\(Int($0)) chars"

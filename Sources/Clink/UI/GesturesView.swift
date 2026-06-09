@@ -28,7 +28,9 @@ struct GesturesView: View {
                               isOn: $model.settings.swipeShowTrail)
                     if model.settings.swipeShowTrail {
                         Divider()
-                        SliderRow("Thickness", value: $model.settings.swipeTrailWidth,
+                        SliderRow("Thickness",
+                                  tooltip: "Width of the trail line drawn under your finger while swiping.",
+                                  value: $model.settings.swipeTrailWidth,
                                   in: 2...8, step: 0.5) {
                             String(format: "%.1f pt", $0)
                         }
@@ -41,12 +43,16 @@ struct GesturesView: View {
                               isOn: $model.settings.swipeKeyMorph)
                     if model.settings.swipeKeyMorph {
                         Divider()
-                        SliderRow("Swell", value: $model.settings.swipeMorphStrength,
+                        SliderRow("Swell",
+                                  tooltip: "How much each key bulges outward as your finger passes over it.",
+                                  value: $model.settings.swipeMorphStrength,
                                   in: 0.05...0.40, step: 0.01) {
                             "\(Int(($0 * 100).rounded()))%"
                         }
                         Divider()
-                        SliderRow("Wave width", value: $model.settings.swipeMorphRadius,
+                        SliderRow("Wave width",
+                                  tooltip: "Radius of the ripple effect — wider spreads the swell across more neighbouring keys.",
+                                  value: $model.settings.swipeMorphRadius,
                                   in: 1.0...2.5, step: 0.1) {
                             String(format: "%.1f×", $0)
                         }

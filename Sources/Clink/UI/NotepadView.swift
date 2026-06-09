@@ -17,12 +17,6 @@ struct NotepadView: View {
         @Bindable var model = model
         @Bindable var notepad = model.notepad
         VStack(spacing: 0) {
-            NotepadPreview(settings: model.settings)
-                .padding(.horizontal, UX.screenPadding)
-                .padding(.top, UX.screenPadding)
-                .padding(.bottom, UX.cardSpacing)
-                .overlay(alignment: .bottom) { Divider().opacity(0.4) }
-
             ScrollView {
                 VStack(spacing: UX.cardSpacing) {
                     switch selectedTab {
