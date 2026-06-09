@@ -38,23 +38,11 @@ struct PerformanceView: View {
     private func responsivenessTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Responsiveness") {
-            Text("The overall snappiness of typing, in one tap. Native mimics the stock keyboard — fast, firm springs, minimal animation, tight compute. Default is Clink's softer liquid feel; Bouncy leans into the deformation. Fine-tune the individual springs under Animation.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, UX.rowVPadding)
-            Divider()
             PresetChips(presets: TuningPresets.responsiveness)
                 .padding(.vertical, UX.rowVPadding)
         }
 
         CardSection("Backspace repeat") {
-            Text("Hold backspace to delete repeatedly. The hold delay is the pause before it starts; the speed accelerates from the start interval toward the fastest interval the longer you hold.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, UX.rowVPadding)
-            Divider()
             SliderRow("Hold delay",
                       tooltip: "How long you must hold backspace before rapid-delete kicks in.",
                       value: $model.settings.repeatHoldDelay,
@@ -83,12 +71,6 @@ struct PerformanceView: View {
     private func suggestionsTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Suggestion compute") {
-            Text("How long after each keystroke before the suggestion engine runs. A longer delay collapses more keystrokes into one compute — fewer UITextChecker calls, less CPU, better battery in fast bursts. Shorter keeps the bar snappier.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, UX.rowVPadding)
-            Divider()
             PresetChips(presets: TuningPresets.performance)
                 .padding(.vertical, UX.rowVPadding)
             Divider()

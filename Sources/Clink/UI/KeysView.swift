@@ -85,12 +85,6 @@ struct KeysView: View {
     private func paddingTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Values") {
-            Text("Add space around the keyboard — not between keys. Top padding sits between the suggestion bar and the keys (handy with a background image); bottom padding lifts the whole keyboard up from the bottom edge.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, UX.rowVPadding)
-            Divider()
             SliderRow("Top padding",
                       tooltip: "Space between the suggestion bar and the top row of keys.",
                       value: $model.settings.keyboardTopPadding,
@@ -112,12 +106,6 @@ struct KeysView: View {
         }
 
         CardSection("Values") {
-            Text("How long to hold the key before rapid-delete begins, and how fast it accelerates.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, UX.rowVPadding)
-            Divider()
             SliderRow("Hold delay",
                       tooltip: "How long you must hold backspace before rapid-delete kicks in.",
                       value: $model.settings.repeatHoldDelay,

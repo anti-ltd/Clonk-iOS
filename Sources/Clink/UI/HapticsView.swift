@@ -27,12 +27,6 @@ struct HapticsView: View {
 
             if model.settings.hapticsEnabled {
                 CardSection("Feel") {
-                    Text("How each keystroke lands in your hand. Heavier styles and a higher strength read punchier and more mechanical; lighter is a faint tick.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, UX.rowVPadding)
-                    Divider()
                     HStack {
                         Text("Style")
                         Spacer()

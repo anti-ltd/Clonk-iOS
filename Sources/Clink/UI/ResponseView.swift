@@ -23,12 +23,6 @@ struct ResponseView: View {
             }
 
             CardSection("Long press") {
-                Text("How long to hold before a long-press fires, and how much your finger may drift mid-hold before it's read as a swipe instead.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, UX.rowVPadding)
-                Divider()
                 SliderRow("Accent delay",
                           tooltip: "How long to hold a letter key before the accent picker appears.",
                           value: $model.settings.accentHoldDelay,
@@ -45,17 +39,13 @@ struct ResponseView: View {
                           in: 4...30, step: 2) { "\(Int($0))pt" }
             }
 
-            CardSection("Slide up") {
-                Text("How far the 123 key must be dragged upward to open the action-panel picker. Only applies when slide-up access is on.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, UX.rowVPadding)
-                Divider()
-                SliderRow("Trigger distance",
-                          tooltip: "How far up you must drag the 123 key to open the panel picker — lower triggers more easily, higher prevents accidental opens.",
-                          value: $model.settings.dragUpThreshold,
-                          in: 10...50, step: 2) { "\(Int($0))pt" }
+            if model.settings.activateWithSlideUp {
+                CardSection("Slide up") {
+                    SliderRow("Trigger distance",
+                              tooltip: "How far up you must drag the 123 key to open the panel picker — lower triggers more easily, higher prevents accidental opens.",
+                              value: $model.settings.dragUpThreshold,
+                              in: 10...50, step: 2) { "\(Int($0))pt" }
+                }
             }
         }
         .navigationTitle("Response")
