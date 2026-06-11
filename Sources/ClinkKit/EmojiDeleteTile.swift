@@ -99,20 +99,28 @@ struct EmojiTapPulse<S: Shape>: ViewModifier {
     let shape: S
     let enabled: Bool
 
+    /// Explicit-state flash with render-side animations — same pattern (and
+    /// rationale) as the letter keyboard's `TapPulse`: keyframeAnimator cost a
+    /// per-frame compositing pass, and phaseAnimator could park bright on a
+    /// fast re-trigger. Every path here ends fading to 0.
+    @State private var flash: CGFloat = 0
+    @State private var fadeTask: Task<Void, Never>?
+
     func body(content: Content) -> some View {
         if enabled {
-            content.keyframeAnimator(initialValue: 0.0, trigger: trigger) { view, flash in
-                view.overlay {
-                    shape.fill(.white)
-                        .opacity(flash)
-                        .blendMode(.plusLighter)
-                        .allowsHitTesting(false)
-                }
-            } keyframes: { _ in
-                KeyframeTrack {
-                    CubicKeyframe(0.0, duration: 0.001)
-                    CubicKeyframe(0.34, duration: 0.05)   // snap bright
-                    CubicKeyframe(0.0, duration: 0.20)    // ease back out
+            content.overlay {
+                shape.fill(.white)
+                    .opacity(flash)
+                    .blendMode(.plusLighter)
+                    .allowsHitTesting(false)
+            }
+            .onChange(of: trigger) { _, _ in
+                fadeTask?.cancel()
+                withAnimation(.linear(duration: 0.05)) { flash = 0.34 }   // snap bright
+                fadeTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.05))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(.easeOut(duration: 0.20)) { flash = 0 } // ease back out
                 }
             }
         } else {

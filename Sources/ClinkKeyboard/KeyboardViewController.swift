@@ -32,7 +32,20 @@ final class KeyboardViewController: UIInputViewController {
     /// slow, so rather than run it on every keystroke (which made fast typing
     /// stutter) we debounce: a burst of keys only triggers ONE compute, once
     /// typing settles. See `scheduleSuggestionUpdate`.
+    ///
+    /// `UITextChecker` is `@MainActor` in the iOS 26 SDK, so this work cannot
+    /// leave the main thread (a background-engine attempt didn't compile).
+    /// What we control instead is WHEN it lands: the compute additionally
+    /// waits for a quiet window after the last keystroke (see
+    /// `quietGatedCompute`) so its stall never overlaps a press/release
+    /// animation — running it ~80ms after the last key put it squarely in the
+    /// middle of the release spring.
     private let engine = SuggestionEngine()
+    /// Timestamp of the most recent key-down, driving the quiet-window check.
+    private var lastKeyActivity = Date.distantPast
+    /// Seconds the keyboard must be touch-free before the checker compute may
+    /// run: covers the post-release linger (~0.1s) plus the release spring.
+    private static let suggestionQuietWindow: TimeInterval = 0.45
     /// Coalesces per-keystroke suggestion recomputes (cancelled + rescheduled
     /// on each change) so we run the checker once typing settles, not per key.
     private var suggestionWork: DispatchWorkItem?
@@ -475,6 +488,7 @@ final class KeyboardViewController: UIInputViewController {
             },
             onAnyTap: { [weak self] in
                 guard let self else { return }
+                self.lastKeyActivity = Date()
                 self.sound.play(settings: self.settings, hasFullAccess: self.hasFullAccess)
             },
             // The globe key — only the extension can advance input modes.
@@ -595,6 +609,7 @@ final class KeyboardViewController: UIInputViewController {
             },
             onAnyTap: { [weak self] in
                 guard let self else { return }
+                self.lastKeyActivity = Date()
                 self.sound.play(settings: self.settings, hasFullAccess: self.hasFullAccess)
             },
             onNextKeyboard: needsInputModeSwitchKey
@@ -766,11 +781,38 @@ final class KeyboardViewController: UIInputViewController {
     /// updates a runloop tick after insert/delete).
     private func scheduleSuggestionUpdate() {
         suggestionWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.updateSuggestions() }
+        let work = DispatchWorkItem { [weak self] in self?.debouncedSuggestionTick() }
         suggestionWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + settings.suggestionDebounceDelay / 1000, execute: work)
     }
 
+    /// The debounce tick: auto-capitalize promptly (cheap — one settled proxy
+    /// read; shift must track sentence starts as responsively as the native
+    /// keyboard), then hand the expensive checker compute to the quiet gate.
+    private func debouncedSuggestionTick() {
+        applyAutoCapitalize()
+        quietGatedCompute()
+    }
+
+    /// Run the `UITextChecker` compute only once the keyboard has been
+    /// touch-free for `suggestionQuietWindow` — rescheduling itself for the
+    /// remainder otherwise. The checker is main-actor-bound (SDK annotation),
+    /// so its tens-of-ms stall can't be moved off-thread; landing it ~80ms
+    /// after the last keystroke put it in the middle of the key-release
+    /// animation. Mid-burst this never runs (every keystroke resets the
+    /// debounce); the only cost is the bar refreshing a beat later once
+    /// typing pauses.
+    private func quietGatedCompute() {
+        let remaining = Self.suggestionQuietWindow
+            - Date().timeIntervalSince(lastKeyActivity)
+        guard remaining > 0 else { computeSuggestions(); return }
+        let work = DispatchWorkItem { [weak self] in self?.quietGatedCompute() }
+        suggestionWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + remaining, execute: work)
+    }
+
+    /// Immediate, ungated update — for appearance/lexicon call sites where
+    /// nothing is animating and the bar should be right from the first frame.
     private func updateSuggestions() {
         // Auto-capitalize first, off the same settled proxy read the suggestions
         // use — and *before* the suggestions-enabled gate, so shift still tracks
@@ -779,7 +821,12 @@ final class KeyboardViewController: UIInputViewController {
         // local mirror can't be trusted here: auto-space / smart-punctuation fire
         // their `textDidChange` after `isApplyingEdit` clears, invalidating it).
         applyAutoCapitalize()
+        computeSuggestions()
+    }
 
+    /// The checker-driven bar compute. On the typing path this is reached only
+    /// through `quietGatedCompute` so it can't stall an in-flight animation.
+    private func computeSuggestions() {
         guard settings.suggestionsEnabled else {
             if !live.suggestions.isEmpty { live.suggestions = [] }
             if live.autocorrection != nil { live.autocorrection = nil }

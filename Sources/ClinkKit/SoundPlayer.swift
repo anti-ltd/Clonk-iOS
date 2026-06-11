@@ -86,6 +86,11 @@ final class SoundPlayer {
     func prepare(for settings: KeyboardSettings, hasFullAccess: Bool) {
         if settings.hapticsEnabled, hasFullAccess { generator(for: settings.hapticStyle).prepare() }
         guard settings.soundEnabled, hasFullAccess, settings.soundPack.needsFullAccess else { return }
+        // Activate the audio session NOW, at keyboard load — `setActive` is a
+        // slow cross-process call (tens of ms), and doing it lazily inside
+        // `play` made the very first keypress visibly hitch. `play` keeps its
+        // lazy call only as a fallback for settings changed mid-session.
+        activateSessionIfNeeded()
         for name in settings.soundPack.sampleNames where players[name] == nil {
             guard let url = Bundle.main.url(
                 forResource: name, withExtension: settings.soundPack.fileExtension, subdirectory: "Sounds")

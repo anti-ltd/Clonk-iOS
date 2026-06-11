@@ -22,20 +22,32 @@ struct TapPulse: ViewModifier {
     /// Peak opacity of the flash (0 = off). Tunable via `tapFlashStrength`.
     var strength: CGFloat = 0.34
 
+    /// Current flash opacity. Driven by explicit writes (bright on trigger,
+    /// fade 50ms later) with render-side animations in between — NOT a
+    /// `keyframeAnimator` (its content closure re-runs on the main thread every
+    /// frame, and per-frame `.plusLighter` compositing over a glass surface
+    /// dropped the press bloom to a crawl) and NOT a `phaseAnimator` (a
+    /// re-trigger mid-cycle — double-tapping a key fast — could park it on the
+    /// bright phase, leaving the key visibly stuck lit). Every code path here
+    /// ends with an animated fade to 0, so a stuck flash is impossible.
+    @State private var flash: CGFloat = 0
+    @State private var fadeTask: Task<Void, Never>?
+
     func body(content: Content) -> some View {
         if enabled, strength > 0.001 {
-            content.keyframeAnimator(initialValue: 0.0, trigger: trigger) { view, flash in
-                view.overlay {
-                    shape.fill(.white)
-                        .opacity(flash)
-                        .blendMode(.plusLighter)
-                        .allowsHitTesting(false)
-                }
-            } keyframes: { _ in
-                KeyframeTrack {
-                    CubicKeyframe(0.0, duration: 0.001)
-                    CubicKeyframe(strength, duration: 0.05)   // snap bright
-                    CubicKeyframe(0.0, duration: 0.20)        // ease back out
+            content.overlay {
+                shape.fill(.white)
+                    .opacity(flash)
+                    .blendMode(.plusLighter)
+                    .allowsHitTesting(false)
+            }
+            .onChange(of: trigger) { _, _ in
+                fadeTask?.cancel()
+                withAnimation(.linear(duration: 0.05)) { flash = strength }   // snap bright
+                fadeTask = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.05))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(.easeOut(duration: 0.20)) { flash = 0 }     // ease back out
                 }
             }
         } else {
@@ -68,9 +80,9 @@ struct KeyView: View {
     /// `swipeKeyMorph`).
     let swipeMorph: Bool
     /// Peak extra scale at the finger's centre (per `swipeMorphStrength`).
+    /// The ripple's reach (`swipeMorphRadius`) lives in the router, which
+    /// computes and pushes each key's bulge.
     let swipeMorphStrength: CGFloat
-    /// Ripple reach in key-sizes (per `swipeMorphRadius`).
-    let swipeMorphRadius: CGFloat
     /// Stable identity (row-col) so the glyph layer can track this key across
     /// rebuilds for its symbol animations.
     let keyID: String
@@ -82,8 +94,13 @@ struct KeyView: View {
     let router: KeyTouchRouter
     let physics: KeyPressPhysics
 
+    /// This key's own observable press state — reading it (rather than a shared
+    /// set on the router) means a press invalidates only this key's view, not
+    /// the whole grid. The lookup itself is unobserved (see `KeyTouchRouter`).
+    private var state: KeyPressState { router.state(for: keyID) }
+
     /// Pressed for any reason: a real finger (the router) or the simulator.
-    private var isPressed: Bool { router.pressed.contains(keyID) || simulatedPressed }
+    private var isPressed: Bool { state.isPressed || simulatedPressed }
     /// Space-bar trackpad drag state (only the space key reads these).
     private var cursorActive: Bool { router.spaceCursorActive }
     private var dragX: CGFloat { router.spaceDragX }
@@ -124,15 +141,19 @@ struct KeyView: View {
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius, style: .continuous) }
 
     /// Live swell from a passing swipe finger (1 = rest). Glass-only and gated on
-    /// `swipeKeyMorph`; reads the router's proximity bulge, so it tracks the finger
-    /// frame-by-frame and settles back to 1 the moment the swipe lifts. Applied to
-    /// the surface alone (not the glyph), so the glass flows while the letter holds
-    /// its place — and because the surfaces share a `GlassEffectContainer`, a swollen
-    /// key liquid-merges into its neighbours as the ripple passes. Strength and reach
-    /// come from `swipeMorphStrength` / `swipeMorphRadius`.
+    /// `swipeKeyMorph`; reads this key's OWN router-pushed bulge (see
+    /// `KeyPressState.bulge`), so a glide sample re-renders only the keys whose
+    /// swell actually changed — every key pulling the live trail per sample is
+    /// what made the ripple drop frames. Settles back to 1 the moment the swipe
+    /// lifts (the router zeroes all bulges). Applied to the surface alone (not
+    /// the glyph), so the glass flows while the letter holds its place — and
+    /// because the surfaces share a `GlassEffectContainer`, a swollen key
+    /// liquid-merges into its neighbours as the ripple passes. Strength comes
+    /// from `swipeMorphStrength`; the reach lives in the router
+    /// (`swipeMorphRadius`), where the bulge is computed.
     private var swipeBulgeScale: CGFloat {
-        guard swipeMorph, theme.material == .liquidGlass, router.swipeActive else { return 1 }
-        return 1 + router.swipeProximityBulge(for: keyID, radiusFactor: swipeMorphRadius) * swipeMorphStrength
+        guard swipeMorph, theme.material == .liquidGlass else { return 1 }
+        return 1 + state.bulge * swipeMorphStrength
     }
 
     /// Liquid "warp": the space bar stretches toward the finger (and squashes
@@ -161,6 +182,15 @@ struct KeyView: View {
     }
 
     var body: some View {
+        // Liquid glass only: register a dependency on the neighbours' press
+        // activity. The container's liquid merge between adjacent keys only
+        // refreshes when the views on BOTH sides of the blend re-evaluate, so
+        // each glass key re-renders when a neighbour is pressed/released (the
+        // router bumps this tick — see `recomputePressed`). That's ~6 keys per
+        // press instead of the whole grid, which is what keeps the press bloom
+        // landing on the very next frame. Solid themes have no cross-key
+        // blending and skip the read entirely.
+        if theme.material == .liquidGlass { _ = state.neighborTick }
         let w = warp
         // Generic keys: only the SURFACE blooms here (and morphs in the
         // container); the glyph is drawn on top by the canvas glyph layer.
@@ -205,7 +235,7 @@ struct KeyView: View {
             // landing, so each tap gets its own confirmation. It only flashes a
             // brief highlight over the key — it never touches the bloom geometry,
             // so it adds to the press effect rather than overriding it.
-            .modifier(TapPulse(trigger: router.tapTick(keyID), shape: shape, enabled: pressWarp, strength: physics.tapFlashStrength))
+            .modifier(TapPulse(trigger: state.tapTick, shape: shape, enabled: pressWarp, strength: physics.tapFlashStrength))
             // Publish the glyph for the on-top layer — except shift, which draws
             // its own so it can morph with its interactive glass.
             .anchorPreference(key: KeyGlyphKey.self, value: .bounds) { anchor in
@@ -223,9 +253,13 @@ struct KeyView: View {
                 return KeyPopup(glyph: g, anchor: anchor)
             }
             // Publish this key's bounds while its accent bar is up, so the canvas
-            // can anchor the accent picker over it.
+            // can anchor the accent picker over it. `isPressed` is checked FIRST
+            // so unpressed keys never read (and thus never observe) the shared
+            // `accentKeyID` — an accent session can only start on a held key, so
+            // the gate loses nothing while sparing the grid an invalidation on
+            // every session start/end.
             .anchorPreference(key: AccentPopupKey.self, value: .bounds) { anchor in
-                router.accentKeyID == keyID ? anchor : nil
+                isPressed && router.accentKeyID == keyID ? anchor : nil
             }
             // Publish this key's frame so the multitouch surface can hit-test to
             // it. Every key (including shift / space / function) is touchable.

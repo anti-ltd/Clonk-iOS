@@ -629,12 +629,13 @@ public struct KeyboardCanvas: View {
                 onClear: { notepad.scratch = "" }
             )
         } else if settings.suggestionsEnabled {
-            SuggestionBar(suggestions: live.suggestions,
-                          autocorrection: live.autocorrection,
-                          emoji: live.emojiSuggestions, theme: theme,
-                          onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
-                          onEmoji: onEmojiSuggestion,
-                          hitboxScale: settings.suggestionHitboxScale)
+            // The live suggestions are read inside this CHILD view, not here —
+            // so each debounced suggestion recompute re-renders only the bar,
+            // never this whole canvas (and with it the entire key grid).
+            LiveSuggestionBar(live: live, theme: theme,
+                              onTap: onSuggestion, onKeepTyped: onCancelAutocorrect,
+                              onEmoji: onEmojiSuggestion,
+                              hitboxScale: settings.suggestionHitboxScale)
                 .anchorPreference(key: BarHitboxKey.self, value: .bounds) { ["bar": $0] }
         } else {
             Spacer()
@@ -885,13 +886,16 @@ public struct KeyboardCanvas: View {
                             // local space == the UIView's local space), so it tracks
                             // the finger exactly. Below the surface but above the
                             // keys; never intercepts touches.
-                            if settings.swipeTypingEnabled, settings.swipeShowTrail,
-                               touch.swipeActive, touch.swipeTrail.count > 1 {
-                                SwipeTrailShape(points: touch.swipeTrail)
-                                    .stroke(theme.accent.color.opacity(0.55),
-                                            style: StrokeStyle(lineWidth: CGFloat(settings.swipeTrailWidth),
-                                                               lineCap: .round, lineJoin: .round))
-                                    .allowsHitTesting(false)
+                            // The live trail is read inside this CHILD view, not
+                            // here — so a glide sample redraws only the stroke,
+                            // never this closure (which would rebuild the
+                            // MultiTouchSurface per sample). The keys' ripple
+                            // doesn't depend on this either: the router PUSHES
+                            // each key's bulge into its own KeyPressState.
+                            if settings.swipeTypingEnabled, settings.swipeShowTrail {
+                                SwipeTrailOverlay(touch: touch,
+                                                  color: theme.accent.color.opacity(0.55),
+                                                  lineWidth: CGFloat(settings.swipeTrailWidth))
                             }
                             MultiTouchSurface(
                                 router: touch,
@@ -927,6 +931,8 @@ public struct KeyboardCanvas: View {
                                 // panel (notepad/calc/…) composing, where the swipe
                                 // callbacks' host-document edits wouldn't apply.
                                 swipeEnabled: settings.swipeTypingEnabled && live.activePanel == nil,
+                                swipeMorphEnabled: settings.swipeTypingEnabled && settings.swipeKeyMorph,
+                                swipeMorphRadius: CGFloat(settings.swipeMorphRadius),
                                 onSwipeStart: onSwipeStart,
                                 onSwipeEnd: onSwipeEnd)
                         }
@@ -1657,7 +1663,6 @@ public struct KeyboardCanvas: View {
                             popupEnabled: settings.keyPopupEnabled, pressWarp: settings.keyPressWarp,
                             swipeMorph: settings.swipeTypingEnabled && settings.swipeKeyMorph,
                             swipeMorphStrength: CGFloat(settings.swipeMorphStrength),
-                            swipeMorphRadius: CGFloat(settings.swipeMorphRadius),
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
                             router: touch,
@@ -1680,5 +1685,48 @@ public struct KeyboardCanvas: View {
         } else {
             content.frame(maxHeight: .infinity)
         }
+    }
+}
+
+/// Render-isolation wrapper for the swipe trail: the router's live trail is
+/// read in THIS body, so each finger sample re-renders only the stroke — not
+/// the surrounding overlay closure that hosts the `MultiTouchSurface`. The
+/// keys' ripple is independent of this view: the router pushes per-key bulge
+/// values into each `KeyPressState` as the trail advances.
+private struct SwipeTrailOverlay: View {
+    var touch: KeyTouchRouter
+    let color: Color
+    let lineWidth: CGFloat
+
+    var body: some View {
+        if touch.swipeActive, touch.swipeTrail.count > 1 {
+            SwipeTrailShape(points: touch.swipeTrail)
+                .stroke(color,
+                        style: StrokeStyle(lineWidth: lineWidth,
+                                           lineCap: .round, lineJoin: .round))
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+/// Render-isolation wrapper for the suggestion bar: the observable `live`
+/// suggestion properties are read in THIS body, so a suggestion recompute
+/// invalidates just this view — `KeyboardCanvas.body` (and the whole key grid
+/// it builds) stays untouched.
+private struct LiveSuggestionBar: View {
+    var live: KeyboardLiveState
+    let theme: Theme
+    let onTap: (String) -> Void
+    let onKeepTyped: () -> Void
+    let onEmoji: (String) -> Void
+    let hitboxScale: Double
+
+    var body: some View {
+        SuggestionBar(suggestions: live.suggestions,
+                      autocorrection: live.autocorrection,
+                      emoji: live.emojiSuggestions, theme: theme,
+                      onTap: onTap, onKeepTyped: onKeepTyped,
+                      onEmoji: onEmoji,
+                      hitboxScale: hitboxScale)
     }
 }

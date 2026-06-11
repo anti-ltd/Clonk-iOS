@@ -66,41 +66,55 @@ struct EmojiGlassFlashView: View {
     let trigger: Int
 
     /// Animated state: the droplet's scale (the morph) and its opacity (in/out).
-    private struct Flash { var scale: CGFloat = 0.55; var opacity: Double = 0 }
-
-    /// `keyframeAnimator` only fires when its trigger *changes while mounted*. This
-    /// view is freshly mounted per flash (the overlay unmounts at rest), so the
-    /// external `trigger` never changes within one lifetime — the morph would never
-    /// play. Bumping a local tick on appear gives the animator the change it needs;
-    /// also bumping on `trigger` re-morphs a repeat tap that lands before unmount.
-    @State private var tick = 0
+    /// Driven by explicit writes with render-side animations — NOT a
+    /// `keyframeAnimator`, whose content closure re-runs on the main thread
+    /// every frame and was REBUILDING the `glassEffect` view per frame for the
+    /// whole 0.38s flash (expensive on older GPUs), and NOT a `phaseAnimator`,
+    /// which can park on a bright phase when re-triggered mid-cycle (the
+    /// stuck-lit-key bug — see `TapPulse`). The glass view below is built once;
+    /// only its scale/opacity animate, and every path ends faded out.
+    @State private var scale: CGFloat = 0.55
+    @State private var opacity: Double = 0
+    @State private var playTask: Task<Void, Never>?
 
     var body: some View {
         let shape = Capsule(style: .continuous)
         ZStack {
-            Color.clear.keyframeAnimator(initialValue: Flash(), trigger: tick) { _, f in
-                Color.clear
-                    .glassEffect(.regular.tint(tint), in: shape)
-                    .scaleEffect(f.scale)
-                    .opacity(f.opacity)
-            } keyframes: { _ in
-                KeyframeTrack(\.scale) {
-                    CubicKeyframe(0.55, duration: 0.001)
-                    CubicKeyframe(1.08, duration: 0.15)   // morph out past full
-                    CubicKeyframe(0.97, duration: 0.23)   // settle back in
-                }
-                KeyframeTrack(\.opacity) {
-                    CubicKeyframe(0.0, duration: 0.001)
-                    CubicKeyframe(0.85, duration: 0.06)   // bloom in
-                    CubicKeyframe(0.0, duration: 0.32)    // ease away
-                }
-            }
+            Color.clear
+                .glassEffect(.regular.tint(tint), in: shape)
+                .scaleEffect(scale)
+                .opacity(opacity)
             // The glyph, crisp on top of the glass droplet.
             Text(glyph).font(.system(size: 30))
         }
         .allowsHitTesting(false)
-        .onAppear { tick &+= 1 }
-        .onChange(of: trigger) { _, _ in tick &+= 1 }
+        // This view is freshly mounted per flash (the overlay unmounts at
+        // rest), so play on appear; a repeat tap that lands before unmount
+        // changes `trigger` and re-plays from the rest pose.
+        .onAppear { play() }
+        .onChange(of: trigger) { _, _ in play() }
+    }
+
+    /// Replay the morph: snap back to the rest pose, then run the same curve
+    /// the keyframes traced — scale 0.55 → 1.08 (0.15s) settling to 0.97
+    /// (0.23s), opacity blooming to 0.85 (0.06s) then easing away (0.32s).
+    private func play() {
+        playTask?.cancel()
+        var snap = Transaction()
+        snap.disablesAnimations = true
+        withTransaction(snap) { scale = 0.55; opacity = 0 }
+        playTask = Task { @MainActor in
+            // A fresh runloop turn, so the reset above is committed and these
+            // animate from the rest pose instead of coalescing with it.
+            withAnimation(.linear(duration: 0.06)) { opacity = 0.85 }   // bloom in
+            withAnimation(.easeOut(duration: 0.15)) { scale = 1.08 }    // morph out past full
+            try? await Task.sleep(for: .seconds(0.06))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.32)) { opacity = 0 }     // ease away
+            try? await Task.sleep(for: .seconds(0.09))                  // 0.15 from start
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.23)) { scale = 0.97 }  // settle back in
+        }
     }
 }
 

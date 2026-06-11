@@ -11,6 +11,14 @@ import UIKit
 /// it's shared by the keyboard extension (which runs it from a debounced work
 /// item, off the hot typing path) and the in-app device showcase (which runs it
 /// as the typing simulator fills the bubble, so the suggestion bar is live).
+///
+/// Necessarily `@MainActor`: the iOS 26 SDK annotates `UITextChecker` (and
+/// even `UITextChecker.availableLanguages`) as main-actor, so the checker work
+/// CANNOT be moved to a background queue — a dual-engine attempt didn't
+/// compile under Swift 6. The extension compensates by *scheduling*: the
+/// debounced bar compute waits for a quiet window after the last keystroke
+/// (see `KeyboardViewController.quietGatedCompute`) so its tens-of-ms stall
+/// never lands in the middle of a key press/release animation.
 @MainActor
 public final class SuggestionEngine {
     private let checker = UITextChecker()
@@ -146,7 +154,7 @@ public final class SuggestionEngine {
         correctionCache = nil
     }
 
-    public struct Result {
+    public struct Result: Sendable {
         public var predictions: [String]
         public var correction: Autocorrection?
         /// Emoji matching the word being typed, shown as non-primary bar chips

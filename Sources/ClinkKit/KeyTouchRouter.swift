@@ -26,13 +26,66 @@ import UIKit
 /// state into it during touch events (on the main thread — safe), and every
 /// `KeyView` reads its own pressed/warp state back out. The SwiftUI views keep
 /// rendering exactly as before; only the *source* of the press changed.
+/// One key's observable press state. Each `KeyView` reads ONLY its own instance
+/// (plus, on liquid glass, its `neighborTick`), so a press/release invalidates
+/// the pressed key and — on glass — its immediate neighbours, never the whole
+/// grid. `@Observable` tracks per *property*, not per key: the old shared
+/// `pressed: Set` / `tapTicks` dictionary re-rendered all ~35 keys (glass
+/// effects × preference closures) several times per keystroke, which on-device
+/// cost the frame that should have shown the press bloom — taps felt dropped.
+@MainActor
+@Observable
+public final class KeyPressState {
+    /// Held by any finger, or lingering after release (see `startLinger`).
+    public internal(set) var isPressed = false
+    /// Bumped on *every* touch-down — drives the additive "tap pulse" each
+    /// `KeyView` plays to confirm a press.
+    ///
+    /// `isPressed` can't do this job: the press bloom is sprung on it changing,
+    /// but pressing the same key twice in quick succession (the second `l` in
+    /// "tell") re-fires inside the linger window, so the key never leaves
+    /// pressed and the bloom never re-animates — the second tap reads as
+    /// dropped even though the character *was* inserted. This tick changes on
+    /// every landing, so the pulse fires every time regardless of press state.
+    public internal(set) var tapTick = 0
+    /// Bumped whenever an ADJACENT key's press flips. Liquid-glass keys read
+    /// this so they re-evaluate when a neighbour is pressed or released —
+    /// `GlassEffectContainer`'s liquid merge only refreshes when the views on
+    /// BOTH sides of the blend re-evaluate, and the merge is strictly local,
+    /// so the neighbours are exactly the set that needs waking. Solid keys
+    /// never read it, so the writes cost nothing there.
+    public internal(set) var neighborTick = 0
+    /// Live swipe-ripple swell for this key, `0` (rest) … `1` (finger
+    /// dead-centre), pushed by the router on each glide sample (see
+    /// `updateSwipeTrail`). Per-key — and only written when the value actually
+    /// moved — so a sample re-renders the handful of keys under and around the
+    /// finger, not the whole grid (which is what made the ripple drop frames).
+    public internal(set) var bulge: CGFloat = 0
+}
+
 @MainActor
 @Observable
 public final class KeyTouchRouter {
-    /// Keys currently held down (by any finger). Each `KeyView` renders pressed
-    /// when its ID is in here. Recomputed as the union of all active touches, so
-    /// two fingers on one key keep it lit until both lift.
-    public private(set) var pressed: Set<String> = []
+    /// Per-key observable press state, created on first access. The dictionary
+    /// itself is deliberately NOT observed (only each `KeyPressState`'s own
+    /// properties are), so lazily inserting a state — or flipping one key's
+    /// press — never invalidates any other key's view.
+    @ObservationIgnored private var keyStates: [String: KeyPressState] = [:]
+
+    /// This key's press state — `KeyView` reads its pressed/tap-pulse out of
+    /// here, written by the touch surface during touch events.
+    public func state(for id: String) -> KeyPressState {
+        if let s = keyStates[id] { return s }
+        let s = KeyPressState()
+        keyStates[id] = s
+        return s
+    }
+
+    /// Keys currently held down (by any finger) or lingering — the union of all
+    /// active touches, so two fingers on one key keep it lit until both lift.
+    /// Internal diffing state only (deliberately unobserved): views are driven
+    /// by the per-key `KeyPressState`s, plus `neighborTick` for the glass merge.
+    @ObservationIgnored public private(set) var pressed: Set<String> = []
 
     /// Space-bar trackpad: live horizontal drag offset (drives the glass warp)
     /// and whether the current space touch has crossed into cursor-drag mode.
@@ -80,21 +133,6 @@ public final class KeyTouchRouter {
     /// The highlighted (and on-release committed) option index.
     public private(set) var accentIndex: Int = 0
 
-    /// Per-key counter bumped on *every* touch-down. Drives the additive "tap
-    /// pulse" each `KeyView` plays to confirm a press.
-    ///
-    /// `pressed` can't do this job: the press bloom is sprung on `pressed`
-    /// changing, but pressing the same key twice in quick succession (the second
-    /// `l` in "tell") re-fires inside the linger window, so the key never leaves
-    /// `pressed` and the bloom never re-animates — the second tap reads as
-    /// dropped even though the character *was* inserted. This tick changes on
-    /// every landing, so the pulse fires every time regardless of press state.
-    public private(set) var tapTicks: [String: Int] = [:]
-
-    /// The current tap count for a key (0 if never pressed). Read by `KeyView` as
-    /// its pulse trigger.
-    public func tapTick(_ id: String) -> Int { tapTicks[id] ?? 0 }
-
     public init() {}
 
     // MARK: - Registry (pushed in from the layout each pass)
@@ -104,8 +142,22 @@ public final class KeyTouchRouter {
     // via `resolveSpec` at touch time, so they always reflect the current plane /
     // shift without round-tripping closures through the preference system.
 
-    /// keyID → frame in the grid's coordinate space.
-    fileprivate var frames: [String: CGRect] = [:]
+    /// keyID → frame in the grid's coordinate space. Unobserved: it feeds
+    /// hit-testing and the bulge/neighbour computations, never a view directly.
+    @ObservationIgnored fileprivate var frames: [String: CGRect] = [:]
+    /// keyID → the IDs of adjacent keys (edge gap ≤ `neighborGap` on both
+    /// axes — same-row neighbours, the rows above/below, and diagonals).
+    /// Rebuilt only when `frames` actually changes. Drives the glass-merge
+    /// `neighborTick` nudges in `recomputePressed`.
+    @ObservationIgnored private var neighbors: [String: [String]] = [:]
+    /// Maximum edge-to-edge gap (pt) for two keys to count as neighbours.
+    /// Comfortably above key/row spacing (~6pt) so diagonals qualify, and well
+    /// below a key width so next-but-one keys don't.
+    private let neighborGap: CGFloat = 18
+    /// Swipe-ripple config (pushed from settings each layout pass): whether the
+    /// glide should swell keys at all, and the influence radius in key-sizes.
+    @ObservationIgnored fileprivate var swipeMorphEnabled: Bool = false
+    @ObservationIgnored fileprivate var swipeMorphRadius: CGFloat = 1.0
     /// keyID → its current spec. Resolved on demand at touch time so it always
     /// reads the *live* plane/shift (a sticky-shift flip mid-burst must affect the
     /// very next touch). The canvas memoizes the underlying build, so this closure
@@ -205,9 +257,17 @@ public final class KeyTouchRouter {
                             dragUpThreshold: CGFloat,
                             surfaceWidth: CGFloat,
                             swipeEnabled: Bool,
+                            swipeMorphEnabled: Bool,
+                            swipeMorphRadius: CGFloat,
                             onSwipeStart: @escaping () -> Void,
                             onSwipeEnd: @escaping ([CGPoint], [Character: CGPoint]) -> Void) {
-        self.frames = frames
+        // Frames change only on real layout changes (resize, plane padding, …);
+        // skipping the no-op write keeps the neighbour map rebuild off the
+        // common per-render update path.
+        if frames != self.frames {
+            self.frames = frames
+            rebuildNeighbors()
+        }
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
         self.lingerDuration = lingerDuration
@@ -234,8 +294,30 @@ public final class KeyTouchRouter {
         self.dragUpThreshold = dragUpThreshold
         self.surfaceWidth = surfaceWidth
         self.swipeEnabled = swipeEnabled
+        self.swipeMorphEnabled = swipeMorphEnabled
+        self.swipeMorphRadius = swipeMorphRadius
         self.onSwipeStart = onSwipeStart
         self.onSwipeEnd = onSwipeEnd
+    }
+
+    /// Recompute the adjacency map from the current frames: two keys are
+    /// neighbours when their edge-to-edge gap is at most `neighborGap` on both
+    /// axes. O(n²) over ~35 keys, and only on real layout changes — trivial.
+    private func rebuildNeighbors() {
+        var map: [String: [String]] = [:]
+        let entries = Array(frames)
+        for i in entries.indices {
+            for j in (i + 1)..<entries.count {
+                let a = entries[i].value, b = entries[j].value
+                let dx = max(b.minX - a.maxX, a.minX - b.maxX, 0)
+                let dy = max(b.minY - a.maxY, a.minY - b.maxY, 0)
+                if dx <= neighborGap, dy <= neighborGap {
+                    map[entries[i].key, default: []].append(entries[j].key)
+                    map[entries[j].key, default: []].append(entries[i].key)
+                }
+            }
+        }
+        neighbors = map
     }
 
     // MARK: - Swipe session (driven by KeyGridTouchView)
@@ -274,25 +356,38 @@ public final class KeyTouchRouter {
         onSwipeStart()
     }
 
-    /// Publish the live trail for the overlay.
-    fileprivate func updateSwipeTrail(_ points: [CGPoint]) { swipeTrail = points }
+    /// Publish the live trail for the overlay, and PUSH the ripple swell into
+    /// each affected key's own `KeyPressState.bulge` — keys never read the
+    /// trail themselves. Pulling (every key reading `swipeTrail` per sample)
+    /// re-rendered the entire grid 60×/s during a glide, which is exactly what
+    /// made the ripple drop frames; pushing only touches the keys whose swell
+    /// actually moved (the handful around the finger).
+    fileprivate func updateSwipeTrail(_ points: [CGPoint]) {
+        swipeTrail = points
+        if swipeMorphEnabled { pushBulges(tip: points.last) }
+    }
 
-    /// How strongly a key should swell as the swiping finger passes over it, on
-    /// `0` (rest) … `1` (finger dead-centre on the key). Falls off smoothly to `0`
-    /// just past the key's edge, so only the key under the trace and its immediate
-    /// neighbours react — a travelling ripple, not the whole grid pulsing. Returns
-    /// `0` when no swipe is engaged. Reads the live trail head, so a view that calls
-    /// this re-renders as the finger moves. `radiusFactor` scales the influence
-    /// radius in key-sizes — higher reaches more neighbours (a wider wave). The key
-    /// drives the visual; see `KeyView.swipeBulgeScale`.
-    public func swipeProximityBulge(for keyID: String, radiusFactor: CGFloat) -> CGFloat {
-        guard swipeActive, let tip = swipeTrail.last, let f = frames[keyID] else { return 0 }
-        let centre = CGPoint(x: f.midX, y: f.midY)
-        let d = hypot(tip.x - centre.x, tip.y - centre.y)
-        let radius = max(f.width, f.height) * radiusFactor
-        guard radius > 0, d < radius else { return 0 }
-        let t = 1 - d / radius
-        return t * t   // ease-in falloff — gentle at the fringe, peaks under the finger
+    /// Write each key's ripple swell, `0` (rest) … `1` (finger dead-centre),
+    /// falling off smoothly to `0` just past `swipeMorphRadius` key-sizes — a
+    /// travelling ripple, not the whole grid pulsing. `tip: nil` settles every
+    /// key back to rest. Writes are skipped when the value barely moved, so
+    /// keys far from the finger are never invalidated at all.
+    private func pushBulges(tip: CGPoint?) {
+        for (id, f) in frames {
+            var target: CGFloat = 0
+            if let tip {
+                let d = hypot(tip.x - f.midX, tip.y - f.midY)
+                let radius = max(f.width, f.height) * swipeMorphRadius
+                if radius > 0, d < radius {
+                    let t = 1 - d / radius
+                    target = t * t   // ease-in falloff — gentle at the fringe, peaks under the finger
+                }
+            }
+            let s = state(for: id)
+            if abs(s.bulge - target) > 0.004 || (target == 0 && s.bulge != 0) {
+                s.bulge = target
+            }
+        }
     }
 
     /// Finish the swipe: hand the path + letter centres to the host to decode and
@@ -301,6 +396,7 @@ public final class KeyTouchRouter {
         guard swipeActive else { return }
         swipeActive = false
         swipeTrail = []
+        pushBulges(tip: nil)   // every swollen key springs back to rest
         onSwipeEnd(path, letterCenters())
     }
 
@@ -309,6 +405,7 @@ public final class KeyTouchRouter {
         guard swipeActive else { return }
         swipeActive = false
         swipeTrail = []
+        pushBulges(tip: nil)
     }
 
     // MARK: - Hit testing
@@ -422,7 +519,7 @@ public final class KeyTouchRouter {
         pressStart[id] = Date()     // for the minimum-visible-press floor (see startLinger)
         cancelLinger(id)            // pressed again → stop any pending fade-out
         recomputePressed()
-        tapTicks[id, default: 0] &+= 1   // fire the per-press tap pulse
+        state(for: id).tapTick &+= 1   // fire the per-press tap pulse
         onPressDown()
 
         // Remember the letter just typed so the *next* touch can predict from it.
@@ -455,7 +552,17 @@ public final class KeyTouchRouter {
                     spaceCursorReady = true
                 }
             } else {
-                spec.action()
+                // Commit the character on the NEXT runloop turn, not inside the
+                // touch event. The insert is a cross-process proxy call (and, on
+                // a word terminator, runs the synchronous autocorrect check) —
+                // doing it here held up the render commit that STARTS the press
+                // bloom, so by the time frames appeared the spring was half done
+                // and the key seemed to snap. Deferring lets the press visual
+                // land on the very next frame; FIFO ordering on the main queue
+                // keeps the document text in exact key order, and the block runs
+                // before any later touch event can be delivered.
+                let action = spec.action
+                DispatchQueue.main.async { action() }
                 // Schedule the accent bar if this key has variants and the
                 // feature is on. The base is already typed (above); a hold then
                 // raises the bar, and releasing on a variant replaces it.
@@ -638,7 +745,12 @@ public final class KeyTouchRouter {
                     // the press now so it springs straight back to full size.
                     clearPress(id)
                 } else {
-                    spec.action()                         // tap → space
+                    // Tap → space, deferred like the character keys: the space
+                    // is the terminator that runs the synchronous autocorrect
+                    // (UITextChecker — tens of ms on a miss), which would
+                    // otherwise stall the release animation's first frames.
+                    let action = spec.action
+                    DispatchQueue.main.async { action() }
                 }
                 spaceCursorActive = false
                 spaceDragX = 0
@@ -713,7 +825,16 @@ public final class KeyTouchRouter {
 
     private func recomputePressed() {
         let next = Set(heldCounts.keys).union(lingering)
-        if next != pressed { pressed = next }
+        guard next != pressed else { return }
+        let changed = next.symmetricDifference(pressed)
+        for id in changed {
+            state(for: id).isPressed = next.contains(id)
+            // Nudge the neighbours so glass keys adjacent to the press
+            // re-evaluate too — the liquid merge needs both sides of the blend
+            // refreshed. Solid keys never read the tick, so this is free there.
+            for n in neighbors[id] ?? [] { state(for: n).neighborTick &+= 1 }
+        }
+        pressed = next
     }
 
     /// Immediately drop a key's pressed state (no linger) — used when a gesture
@@ -1080,6 +1201,8 @@ struct MultiTouchSurface: UIViewRepresentable {
     let dragUpThreshold: CGFloat
     let surfaceWidth: CGFloat
     let swipeEnabled: Bool
+    let swipeMorphEnabled: Bool
+    let swipeMorphRadius: CGFloat
     let onSwipeStart: () -> Void
     let onSwipeEnd: ([CGPoint], [Character: CGPoint]) -> Void
 
@@ -1108,6 +1231,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       dragUpThreshold: dragUpThreshold,
                       surfaceWidth: surfaceWidth,
                       swipeEnabled: swipeEnabled,
+                      swipeMorphEnabled: swipeMorphEnabled,
+                      swipeMorphRadius: swipeMorphRadius,
                       onSwipeStart: onSwipeStart,
                       onSwipeEnd: onSwipeEnd)
         return v
@@ -1137,6 +1262,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       dragUpThreshold: dragUpThreshold,
                       surfaceWidth: surfaceWidth,
                       swipeEnabled: swipeEnabled,
+                      swipeMorphEnabled: swipeMorphEnabled,
+                      swipeMorphRadius: swipeMorphRadius,
                       onSwipeStart: onSwipeStart,
                       onSwipeEnd: onSwipeEnd)
     }

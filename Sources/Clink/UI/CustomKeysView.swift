@@ -312,6 +312,7 @@ struct CustomKeyEditorBody: View {
                     Text("Leave the label blank to show what the key types.")
                         .font(.caption).foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, UX.rowVPadding)
                 }
             }
 
@@ -320,6 +321,7 @@ struct CustomKeyEditorBody: View {
                     Text("Hold the key to pick one of these, Gboard-style.")
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, UX.rowVPadding)
                     if !alternates.isEmpty {
                         Divider()
                         ScrollView(.horizontal, showsIndicators: false) {
