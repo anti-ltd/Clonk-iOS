@@ -476,15 +476,18 @@ public struct KeyboardCanvas: View {
         pickerDragHover = panelRowFrames.first { $0.value.contains(windowPoint) }?.key
     }
 
-    /// Release of a 123 drag-up: select the row under the finger, or leave the
-    /// popover open for a follow-up tap if released away from any row.
+    /// Release of a 123 drag-up: select the row under the finger, or dismiss the
+    /// popover if released away from any row. A drag-up is always a deliberate
+    /// gesture (it had to cross the engage threshold), so releasing off a row
+    /// dismisses — matching the suggestion-bar icon's "dragged off → dismiss".
     private func slideDragEnd(_ windowPoint: CGPoint) {
         defer { pickerDragHover = nil }
         guard settings.panelPickerStyle == .popover, pickerOpen else { return }
         if let hover = panelRowFrames.first(where: { $0.value.contains(windowPoint) })?.key {
             activate(hover)
+        } else {
+            withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }
         }
-        // else: leave the popover open — user can tap a row or tap-away to dismiss.
     }
 
     private func togglePanel(_ panel: ActionPanel) {
@@ -1107,17 +1110,14 @@ public struct KeyboardCanvas: View {
     @ViewBuilder private func glyphLabel(_ g: KeyGlyphInfo) -> some View {
         Group {
             if g.isSystem {
-                // While a word-delete swipe is engaged, show the filled variant so
-                // the key visibly "powers up" as it eats words (cross-faded by the
-                // replace transition, the per-word `.bounce` still firing on top).
-                Image(systemName: deleteSwipeSymbol(g))
+                Image(systemName: g.glyph)
                     .font(.system(size: 18, weight: .medium))
                     // Animate symbol swaps both ways — e.g. the return glyph
                     // tracking the host field (return ⇄ go ⇄ send …).
                     .contentTransition(.symbolEffect(.replace))
                     // Bounce on each held-delete repeat (no-op elsewhere).
                     .symbolEffect(.bounce, value: g.deleteTick)
-                    // Pin identity to the *base* symbol name. A press re-renders the
+                    // Pin identity to the symbol name. A press re-renders the
                     // same identity (name unchanged) → the replace transition
                     // has nothing to cross-fade, so it can't mis-fire and drop
                     // the glyph (the intermittent delete-icon vanish). A real
@@ -1134,16 +1134,12 @@ public struct KeyboardCanvas: View {
         .foregroundStyle(g.color)
         .opacity(g.hidden ? 0 : 1)
         // Lean left and swell while swiping to delete words — a continuous cue that
-        // rides over the discrete per-word bounce. No-op on every non-delete glyph.
+        // rides over the discrete per-word bounce. Pure geometry: it never touches
+        // the symbol's name/content, so it can't trip the replace transition and
+        // drop the glyph. No-op on every non-delete glyph.
         .scaleEffect(g.deleteSwiping ? 1.18 : 1, anchor: .center)
         .offset(x: g.deleteSwiping ? -4 : 0)
         .animation(.snappy(duration: 0.22), value: g.deleteSwiping)
-    }
-
-    /// The delete glyph swaps to its filled variant while a word-delete swipe is
-    /// engaged; every other glyph (and the resting delete key) is unchanged.
-    private func deleteSwipeSymbol(_ g: KeyGlyphInfo) -> String {
-        g.deleteSwiping && g.glyph == "delete.left" ? "delete.left.fill" : g.glyph
     }
 
     /// Corner radius shared by the popup chrome — tracks the key roundness, a
