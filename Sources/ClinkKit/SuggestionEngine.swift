@@ -14,25 +14,82 @@ import UIKit
 @MainActor
 public final class SuggestionEngine {
     private let checker = UITextChecker()
-    /// The `UITextChecker` language driving completions/guesses/spell-check.
-    /// Set via `setLanguage`; guaranteed to be a value the device can check.
-    private var language = SuggestionEngine.resolveLanguage("en_US")
+    /// The active `UITextChecker` languages driving completions/guesses/spell-check,
+    /// in priority order. Set via `setLanguages`; every entry is guaranteed to be a
+    /// value the device can actually check. Multiple languages run simultaneously
+    /// (bilingual typing) — completions/guesses are merged across them, and a word
+    /// counts as misspelled only when it's misspelled in *every* active language,
+    /// so a valid word in any of them is left alone.
+    private var languages = [SuggestionEngine.resolveLanguage("en_US")]
     /// The language-specific next-word/contraction/ranking tables layered on top
-    /// of `UITextChecker` (the checker is language-agnostic; these aren't). Kept
-    /// in sync with `language` by `setLanguage`. See `LanguageHeuristics`.
-    private var heuristics = LanguageHeuristics.forLanguage("en_US")
+    /// of `UITextChecker` (the checker is language-agnostic; these aren't), merged
+    /// across all active languages. Kept in sync with `languages` by `setLanguages`.
+    /// See `LanguageHeuristics`.
+    private var heuristics = LanguageHeuristics.forLanguages(["en_US"])
 
-    /// Point the engine at a spelling/completion language (a `UITextChecker`
-    /// identifier such as "en_US" or "fr_FR"). UITextChecker silently returns
-    /// nothing for a language it can't load — which leaves the bar AND autocorrect
-    /// dead — so we always resolve to a language the device actually has.
-    /// Clears the correction cache (its entries were resolved in the old tongue).
-    public func setLanguage(_ identifier: String) {
-        let resolved = Self.resolveLanguage(identifier)
-        guard resolved != language else { return }
-        language = resolved
-        heuristics = LanguageHeuristics.forLanguage(resolved)
+    /// Point the engine at one or more spelling/completion languages (`UITextChecker`
+    /// identifiers such as "en_US" / "fr_FR"). Each is resolved to a language the
+    /// device actually has (UITextChecker silently returns nothing for a language it
+    /// can't load — which would leave the bar AND autocorrect dead), de-duplicated,
+    /// and order is preserved. Empty input falls back to English. Clears the caches,
+    /// whose entries were resolved against the old language set.
+    public func setLanguages(_ identifiers: [String]) {
+        var resolved: [String] = []
+        var seen = Set<String>()
+        for id in identifiers {
+            let r = Self.resolveLanguage(id)
+            if seen.insert(r).inserted { resolved.append(r) }
+        }
+        if resolved.isEmpty { resolved = [Self.resolveLanguage("en_US")] }
+        guard resolved != languages else { return }
+        languages = resolved
+        heuristics = LanguageHeuristics.forLanguages(resolved)
         correctionCache = nil
+        swipeVocabCache = nil
+    }
+
+    /// Single-language convenience — sets the active set to just `identifier`.
+    public func setLanguage(_ identifier: String) { setLanguages([identifier]) }
+
+    // MARK: - Multi-language checker fan-out
+    //
+    // Each helper runs `UITextChecker` against every active language and combines
+    // the results. With one language active they cost exactly what the old single
+    // calls did; with two they're a linear 2× — fine on the debounced/per-word
+    // paths these feed.
+
+    /// Completions across all active languages, first-seen order, de-duplicated.
+    private func mergedCompletions(_ partial: String, _ range: NSRange) -> [String] {
+        var out: [String] = []
+        var seen = Set<String>()
+        for lang in languages {
+            for w in checker.completions(forPartialWordRange: range, in: partial, language: lang) ?? []
+            where seen.insert(w.lowercased()).inserted { out.append(w) }
+        }
+        return out
+    }
+
+    /// Spelling guesses across all active languages, first-seen order, de-duplicated.
+    private func mergedGuesses(_ partial: String, _ range: NSRange) -> [String] {
+        var out: [String] = []
+        var seen = Set<String>()
+        for lang in languages {
+            for w in checker.guesses(forWordRange: range, in: partial, language: lang) ?? []
+            where seen.insert(w.lowercased()).inserted { out.append(w) }
+        }
+        return out
+    }
+
+    /// A word is "misspelled" only when it's misspelled in *every* active language —
+    /// so a word valid in any one of them (e.g. Spanish "como" while English is also
+    /// on) is never flagged or auto-corrected.
+    private func misspelledEverywhere(_ partial: String, _ range: NSRange) -> Bool {
+        for lang in languages {
+            let loc = checker.rangeOfMisspelledWord(
+                in: partial, range: range, startingAt: 0, wrap: false, language: lang).location
+            if loc == NSNotFound { return false }
+        }
+        return true
     }
 
     /// Map any requested identifier onto one `UITextChecker` actually supports on
@@ -116,10 +173,9 @@ public final class SuggestionEngine {
         // almond). Guesses = spelling fixes (e.g. "almo" → also). For a prefix,
         // a completion is usually what's intended, so completions lead — and we
         // rank them so common words ("almost") beat rare ones ("almoner").
-        let completions = rank(checker.completions(forPartialWordRange: range, in: partial, language: language) ?? [])
-        let guesses = checker.guesses(forWordRange: range, in: partial, language: language) ?? []
-        let isMisspelled = checker.rangeOfMisspelledWord(
-            in: partial, range: range, startingAt: 0, wrap: false, language: language).location != NSNotFound
+        let completions = rank(mergedCompletions(partial, range))
+        let guesses = mergedGuesses(partial, range)
+        let isMisspelled = misspelledEverywhere(partial, range)
 
         // Bar candidates: common-ranked pool of completions + guesses, minus the
         // literal (the bar shows that itself).
@@ -183,12 +239,9 @@ public final class SuggestionEngine {
         let result = resolveCorrection(
             partial: partial, autocorrect: autocorrect, autoPunctuation: autoPunctuation,
             rejected: rejected,
-            isMisspelled: self.checker.rangeOfMisspelledWord(
-                in: partial, range: range, startingAt: 0, wrap: false,
-                language: self.language).location != NSNotFound,
-            guesses: self.checker.guesses(forWordRange: range, in: partial, language: self.language) ?? [],
-            completions: self.rank(self.checker.completions(
-                forPartialWordRange: range, in: partial, language: self.language) ?? []))
+            isMisspelled: self.misspelledEverywhere(partial, range),
+            guesses: self.mergedGuesses(partial, range),
+            completions: self.rank(self.mergedCompletions(partial, range)))
         store(result, partial: partial, autocorrect: autocorrect,
               autoPunctuation: autoPunctuation, rejected: rejected)
         return result
@@ -292,9 +345,8 @@ public final class SuggestionEngine {
             let candidate = String(swapped)
             if candidate.caseInsensitiveCompare(word) == .orderedSame { continue }
             let r = NSRange(location: 0, length: candidate.utf16.count)
-            let mis = checker.rangeOfMisspelledWord(
-                in: candidate, range: r, startingAt: 0, wrap: false, language: language).location
-            if mis == NSNotFound { return candidate }
+            // Valid (correctly spelled) in any active language → an accepted fix.
+            if !misspelledEverywhere(candidate, r) { return candidate }
         }
         return nil
     }
@@ -350,13 +402,14 @@ public final class SuggestionEngine {
     // MARK: - Swipe / glide typing
 
     private let swipeDecoder = SwipeDecoder()
-    /// Lowercased word pool for swipe decoding: the language's heuristic tables
-    /// plus the full system dictionary from UITextChecker (seeded a–z). Built
-    /// once per language and cached; rebuilt on language change.
-    private var swipeVocabCache: (language: String, words: [String])?
+    /// Lowercased word pool for swipe decoding: the languages' heuristic tables
+    /// plus the system dictionary from UITextChecker (seeded a–z per active
+    /// language). Built once per active-language set and cached; rebuilt when the
+    /// set changes.
+    private var swipeVocabCache: (languages: [String], words: [String])?
 
     private func swipeVocabulary() -> [String] {
-        if let c = swipeVocabCache, c.language == language { return c.words }
+        if let c = swipeVocabCache, c.languages == languages { return c.words }
         var set = Set<String>()
         set.formUnion(heuristics.commonWords)
         set.formUnion(heuristics.commonFallback.map { $0.lowercased() })
@@ -373,17 +426,19 @@ public final class SuggestionEngine {
         set.formUnion(SwipeLexicon.words)
         // A light single-letter UITextChecker pass adds device-/language-specific
         // long-tail words (names, locale words the static lists miss). Cheap (~26
-        // calls), cached per language; two-letter seeding was dropped — it cost ~676
-        // calls for words the bundled list already covers.
-        for ch in "abcdefghijklmnopqrstuvwxyz" {
-            let seed = String(ch)
-            let completions = checker.completions(
-                forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
-                in: seed, language: language) ?? []
-            for w in completions where w.count >= 2 { set.insert(w.lowercased()) }
+        // calls per active language), cached; two-letter seeding was dropped — it
+        // cost ~676 calls for words the bundled list already covers.
+        for lang in languages {
+            for ch in "abcdefghijklmnopqrstuvwxyz" {
+                let seed = String(ch)
+                let completions = checker.completions(
+                    forPartialWordRange: NSRange(location: 0, length: seed.utf16.count),
+                    in: seed, language: lang) ?? []
+                for w in completions where w.count >= 2 { set.insert(w.lowercased()) }
+            }
         }
         let words = Array(set)
-        swipeVocabCache = (language, words)
+        swipeVocabCache = (languages, words)
         return words
     }
 

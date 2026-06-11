@@ -46,5 +46,8 @@ Icon
 # Logs
 *.log
 
+# Wrangler local state / cache (contains account id + email)
+.wrangler/
+
 # Local release tooling
 push-asc.sh

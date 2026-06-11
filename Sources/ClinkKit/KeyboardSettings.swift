@@ -160,11 +160,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var themeApp: Bool
     // Mechanics
     public var layoutID: String
-    /// The language the suggestion bar, autocomplete, and auto-correction run in,
-    /// as a `UITextChecker` identifier (e.g. "en_US", "fr_FR"). Drives the
-    /// completion/spelling dictionary; independent of the physical key `layoutID`.
-    /// Falls back to "en_US" inside the engine if the device can't spell-check it.
-    public var keyboardLanguage: String
+    /// The languages the suggestion bar, autocomplete, and auto-correction run in,
+    /// as `UITextChecker` identifiers (e.g. "en_US", "fr_FR"). More than one means
+    /// simultaneous bilingual typing: completions/predictions are merged and a word
+    /// is only auto-corrected when it's wrong in *every* active language. Always
+    /// holds at least one entry. Drives the completion/spelling dictionary;
+    /// independent of the physical key `layoutID`. Unsupported entries fall back to
+    /// "en_US" inside the engine.
+    public var keyboardLanguages: [String]
+    /// The first active language — the one used wherever a single language is still
+    /// meaningful (e.g. a default layout suggestion). Never empty.
+    public var primaryLanguage: String { keyboardLanguages.first ?? "en_US" }
     /// Holding a letter key reveals a bar of accent/diacritic variants (hold "e"
     /// → è é ê ë …), slide-to-pick like the system keyboard. Optional; off leaves
     /// letter keys with no long-press behaviour.
@@ -494,7 +500,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         backgroundVisible: Bool = false,
         themeApp: Bool = false,
         layoutID: String = KeyboardLayout.default.id,
-        keyboardLanguage: String = "en_US",
+        keyboardLanguages: [String] = ["en_US"],
         accentPopupsEnabled: Bool = true,
         showNumberRow: Bool = false,
         autoCapitalize: Bool = true,
@@ -605,7 +611,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.backgroundVisible = backgroundVisible
         self.themeApp = themeApp
         self.layoutID = layoutID
-        self.keyboardLanguage = keyboardLanguage
+        self.keyboardLanguages = keyboardLanguages.isEmpty ? ["en_US"] : keyboardLanguages
         self.accentPopupsEnabled = accentPopupsEnabled
         self.showNumberRow = showNumberRow
         self.autoCapitalize = autoCapitalize
@@ -713,6 +719,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
 
     // MARK: - Decoding (tolerate older payloads missing the new keys)
 
+    /// Keys that no longer map to a stored property but must still be readable from
+    /// older saved payloads for migration. `keyboardLanguage` (singular) became the
+    /// `keyboardLanguages` array.
+    private enum LegacyKeys: String, CodingKey {
+        case keyboardLanguage
+    }
+
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.default.id
@@ -723,7 +736,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         backgroundVisible = try c.decodeIfPresent(Bool.self, forKey: .backgroundVisible) ?? false
         themeApp = try c.decodeIfPresent(Bool.self, forKey: .themeApp) ?? false
         layoutID = try c.decodeIfPresent(String.self, forKey: .layoutID) ?? KeyboardLayout.default.id
-        keyboardLanguage = try c.decodeIfPresent(String.self, forKey: .keyboardLanguage) ?? "en_US"
+        // Prefer the new multi-language array; migrate a payload that only has the
+        // legacy single `keyboardLanguage` string; default to English otherwise.
+        if let langs = try c.decodeIfPresent([String].self, forKey: .keyboardLanguages), !langs.isEmpty {
+            keyboardLanguages = langs
+        } else if let legacy = try? decoder.container(keyedBy: LegacyKeys.self)
+                    .decodeIfPresent(String.self, forKey: .keyboardLanguage),
+                  !legacy.isEmpty {
+            keyboardLanguages = [legacy]
+        } else {
+            keyboardLanguages = ["en_US"]
+        }
         accentPopupsEnabled = try c.decodeIfPresent(Bool.self, forKey: .accentPopupsEnabled) ?? true
         showNumberRow = try c.decodeIfPresent(Bool.self, forKey: .showNumberRow) ?? false
         autoCapitalize = try c.decodeIfPresent(Bool.self, forKey: .autoCapitalize) ?? true

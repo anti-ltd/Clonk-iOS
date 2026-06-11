@@ -54,6 +54,51 @@ struct LanguageHeuristics {
         return table[String(code)] ?? .empty
     }
 
+    /// Merge the heuristics for several active languages into one set, so a
+    /// bilingual user gets next-word predictions, contractions, and ranking from
+    /// every language they type in. Sentence starters and fallbacks are
+    /// *interleaved* round-robin (rather than concatenated) so no single language
+    /// monopolises the leading bar slots; bigram follow-on lists are concatenated
+    /// per key; contractions take the first active language's mapping on a clash;
+    /// common-word ranking is the union. Order of `identifiers` is the priority
+    /// order. A single (or empty) language short-circuits to the plain lookup.
+    static func forLanguages(_ identifiers: [String]) -> LanguageHeuristics {
+        let sets = identifiers.map { forLanguage($0) }
+        guard sets.count > 1 else { return sets.first ?? .empty }
+
+        var bigrams: [String: [String]] = [:]
+        var contractions: [String: String] = [:]
+        var commonWords: Set<String> = []
+        for h in sets {
+            for (k, v) in h.bigrams { bigrams[k, default: []] += v }
+            for (k, v) in h.contractions where contractions[k] == nil { contractions[k] = v }
+            commonWords.formUnion(h.commonWords)
+        }
+        return LanguageHeuristics(
+            sentenceStarters: dedup(interleave(sets.map(\.sentenceStarters))),
+            commonFallback: dedup(interleave(sets.map(\.commonFallback))),
+            bigrams: bigrams.mapValues { dedup($0) },
+            contractions: contractions,
+            commonWords: commonWords)
+    }
+
+    /// Round-robin merge of several ordered lists: first of each, then second of
+    /// each, … so every language contributes to the front of the result.
+    private static func interleave(_ lists: [[String]]) -> [String] {
+        var out: [String] = []
+        let maxLen = lists.map(\.count).max() ?? 0
+        for i in 0..<maxLen {
+            for list in lists where i < list.count { out.append(list[i]) }
+        }
+        return out
+    }
+
+    /// Drop later duplicates (case-insensitive), preserving first-seen order.
+    private static func dedup(_ words: [String]) -> [String] {
+        var seen = Set<String>()
+        return words.filter { seen.insert($0.lowercased()).inserted }
+    }
+
     private static let table: [String: LanguageHeuristics] = [
         "en": english, "fr": french, "es": spanish, "de": german,
         "it": italian, "pt": portuguese, "ru": russian,

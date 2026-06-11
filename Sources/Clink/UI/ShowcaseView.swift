@@ -321,7 +321,7 @@ final class ShowcaseTyper {
     /// Layout/keymap source for resolving characters → keys. Kept in sync with
     /// the app's live settings by the view.
     var settings: KeyboardSettings = .default {
-        didSet { suggestEngine.setLanguage(settings.keyboardLanguage) }
+        didSet { suggestEngine.setLanguages(settings.keyboardLanguages) }
     }
 
     // Live output.

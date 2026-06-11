@@ -292,7 +292,7 @@ final class KeyboardViewController: UIInputViewController {
     private func reloadSettings() {
         let new = store.load()
         settings = new
-        engine.setLanguage(new.keyboardLanguage)
+        engine.setLanguages(new.keyboardLanguages)
         sound.prepare(for: new, hasFullAccess: hasFullAccess)
 
         let root = AnyView(makeCanvas(for: new))

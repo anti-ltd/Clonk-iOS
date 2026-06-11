@@ -1,11 +1,14 @@
 /**
- Localization page (Onboarding): pick the language the suggestion bar,
- autocomplete, and auto-correction run in. The choice is a `UITextChecker`
- language identifier stored on `KeyboardSettings.keyboardLanguage`; the keyboard
- extension feeds it to its `SuggestionEngine` on the next settings reload. Only
- languages the device can actually spell-check are listed, so a pick is never
- a dead one. The physical key arrangement (QWERTY/AZERTY/…) is a separate
- setting under Style → Layout & Keys.
+ Localization page (Onboarding): pick the language(s) the suggestion bar,
+ autocomplete, and auto-correction run in. Each choice is a `UITextChecker`
+ language identifier; the set is stored on `KeyboardSettings.keyboardLanguages`
+ and the keyboard extension feeds it to its `SuggestionEngine` on the next
+ settings reload. Multiple languages run *simultaneously* — type Spanish and
+ English in the same field and both get completions, with a word only
+ auto-corrected when it's wrong in every active language. Only languages the
+ device can actually spell-check are listed, so a pick is never a dead one. The
+ physical key arrangement (QWERTY/AZERTY/…) is a separate setting under
+ Style → Layout & Keys.
  */
 import SwiftUI
 import UIKit
@@ -50,10 +53,25 @@ struct LocalizationView: View {
         }
     }
 
-    private var selected: String { model.settings.keyboardLanguage }
+    /// The active set, in priority order.
+    private var active: [String] { model.settings.keyboardLanguages }
 
     private func displayName(for id: String) -> String {
         Locale.current.localizedString(forIdentifier: id) ?? id
+    }
+
+    /// Add or remove a language from the active set. Keeps at least one active
+    /// (you can't end up with no spell-check language), and never reorders the
+    /// survivors. Layout is intentionally left alone — it's an independent setting.
+    private func toggle(_ id: String) {
+        var langs = model.settings.keyboardLanguages
+        if let idx = langs.firstIndex(of: id) {
+            guard langs.count > 1 else { return }   // keep at least one
+            langs.remove(at: idx)
+        } else {
+            langs.append(id)
+        }
+        model.settings.keyboardLanguages = langs
     }
 
     var body: some View {
@@ -62,7 +80,7 @@ struct LocalizationView: View {
             VStack(spacing: UX.cardSpacing) {
                 searchField
 
-                Text("Choose the language your typing suggestions, autocomplete, and auto-correction use. Only languages your device can spell-check are listed. Picking a language also switches the key layout to match (e.g. French → AZERTY, Russian → ЙЦУКЕН).")
+                Text("Choose one or more languages for your typing suggestions, autocomplete, and auto-correction. Pick several to type them at once — e.g. Spanish and English together — and a word is only corrected when it's wrong in every one. Only languages your device can spell-check are listed. The key layout (QWERTY/AZERTY/…) is a separate setting.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -73,11 +91,14 @@ struct LocalizationView: View {
                               isOn: $model.settings.accentPopupsEnabled)
                 }
 
-                CardSection("Current") {
-                    row(Language(id: selected, name: displayName(for: selected)))
+                CardSection(active.count > 1 ? "Active (\(active.count))" : "Active") {
+                    ForEach(Array(active.enumerated()), id: \.element) { idx, id in
+                        if idx > 0 { Divider() }
+                        row(Language(id: id, name: displayName(for: id)))
+                    }
                 }
 
-                let others = filtered.filter { $0.id != selected }
+                let others = filtered.filter { !active.contains($0.id) }
                 CardSection(search.isEmpty ? "All languages" : "Results") {
                     ForEach(Array(others.enumerated()), id: \.element.id) { idx, lang in
                         if idx > 0 { Divider() }
@@ -137,10 +158,12 @@ struct LocalizationView: View {
 
     @ViewBuilder
     private func row(_ lang: Language) -> some View {
+        let isActive = active.contains(lang.id)
+        // The last remaining active language can't be turned off — there's always
+        // at least one spell-check language.
+        let isLocked = isActive && active.count == 1
         Button {
-            model.settings.keyboardLanguage = lang.id
-            // Auto-pair the physical key layout to the language.
-            model.settings.layoutID = KeyboardLayout.defaultLayoutID(forLanguage: lang.id)
+            toggle(lang.id)
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -148,16 +171,17 @@ struct LocalizationView: View {
                     Text(lang.id).font(.caption).foregroundStyle(.tertiary)
                 }
                 Spacer()
-                if lang.id == selected {
+                if isActive {
                     Image(systemName: "checkmark")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(themeAccent)
+                        .foregroundStyle(isLocked ? Color.secondary : themeAccent)
                 }
             }
             .padding(.vertical, UX.rowVPadding)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(isLocked)
     }
 }
 

@@ -144,7 +144,7 @@ DEVICE_UDID = $(shell \
 			| awk -v name="$(DEVICE_NAME)" '\
 				/^----/ {next} \
 				!/physical/ {next} \
-				!/connected/ {next} \
+				!/connected|available/ {next} \
 				name != "" && index($$0, name) == 0 {next} \
 				{ \
 					if (match($$0, /[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/)) { \
