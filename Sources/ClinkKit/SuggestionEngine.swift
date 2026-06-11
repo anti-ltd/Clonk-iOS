@@ -199,6 +199,41 @@ public final class SuggestionEngine {
         }
     }
 
+    /// Lexicon-only predictions for the bar — **no `UITextChecker`**, so every
+    /// source here is a microsecond mmap lookup safe to run on the short
+    /// debounce instead of behind the quiet gate. The controller paints this
+    /// the instant typing settles, then `compute` refines it with the checker's
+    /// long tail (locale words, names) and the autocorrection once the keyboard
+    /// is touch-free. Returns no correction — that needs the checker and rides
+    /// the full pass (and the synchronous space-press path applies it anyway).
+    public func fastCompute(partial: String, previousWord: String?, sentenceStart: Bool) -> Result {
+        guard !partial.isEmpty else {
+            return Result(predictions: nextWords(previousWord: previousWord, sentenceStart: sentenceStart),
+                          correction: nil)
+        }
+        // Same lexicon + learned + contact sources `compute` leads with, ranked
+        // by frequency — just without the checker completions/guesses layered on.
+        let lexiconCompletions = lexicon.topCompletions(prefix: partial, limit: 6)
+        let learnedCompletions = adaptation?.completions(prefix: partial, limit: 3) ?? []
+        var pool = rank(learnedCompletions + lexiconCompletions)
+            .filter { $0.caseInsensitiveCompare(partial) != .orderedSame }
+        if !lexiconEntries.isEmpty {
+            let lower = partial.lowercased()
+            let hits = lexiconEntries
+                .filter { $0.prefix.hasPrefix(lower) && $0.text.caseInsensitiveCompare(partial) != .orderedSame }
+                .map(\.text)
+            if !hits.isEmpty { pool = hits + pool }
+        }
+        var seen = Set<String>()
+        pool = pool.filter { seen.insert($0.lowercased()).inserted }
+        // Lead with the literal — the fast pass computes no correction, and a
+        // word being typed normally (the common case) shows the literal first
+        // in the full pass too, so the two passes agree.
+        pool.insert(partial, at: 0)
+        return Result(predictions: Array(pool.prefix(4)), correction: nil,
+                      emoji: EmojiData.emojiSuggestions(for: partial))
+    }
+
     /// `previousWord` is the completed word before the cursor (drives next-word
     /// prediction when there's no partial); `context` is the word before the
     /// *partial* being typed (drives correction confidence via bigrams).

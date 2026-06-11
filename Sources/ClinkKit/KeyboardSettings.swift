@@ -158,9 +158,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// painted behind the keys; when off (the default) the keyboard stays
     /// transparent and the keys float. Applies to every theme uniformly.
     public var backgroundVisible: Bool
-    /// When true, the app's settings UI adopts the keyboard's active theme.
-    /// When false (default), the app uses Liquid Light / Liquid Dark regardless
-    /// of which keyboard theme the user has selected.
+    /// When true (default), the app's settings UI adopts the keyboard's active
+    /// theme. When false, the app uses Liquid Light / Liquid Dark regardless of
+    /// which keyboard theme the user has selected.
     public var themeApp: Bool
     // Mechanics
     public var layoutID: String
@@ -533,7 +533,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         darkThemeID: String = Theme.preset(id: "liquid-dark").id,
         customThemes: [Theme] = [],
         backgroundVisible: Bool = false,
-        themeApp: Bool = false,
+        themeApp: Bool = true,
         layoutID: String = KeyboardLayout.default.id,
         spaceBarLeadingKeys: [CustomKey] = [],
         spaceBarTrailingKeys: [CustomKey] = [],
@@ -785,7 +785,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         darkThemeID = try c.decodeIfPresent(String.self, forKey: .darkThemeID) ?? Theme.defaultDark.id
         customThemes = try c.decodeIfPresent([Theme].self, forKey: .customThemes) ?? []
         backgroundVisible = try c.decodeIfPresent(Bool.self, forKey: .backgroundVisible) ?? false
-        themeApp = try c.decodeIfPresent(Bool.self, forKey: .themeApp) ?? false
+        themeApp = try c.decodeIfPresent(Bool.self, forKey: .themeApp) ?? true
         layoutID = try c.decodeIfPresent(String.self, forKey: .layoutID) ?? KeyboardLayout.default.id
         spaceBarLeadingKeys = try c.decodeIfPresent([CustomKey].self, forKey: .spaceBarLeadingKeys) ?? []
         spaceBarTrailingKeys = try c.decodeIfPresent([CustomKey].self, forKey: .spaceBarTrailingKeys) ?? []

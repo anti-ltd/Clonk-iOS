@@ -1047,12 +1047,6 @@ private struct ClinkContent: View {
                 .padding(.vertical, 8)
                 .id("header")
 
-                CardSection {
-                    ToggleRow("Theme app with keyboard",
-                              subtitle: "Apply your keyboard theme to the Clink settings UI. Off uses Liquid Light / Dark.",
-                              isOn: $model.settings.themeApp)
-                }
-
                 gridSection("General", cards: generalCards).id("general")
                 gridSection("Customization", cards: customizationCards).id("customization")
                 gridSection("Extensions", cards: extensionCards, gearAction: { showExtensionPicker = true }).id("extensions")

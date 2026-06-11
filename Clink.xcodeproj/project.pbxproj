@@ -286,6 +286,7 @@
 		B45E135416622CEBA9D57215 /* SwipeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */; };
 		B4D66C6F23137F6EF5B40B27 /* EmojiCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D744EEA3405072F1C9A6785 /* EmojiCell.swift */; };
 		B532614642A9CE9B54BC7C0B /* Theme+Lavender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC95A8FEBDFF602C7F928DF /* Theme+Lavender.swift */; };
+		B554F4A14AC9F9CC0639D183 /* FastComputeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8708F85A91AB32614E1C8668 /* FastComputeTests.swift */; };
 		B5BDBDBEE7D209C8504D873F /* Theme+Synthwave.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4586002B16E5A1F18E6B3C31 /* Theme+Synthwave.swift */; };
 		B65FD916B8DE5F0C88AD6D6A /* PyProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385CB38B2FE8AFFC8C586AAE /* PyProgram.swift */; };
 		B6B4F51D8B37609FAB195703 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */; };
@@ -533,6 +534,7 @@
 		7F101CB1DD74A4CF9831A8D7 /* CalculatorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorSettingsView.swift; sourceTree = "<group>"; };
 		7F35D87B767399D277F77F83 /* PerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceView.swift; sourceTree = "<group>"; };
 		8320B7EE9D617EF8DB1CB769 /* LexiconRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexiconRepository.swift; sourceTree = "<group>"; };
+		8708F85A91AB32614E1C8668 /* FastComputeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FastComputeTests.swift; sourceTree = "<group>"; };
 		87FC6F0B5F4D97B9A46D60C8 /* PanelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelManager.swift; sourceTree = "<group>"; };
 		8927D850C4365DFDC1FD2FDA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		89603465B35CBE91068ED11D /* EmojiDeleteTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiDeleteTile.swift; sourceTree = "<group>"; };
@@ -950,6 +952,7 @@
 			children = (
 				588DF8987A80BB4A75F7772B /* AdaptiveHitboxTests.swift */,
 				B6880EECB16CF22FAFE7F084 /* CorrectionScorerTests.swift */,
+				8708F85A91AB32614E1C8668 /* FastComputeTests.swift */,
 				1339BFD0C74FB86D01618B4B /* LexiconTests.swift */,
 				4C0FAE04C28FA15B8CF15385 /* SwipeDecoderTests.swift */,
 				24B886C95C9D9174E7C052AB /* UserAdaptationTests.swift */,
@@ -1177,6 +1180,7 @@
 				672AA220739548298F20BA9B /* EmojiTabTapSurface.swift in Sources */,
 				BAF01BEA1228A138CEAEC2C7 /* ExtensionManager.swift in Sources */,
 				48AFA235F8017942850D4FC5 /* ExtensionsPanel.swift in Sources */,
+				B554F4A14AC9F9CC0639D183 /* FastComputeTests.swift in Sources */,
 				6E061889A928576E2E22698A /* FeatureFlags.swift in Sources */,
 				4C4C076B9F11887FD36FA75B /* InputViewHeight.swift in Sources */,
 				D135BFF8F28E71F4CF46DAA0 /* KeyGlyphLayer.swift in Sources */,

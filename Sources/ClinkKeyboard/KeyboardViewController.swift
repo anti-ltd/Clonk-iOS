@@ -817,12 +817,36 @@ final class KeyboardViewController: UIInputViewController {
         live.predictedDistribution = engine.nextLetterDistribution(partial: partial)
     }
 
-    /// The debounce tick: auto-capitalize promptly (cheap — one settled proxy
-    /// read; shift must track sentence starts as responsively as the native
-    /// keyboard), then hand the expensive checker compute to the quiet gate.
+    /// The debounce tick: auto-capitalize promptly, paint the bar *immediately*
+    /// from the lexicon (microsecond mmap lookups — no animation stall), then
+    /// hand the expensive `UITextChecker` enrichment to the quiet gate. The fast
+    /// pass is what makes the bar feel instant: it fills ~80ms after you settle
+    /// instead of waiting the full quiet window for the checker.
     private func debouncedSuggestionTick() {
         applyAutoCapitalize()
+        fastComputeSuggestions()
         quietGatedCompute()
+    }
+
+    /// Instant, lexicon-only bar update (no `UITextChecker`). Paints the
+    /// frequency-ranked completions + next-word + emoji the moment typing
+    /// settles; `computeSuggestions` later layers on the checker's long tail and
+    /// the autocorrection. Cheap enough to run on every debounce tick.
+    private func fastComputeSuggestions() {
+        guard settings.suggestionsEnabled else { return }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let partial = SmartPunctuation.trailingPartialWord(in: before)
+        // Off a word → let corrections fire again for the next word.
+        if partial.isEmpty { rejectedCorrection = nil }
+        let result = engine.fastCompute(
+            partial: partial,
+            previousWord: previousWord(before: before, partial: partial),
+            sentenceStart: isSentenceStart(before: before, partial: partial))
+        live.suggestions = result.predictions
+        live.emojiSuggestions = result.emoji
+        // Drop a correction that no longer matches the word being typed so a
+        // stale chip never lingers; the full pass re-derives the right one.
+        if live.autocorrection?.from != partial { live.autocorrection = nil }
     }
 
     /// Run the `UITextChecker` compute only once the keyboard has been
