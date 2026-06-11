@@ -115,18 +115,43 @@ struct CustomKeysView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(Array(keys.enumerated()), id: \.element.id) { idx, key in
-                    Chip(key.isSymbol ? "" : displayText(key),
-                         systemImage: key.isSymbol ? key.glyph : nil,
-                         action: { editing = KeyEdit(location: location, index: idx, key: key) })
+                    // Existing key: a solid accent pill (themed, like a real key).
+                    themedChip(key.isSymbol ? "" : displayText(key),
+                               systemImage: key.isSymbol ? key.glyph : nil,
+                               filled: true) {
+                        editing = KeyEdit(location: location, index: idx, key: key)
+                    }
                 }
-                Chip("Add", systemImage: "plus",
-                     action: {
-                         editing = KeyEdit(location: location, index: nil,
-                                           key: CustomKey(glyph: "", action: .insert("")))
-                     })
+                // Add affordance: a lighter accent-tinted pill, clearly secondary.
+                themedChip("Add", systemImage: "plus", filled: false) {
+                    editing = KeyEdit(location: location, index: nil,
+                                      key: CustomKey(glyph: "", action: .insert("")))
+                }
             }
             .padding(.vertical, 2)
         }
+    }
+
+    /// A capsule chip that tracks the keyboard theme: a solid accent fill with a
+    /// white glyph when `filled`, otherwise a soft accent tint with an accent
+    /// label. Matches the accent + rounding of the themed action buttons.
+    @ViewBuilder
+    private func themedChip(_ label: String, systemImage: String?, filled: Bool,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                if let systemImage { Image(systemName: systemImage) }
+                if !label.isEmpty { Text(label) }
+            }
+            .font(.callout.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .foregroundStyle(filled ? AnyShapeStyle(.white) : AnyShapeStyle(themeAccent))
+            .background(filled ? AnyShapeStyle(themeAccent)
+                               : AnyShapeStyle(themeAccent.opacity(0.18)),
+                        in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     /// What a non-symbol chip shows: the cap glyph, else the action's short name.

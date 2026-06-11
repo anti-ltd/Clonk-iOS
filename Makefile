@@ -74,9 +74,16 @@ help:
 	@echo "  DEVICE_NAME=\"My iPhone\"     pick a specific iPhone by name"
 
 # Render the app icon into Resources/Assets.xcassets via the standalone
-# CoreGraphics script. Re-run whenever the brand mark changes.
-icon:
+# CoreGraphics script. The PNGs are a real build artifact that depends on the
+# renderer, so editing RenderAppIcon.swift re-renders on the next build — the
+# `build*` targets list $(ICON_OUT) as a prerequisite. `make icon` forces it.
+ICON_SRC := Tools/RenderAppIcon.swift
+ICON_OUT := Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+
+$(ICON_OUT): $(ICON_SRC)
 	swift Tools/RenderAppIcon.swift
+
+icon: $(ICON_OUT)
 
 # Regenerate Sources/ClinkKit/EmojiData.generated.swift (the full emoji set)
 # from Tools/emoji-test.txt. Re-run after vendoring a newer emoji-test.txt.
@@ -92,7 +99,7 @@ project:
 	@echo "Generated $(PROJECT)"
 
 # Build for the iOS simulator. Generates the project on first run.
-build: $(PROJECT)
+build: $(PROJECT) $(ICON_OUT)
 	@mkdir -p $(BUILD_DIR)
 	xcodebuild \
 		-project $(PROJECT) \
@@ -153,7 +160,7 @@ DEVICE_UDID = $(shell \
 				}'; \
 	fi)
 
-build-device: $(PROJECT)
+build-device: $(PROJECT) $(ICON_OUT)
 	@mkdir -p $(BUILD_DIR)
 	xcodebuild \
 		-project $(PROJECT) \
@@ -201,7 +208,7 @@ device-launch:
 # ShowcaseView. Regenerates the project first so a freshly-added showcase source
 # is always picked up.
 # ============================================================
-build-device-showcase: project
+build-device-showcase: project $(ICON_OUT)
 	@mkdir -p $(BUILD_DIR)
 	xcodebuild \
 		-project $(PROJECT) \
