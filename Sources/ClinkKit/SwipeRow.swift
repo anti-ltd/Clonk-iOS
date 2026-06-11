@@ -52,6 +52,11 @@ public struct SwipeRow<Content: View, Background: View>: View {
     /// Only the anchoring, gesture direction, and reveal order flip; the open
     /// magnitude (`offset`/`slid`) and the glass-morph math are identical.
     private let mirror: Bool
+    /// Inset (pt) pulling the revealed action strip in from the open edge, so the
+    /// outermost button isn't flush against (or clipped by) the row's edge. 0 for
+    /// the full-width list; the clipboard grid uses a few points so the buttons sit
+    /// comfortably inside each clipped cell.
+    private let actionInset: CGFloat
     private let onTap: (() -> Void)?
     private let cardBackground: Background
     private let content: Content
@@ -80,6 +85,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 actions: [SwipeAction],
                 glass: Bool = false,
                 mirror: Bool = false,
+                actionInset: CGFloat = 0,
                 openID: Binding<Int?> = .constant(nil),
                 scrollSpace: String? = nil,
                 viewportHeight: CGFloat = 0,
@@ -91,6 +97,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
         self.actions = actions
         self.glass = glass
         self.mirror = mirror
+        self.actionInset = actionInset
         self._openID = openID
         self.scrollSpace = scrollSpace
         self.viewportHeight = viewportHeight
@@ -126,16 +133,12 @@ public struct SwipeRow<Content: View, Background: View>: View {
                     if offset != 0 { close() } else { onTap?() }
                 }
                 // Tall transparent grab band so the swipe keeps tracking through
-                // vertical drift. The gesture lives on this card (a stable origin —
-                // a sliding strip would feed back into the drag). Engagement is
-                // gated by `startLocation` to the card's open-side edge so the rest
-                // of the card scrolls the list freely.
+                // vertical drift.
                 .background {
                     Color.clear
                         .padding(.vertical, -28)
                         .contentShape(Rectangle())
                 }
-                .simultaneousGesture(swipeGesture)
             if !mirror { Color.clear.frame(width: slid) }
         }
         .background {
@@ -146,6 +149,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                     ZStack(alignment: mirror ? .leading : .trailing) {
                         lensStrip(slid: slid)
                             .frame(width: openWidth)
+                            .padding(mirror ? .leading : .trailing, actionInset)
                         cardBackground
                             .frame(maxWidth: .infinity)
                             // Color-shifting glow on the card's inner open-side edge
@@ -162,6 +166,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 // they stay crisp and centered while the lens does its gooey morph.
                 glyphStrip(slid: slid)
                     .frame(width: openWidth)
+                    .padding(mirror ? .leading : .trailing, actionInset)
             }
         }
         // Transparent tap targets over the circle positions, in the FRONT so taps
@@ -184,6 +189,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                     }
                 }
                 .frame(width: openWidth)
+                .padding(mirror ? .leading : .trailing, actionInset)
             }
         }
         // Track how much of the row is in the scroll viewport, and its width.
@@ -212,6 +218,12 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 withAnimation(.smooth(duration: 0.25)) { offset = 0 }
             }
         }
+        // The swipe lives on the whole (stable, full-width) row, NOT the card
+        // content: the card shrinks as it opens, so a gesture bound to it would
+        // slide under the finger and feed back into the drag (the right-column
+        // stagger). The outer row never moves, so translation stays clean for both
+        // directions. `startLocation` is in row space, matching the edge gating.
+        .simultaneousGesture(swipeGesture)
     }
 
     /// Fraction of the row inside the scroll viewport (1 fully in … 0 fully out).
@@ -330,9 +342,10 @@ public struct SwipeRow<Content: View, Background: View>: View {
         .allowsHitTesting(false)
     }
 
-    /// A soft glow hugging the card's right edge. Its colour continuously lerps
-    /// between adjacent action tints as they emerge (red→orange→…, no gap), and
-    /// its strength stays up across the whole reveal, fading only at the ends.
+    /// A soft glow hugging the card's open-side edge (right normally, left when
+    /// mirrored). Its colour continuously lerps between adjacent action tints as
+    /// they emerge (red→orange→…, no gap), and its strength stays up across the
+    /// whole reveal, fading only at the ends.
     @ViewBuilder private func edgeGlow(slid: CGFloat) -> some View {
         // Only glass themes need the glow (it masks a lens emerging from under the
         // translucent card); a solid card already hides it.
@@ -340,7 +353,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
             let g = glow(slid: slid)
             RadialGradient(
                 gradient: Gradient(colors: [g.color.opacity(0.8), g.color.opacity(0)]),
-                center: .trailing, startRadius: 0, endRadius: 80
+                center: mirror ? .leading : .trailing, startRadius: 0, endRadius: 80
             )
             .opacity(g.strength)
             .blendMode(.plusLighter)

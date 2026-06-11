@@ -133,11 +133,15 @@ struct ClipboardPanel: View {
                         tint: .red) { onDelete(index) },
         ], glass: theme.material == .liquidGlass,
            mirror: index % 2 == 1,
+           actionInset: 12,
            openID: $openRow, scrollSpace: scrollSpace, viewportHeight: viewportHeight,
            onTap: { onTap(entry.text) },
            cardBackground: { cardSurface }) {
             gridCellContent(entry)
         }
+        // Keep the open action circles (and the glass morph's -14pt overhang) inside
+        // this cell so they can't bleed under the adjacent column's card.
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
     private func gridCellContent(_ entry: ClipboardEntry) -> some View {
