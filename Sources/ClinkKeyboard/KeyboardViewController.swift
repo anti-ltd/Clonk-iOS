@@ -41,6 +41,9 @@ final class KeyboardViewController: UIInputViewController {
     /// animation — running it ~80ms after the last key put it squarely in the
     /// middle of the release spring.
     private let engine = SuggestionEngine()
+    /// Opt-in on-device learning (words you type, corrections you reject).
+    /// Only consulted when `settings.learningEnabled`; see `UserAdaptation`.
+    private let adaptation = UserAdaptation.shared
     /// Timestamp of the most recent key-down, driving the quiet-window check.
     private var lastKeyActivity = Date.distantPast
     /// Seconds the keyboard must be touch-free before the checker compute may
@@ -77,9 +80,10 @@ final class KeyboardViewController: UIInputViewController {
     /// True while we're performing our own proxy edits (so selection/text change
     /// callbacks don't invalidate the mirror for our own work).
     private var isApplyingEdit: Bool = false
-    /// How many trailing characters we keep. Comfortably longer than any word so
-    /// trailing-word + smart-punctuation lookbehind always have what they need.
-    private let tailCap = 16
+    /// How many trailing characters we keep. Comfortably longer than any word —
+    /// plus the word before it, so the correction context ("their" before
+    /// "ther") survives the mirror on the synchronous space-press path.
+    private let tailCap = 32
     private var settings = KeyboardSettings.default
     private var hosting: UIHostingController<AnyView>?
     private var heightConstraint: NSLayoutConstraint?
@@ -200,6 +204,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         hosting?.view.isHidden = true
+        // Learning writes are coalesced; persist whatever's pending on the way out.
+        adaptation.flush()
     }
 
     /// Pull in the user's supplementary lexicon — Contacts names plus the text
@@ -306,6 +312,8 @@ final class KeyboardViewController: UIInputViewController {
         let new = store.load()
         settings = new
         engine.setLanguages(new.keyboardLanguages)
+        engine.setAdaptation(new.learningEnabled ? adaptation : nil)
+        engine.setLayout(new.layout)
         sound.prepare(for: new, hasFullAccess: hasFullAccess)
 
         let root = AnyView(makeCanvas(for: new))
@@ -452,7 +460,12 @@ final class KeyboardViewController: UIInputViewController {
                 // when the user spaces within the debounce window.
                 var applied: (original: String, corrected: String)? = nil
                 if Self.wordTerminators.contains(text) {
+                    let typed = self.currentPartialWord
                     applied = self.applyPendingAutocorrect()
+                    // Learn the word the user committed untouched. A corrected
+                    // word isn't learned — the typed form was (probably) a typo,
+                    // and the replacement is the dictionary's word, not theirs.
+                    if applied == nil { self.recordLearnedCommit(typed) }
                 }
                 // Smart punctuation (curly quotes, em-dash, double-space → ". ")
                 // rides the same auto-punctuation switch as contractions. Runs
@@ -504,6 +517,9 @@ final class KeyboardViewController: UIInputViewController {
             // Tapped the quoted literal → keep what they typed, drop the fix.
             onCancelAutocorrect: { [weak self] in
                 guard let self else { return }
+                if let c = self.live.autocorrection, self.settings.learningEnabled {
+                    self.adaptation.recordRejection(from: c.from, to: c.to)
+                }
                 self.rejectedCorrection = self.live.autocorrection?.from
                 self.live.autocorrection = nil
             },
@@ -780,10 +796,25 @@ final class KeyboardViewController: UIInputViewController {
     /// also lets `documentContextBeforeInput` reflect the latest edit (it
     /// updates a runloop tick after insert/delete).
     private func scheduleSuggestionUpdate() {
+        // Refresh the adaptive-hitbox prediction synchronously — the very next
+        // touch must see it, and a fast typist beats the debounce. Cheap: a
+        // couple of binary searches on the mmapped lexicon.
+        updatePredictedDistribution()
         suggestionWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.debouncedSuggestionTick() }
         suggestionWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + settings.suggestionDebounceDelay / 1000, execute: work)
+    }
+
+    /// Push the engine's word-aware next-letter distribution into the live
+    /// state, where the touch router reads it at touch time (see `key(at:)`).
+    private func updatePredictedDistribution() {
+        guard settings.adaptiveHitboxes else {
+            if live.predictedDistribution != nil { live.predictedDistribution = nil }
+            return
+        }
+        let partial = SmartPunctuation.trailingPartialWord(in: contextBeforeCursor())
+        live.predictedDistribution = engine.nextLetterDistribution(partial: partial)
     }
 
     /// The debounce tick: auto-capitalize promptly (cheap — one settled proxy
@@ -848,7 +879,8 @@ final class KeyboardViewController: UIInputViewController {
             sentenceStart: isSentenceStart(before: before, partial: partial),
             autocorrect: settings.autocorrectEnabled,
             autoPunctuation: settings.autoPunctuationEnabled,
-            rejected: rejectedCorrection)
+            rejected: rejectedCorrection,
+            context: contextWord(before: before, partial: partial))
         live.suggestions = result.predictions
         live.autocorrection = result.correction
         live.emojiSuggestions = result.emoji
@@ -859,6 +891,18 @@ final class KeyboardViewController: UIInputViewController {
     private func previousWord(before: String, partial: String) -> String? {
         guard partial.isEmpty else { return nil }
         let trimmed = before.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let last = trimmed.last, !".!?".contains(last) else { return nil }
+        let word = SmartPunctuation.trailingPartialWord(in: trimmed)
+        return word.isEmpty ? nil : word
+    }
+
+    /// The completed word immediately *before the partial being typed* —
+    /// bigram context for correction confidence ("their car" vs "there car").
+    /// Distinct from `previousWord`, which only exists when no partial is live.
+    private func contextWord(before: String, partial: String) -> String? {
+        guard !partial.isEmpty, before.count > partial.count else { return nil }
+        let trimmed = String(before.dropLast(partial.count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard let last = trimmed.last, !".!?".contains(last) else { return nil }
         let word = SmartPunctuation.trailingPartialWord(in: trimmed)
         return word.isEmpty ? nil : word
@@ -904,7 +948,8 @@ final class KeyboardViewController: UIInputViewController {
             for: word,
             autocorrect: settings.autocorrectEnabled,
             autoPunctuation: settings.autoPunctuationEnabled,
-            rejected: rejectedCorrection)
+            rejected: rejectedCorrection,
+            context: contextWord(before: contextBeforeCursor(), partial: word))
         guard let c = correction, c.from == word else { return nil }
         deleteBackwardMirrored(word.count)
         insertMirrored(c.to)
@@ -940,8 +985,26 @@ final class KeyboardViewController: UIInputViewController {
         isApplyingEdit = false
         // Don't immediately re-correct the word the user deliberately restored.
         rejectedCorrection = revert.original
+        // Persist the signal: undoing a correction is the strongest "leave this
+        // word alone" a user can give. Twice and it's suppressed for good.
+        if settings.learningEnabled {
+            adaptation.recordRejection(from: revert.original, to: revert.corrected)
+        }
         live.autocorrection = nil
         return true
+    }
+
+    /// Learn a word the user committed (terminator typed, no correction fired).
+    /// Skips fields whose content isn't natural language (URLs, email addresses)
+    /// and everything when the learning setting is off; `UserAdaptation` itself
+    /// filters non-words (digits, symbols, one-letter noise).
+    private func recordLearnedCommit(_ word: String, weight: Double = 1) {
+        guard settings.learningEnabled, !word.isEmpty else { return }
+        switch textDocumentProxy.keyboardType {
+        case .URL, .emailAddress: return
+        default: break
+        }
+        adaptation.recordCommit(word, weight: weight)
     }
 
     /// Replace the current partial word with the chosen suggestion + a space.
@@ -952,6 +1015,8 @@ final class KeyboardViewController: UIInputViewController {
         deleteBackwardMirrored(partial.count)
         insertMirrored(word + " ")
         isApplyingEdit = false
+        // A deliberate bar tap is a stronger signal than a passive commit.
+        recordLearnedCommit(word, weight: 1.5)
         live.autocorrection = nil
         sound.play(settings: settings, hasFullAccess: hasFullAccess)
         scheduleSuggestionUpdate()

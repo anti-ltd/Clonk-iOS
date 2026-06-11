@@ -98,7 +98,7 @@ struct RootView: View {
     enum SidebarDestination: Hashable {
         case clink, permissions, localization, layout, theme
         // Customization placeholders (pages to be built out).
-        case animation, automation, cursor, keys, sounds, haptics, suggestions, popups, gestures
+        case animation, automation, cursor, keys, sounds, haptics, suggestions, popups, gestures, adaptation
         // Advanced placeholders.
         case hitboxes, overlays, response, performance
         case clipboard, notepad, emoji, calculator
@@ -357,6 +357,7 @@ private struct DetailHost: View {
         case .haptics:     HapticsView()
         case .gestures:    GesturesView()
         case .suggestions: SuggestionsView()
+        case .adaptation:  AdaptationView()
         case .popups:      PopupsView()
         case .hitboxes:     HitboxView()
         case .overlays:     OverlaysView()
@@ -462,6 +463,7 @@ private struct SidebarPanel: View {
     /// Customization pages, alphabetical. (Several are placeholders pending build-out.)
     private var customizationRows: [NavItem] {
         var rows: [NavItem] = [
+            NavItem(title: "Adaptation",  icon: "brain.head.profile",    dest: .adaptation),
             NavItem(title: "Animation",   icon: "wand.and.stars",        dest: .animation),
             NavItem(title: "Automation",  icon: "gearshape.2",           dest: .automation),
             NavItem(title: "Cursor",      icon: "cursorarrow",           dest: .cursor),
@@ -975,6 +977,7 @@ private struct ClinkContent: View {
 
     private var customizationCards: [DestCard] {
         var cards: [DestCard] = [
+            DestCard(title: "Adaptation",  icon: "brain.head.profile",                          description: "On-device learning from your typing",   dest: .adaptation),
             DestCard(title: "Animation",   icon: "wand.and.stars",                              description: "Spring physics and press timing",       dest: .animation),
             DestCard(title: "Automation",  icon: "gearshape.2",                                 description: "Auto-capitalize and smart punctuation", dest: .automation),
             DestCard(title: "Cursor",      icon: "cursorarrow",                                 description: "Movement style and feel",               dest: .cursor),
@@ -1034,6 +1037,11 @@ private struct ClinkContent: View {
                         .font(.title.weight(.bold))
                     Text(appVersion)
                         .font(.caption).foregroundStyle(specialKeyTextColor)
+                    // Required attribution for the bundled prediction data
+                    // (see Tools/wordlists/README.md for sources + licenses).
+                    Text("Dictionaries: FrequencyWords (CC-BY-SA 4.0) · Tatoeba (CC-BY 2.0 FR)")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)

@@ -30,18 +30,43 @@ public struct SwipeDecoder {
 
     public init() {}
 
+    /// Normalized score above which the exact-anchor pool's best match counts
+    /// as "poor" — only then are neighbor-anchor candidates scored too, so the
+    /// soft-anchor rescue costs nothing on a clean swipe.
+    static let poorScore = 0.055
+    /// Weight of the anchor-miss penalty (start/end distance to the candidate's
+    /// first/last key, normalized by the field diagonal). High enough that a
+    /// neighbor-anchored word must beat the exact pool clearly elsewhere.
+    static let anchorPenaltyWeight = 0.3
+    /// Maximum frequency discount: the most common words score up to this much
+    /// cheaper, replacing the old ≤6% rank tie-break with a real term — the
+    /// gesture is noisy enough that "hey" should beat a fractionally-closer
+    /// "hew" outright, not just on exact ties.
+    static let frequencyWeight = 0.16
+    /// Additive penalty per frequency decade below `rarityFloor` — keeps the
+    /// long tail (subtitle-corpus names like "hetty") from beating an everyday
+    /// word on a marginal geometric edge, while leaving the common range
+    /// untouched.
+    static let rarityWeight = 0.012
+    static let rarityFloor = -4.5
+
     /// Rank `vocabulary` words by how well each one's ideal key path matches the
     /// traced `path`. `keyCenters` maps each lowercased letter to its key's centre
     /// (in the same coordinate space as `path`). `bias` words (e.g. likely
-    /// next-words for context) get a small score discount; `frequencyRank` (word →
-    /// 0-based rank, most-common first) breaks otherwise-equal paths toward the more
-    /// common word — so "hey" beats equally-traced "hew". Returns up to `limit`
-    /// words, best first; returns an empty array when no dictionary word fits (the
-    /// host then inserts nothing rather than committing a garbage key trace).
+    /// next-words for context) get a small score discount. `logFrequency`
+    /// (word → log10 corpus probability, −9…0) scales scores toward common
+    /// words; the legacy `frequencyRank` tie-break is used when it's absent.
+    /// Anchors are soft: candidates may start/end on a *neighbor* of the touched
+    /// first/last key (with a distance penalty) — scored only when nothing
+    /// anchored exactly fits well, so a slightly-missed endpoint degrades into
+    /// a rescue scan instead of silent failure. Returns up to `limit` words,
+    /// best first; empty when nothing plausible matched (the host inserts
+    /// nothing rather than committing a garbage key trace).
     public func decode(path: [CGPoint],
                        keyCenters: [Character: CGPoint],
                        vocabulary: [String],
                        bias: Set<String> = [],
+                       logFrequency: ((String) -> Double?)? = nil,
                        frequencyRank: [String: Int] = [:],
                        limit: Int = 4) -> [String] {
         guard path.count >= 2, !keyCenters.isEmpty,
@@ -58,20 +83,35 @@ public struct SwipeDecoder {
 
         let gesture = resample(path, count: Self.sampleCount)
 
-        var scored: [(word: String, score: Double)] = []
+        // Soft anchor sets: letters whose keys are within ~one key pitch of the
+        // touch-down/lift points. The exact nearest keys always qualify.
+        let pitch = keyPitch(keyCenters)
+        let startSet = letters(near: start, centers: keyCenters, within: pitch * 0.95)
+        let endSet = letters(near: end, centers: keyCenters, within: pitch * 0.95)
+
+        // Split candidates: exact-anchored words score first; neighbor-anchored
+        // ones are kept aside and only scored when the exact pool disappoints.
+        var exactPool: [String] = []
+        var neighborPool: [String] = []
         for raw in vocabulary {
             let word = raw.lowercased()
-            guard word.count >= 2, let wf = word.first, let wl = word.last,
-                  wf == firstKey, wl == lastKey else { continue }
-            // Gather the word's letter-key centres; bail if any isn't on this plane.
+            guard word.count >= 2, let wf = word.first, let wl = word.last else { continue }
+            if wf == firstKey && wl == lastKey {
+                exactPool.append(raw)
+            } else if startSet.contains(wf) && endSet.contains(wl) {
+                neighborPool.append(raw)
+            }
+        }
+
+        /// Score one candidate; nil when a letter is off this plane.
+        func score(_ raw: String) -> Double? {
+            let word = raw.lowercased()
             var centers: [CGPoint] = []
             centers.reserveCapacity(word.count)
-            var ok = true
             for ch in word {
-                guard let c = keyCenters[ch] else { ok = false; break }
+                guard let c = keyCenters[ch] else { return nil }
                 centers.append(c)
             }
-            guard ok else { continue }
             // Symmetric cost: forward = every letter visited (in order); reverse =
             // every traced point explained by some letter. Forward alone lets a tiny
             // word win by matching just the trace's endpoints and ignoring its middle
@@ -81,14 +121,37 @@ public struct SwipeDecoder {
             let forward = orderedProximity(gesture, centers)
             let reverse = coverageCost(gesture, centers)
             var d = (forward + reverse) / 2 / scale
+            // Anchor-miss penalty: zero-ish for exact anchors (the finger landed
+            // on the key), grows with how far the endpoints sit from the
+            // candidate's first/last keys.
+            if let f = centers.first, let l = centers.last {
+                d += Double(dist(start, f) + dist(end, l)) / scale * Self.anchorPenaltyWeight
+            }
             if bias.contains(word) { d *= 0.85 }   // nudge context-likely words up
-            // Frequency tie-break: scale the cost down for commoner words, by at
-            // most ~6%. Small on purpose — it only decides genuine ties, never
-            // overrides a clearly closer path (wrong words score far worse).
-            if let r = frequencyRank[word] {
+            if let logP = logFrequency?(word) ?? nil {
+                // Real frequency term: up to `frequencyWeight` discount for the
+                // most common words, fading to nothing at the rare end…
+                d *= 1.0 - Self.frequencyWeight * max(0, min(1, (logP + 9) / 9))
+                // …plus an absolute-rarity surcharge below the floor.
+                d += Self.rarityWeight * max(0, Self.rarityFloor - logP)
+            } else if let r = frequencyRank[word] {
+                // Legacy rank tie-break (no lexicon bundled).
                 d *= 1.0 - 0.06 / (1.0 + Double(r) / 600.0)
             }
-            scored.append((raw, d))
+            return d
+        }
+
+        var scored: [(word: String, score: Double)] = []
+        for raw in exactPool {
+            if let d = score(raw) { scored.append((raw, d)) }
+        }
+        // Rescue scan: the finger may have missed the first/last key by a bit.
+        // Only pay for it when the exact pool found nothing convincing.
+        let bestExact = scored.map(\.score).min() ?? .greatestFiniteMagnitude
+        if bestExact > Self.poorScore {
+            for raw in neighborPool {
+                if let d = score(raw) { scored.append((raw, d)) }
+            }
         }
         guard !scored.isEmpty else { return fallback(path: path, keyCenters: keyCenters) }
 
@@ -99,6 +162,26 @@ public struct SwipeDecoder {
             out.append(s.word)
             if out.count >= limit { break }
         }
+        return out
+    }
+
+    /// Typical spacing between adjacent keys: the smallest distance from the
+    /// first center to any other. Robust enough for the neighbor radius.
+    private func keyPitch(_ centers: [Character: CGPoint]) -> CGFloat {
+        guard let ref = centers.first?.value else { return 0 }
+        var best = CGFloat.greatestFiniteMagnitude
+        for c in centers.values {
+            let d = dist(ref, c)
+            if d > 0, d < best { best = d }
+        }
+        return best == .greatestFiniteMagnitude ? 0 : best
+    }
+
+    /// Letters whose key centers lie within `radius` of `point`.
+    private func letters(near point: CGPoint, centers: [Character: CGPoint],
+                         within radius: CGFloat) -> Set<Character> {
+        var out: Set<Character> = []
+        for (ch, c) in centers where dist(point, c) <= radius { out.insert(ch) }
         return out
     }
 

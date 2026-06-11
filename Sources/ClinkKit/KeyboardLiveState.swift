@@ -162,6 +162,14 @@ public final class KeyboardLiveState {
     /// than one panel can live behind the top-left button.
     public var activePanel: ActionPanel? = nil
 
+    /// Next-letter probability distribution for the word being typed, pushed by
+    /// the host after each edit (derived from the lexicon's completion set).
+    /// `KeyTouchRouter` prefers this over its built-in English letter tables
+    /// when sizing adaptive hitboxes; nil falls back to those tables. Only the
+    /// (debug) hitbox overlay observes it — the router reads it via a closure
+    /// at touch time, so per-keystroke updates don't re-render the keyboard.
+    public var predictedDistribution: [Character: Double]?
+
     public init(suggestions: [String] = [], autocorrection: Autocorrection? = nil) {
         self.suggestions = suggestions
         self.autocorrection = autocorrection

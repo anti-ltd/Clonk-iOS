@@ -59,12 +59,16 @@ targets:
       # Privacy manifest (required by App Store since May 2024). Lives in a
       # per-target folder so it lands at the bundle root as PrivacyInfo.xcprivacy.
       - Resources/Privacy/App/PrivacyInfo.xcprivacy
+      # Compiled frequency lexicons + bigram models (make lexicons). The in-app
+      # showcase typer runs the same engine, so the app needs them too.
+      - path: Resources/Lexicons
+        buildPhase: resources
     info:
       path: Resources/Clink-Info.plist
       properties:
         CFBundleDisplayName: Clink
         CFBundleShortVersionString: "1.1"
-        CFBundleVersion: "22"
+        CFBundleVersion: "24"
         # Export compliance: Clink runs fully offline and implements no
         # encryption of its own (only standard OS-exempt APIs). Declaring this
         # auto-clears App Store Connect's "Missing Compliance" prompt on every
@@ -109,12 +113,16 @@ targets:
       - Sources/ClinkKit
       # Privacy manifest for the keyboard extension bundle.
       - Resources/Privacy/Keyboard/PrivacyInfo.xcprivacy
+      # Compiled frequency lexicons + bigram models (make lexicons) — the
+      # prediction engine's dictionaries.
+      - path: Resources/Lexicons
+        buildPhase: resources
     info:
       path: Resources/ClinkKeyboard-Info.plist
       properties:
         CFBundleDisplayName: Clink
         CFBundleShortVersionString: "1.1"
-        CFBundleVersion: "22"
+        CFBundleVersion: "24"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           # The principal class is marked @objc(KeyboardViewController)
@@ -141,4 +149,43 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink.keyboard
         TARGETED_DEVICE_FAMILY: "1,2"
+
+  # ----------------------------------------------------------------
+  # Unit tests — pure-logic tests over ClinkKit (lexicon format, ranking,
+  # correction scoring, swipe decoding goldens). Hostless: runs on the
+  # simulator without launching the app. `make test`.
+  # ----------------------------------------------------------------
+  ClinkKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Sources/ClinkKit
+      - Tests/ClinkKitTests
+      # The tests exercise the real compiled lexicons.
+      - path: Resources/Lexicons
+        buildPhase: resources
+    dependencies:
+      - package: iUX-ios
+        product: iUXiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ltd.anti.clink.tests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+
+# Explicit scheme so `xcodebuild test -scheme Clink` finds the test bundle
+# (XcodeGen's auto-generated target schemes don't attach test targets).
+schemes:
+  Clink:
+    build:
+      targets:
+        Clink: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ClinkKitTests
+    archive:
+      config: Release
 

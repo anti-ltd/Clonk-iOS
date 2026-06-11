@@ -33,7 +33,17 @@ public enum AdaptiveHitbox {
                                  grow: Double = defaultGrow,
                                  shrink: Double = defaultShrink,
                                  predictionWeight: Double = defaultPredictionWeight) -> [Character: Double] {
-        let probs = LetterPredictor.distribution(prev: prev, predictionWeight: predictionWeight)
+        factorMap(distribution: LetterPredictor.distribution(prev: prev, predictionWeight: predictionWeight),
+                  grow: grow, shrink: shrink)
+    }
+
+    /// Same mapping, but from a precomputed next-letter distribution — the
+    /// engine derives one from the actual completion candidates of the word
+    /// being typed (see `Lexicon.nextLetterDistribution`), which is per-language
+    /// and word-aware where `LetterPredictor`'s tables are English-only.
+    public static func factorMap(distribution probs: [Character: Double],
+                                 grow: Double = defaultGrow,
+                                 shrink: Double = defaultShrink) -> [Character: Double] {
         let vals = Array(probs.values)
         guard let mx = vals.max(), let mn = vals.min(), !vals.isEmpty else { return [:] }
         let mean = vals.reduce(0, +) / Double(vals.count)

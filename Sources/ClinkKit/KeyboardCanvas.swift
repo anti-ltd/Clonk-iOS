@@ -912,6 +912,9 @@ public struct KeyboardCanvas: View {
             adaptiveShrink: settings.adaptiveShrink,
             adaptivePredictionWeight: settings.adaptivePredictionWeight,
             adaptivePredictAtWordStart: settings.adaptivePredictAtWordStart,
+            // Pulled at touch time, so per-keystroke updates never re-render
+            // the surface. Word-aware (lexicon-derived); nil → English tables.
+            predictedDistribution: { [live] in live.predictedDistribution },
                                 cursorStride: CGFloat(settings.spaceCursorStride),
                                 cursorActivationDelay: settings.spaceCursorActivationDelay / 1000,
                                 cursorLineStride: Int(settings.cursorLineStride),
@@ -1023,12 +1026,20 @@ public struct KeyboardCanvas: View {
                     let adaptive = settings.adaptiveHitboxes
                         && (touch.predictedFrom != nil || settings.adaptivePredictAtWordStart)
                     let specs = adaptive ? currentKeySpecs() : [:]
-                    let factors = adaptive
-                        ? AdaptiveHitbox.factorMap(prev: touch.predictedFrom,
-                                                   grow: settings.adaptiveGrow,
-                                                   shrink: settings.adaptiveShrink,
-                                                   predictionWeight: settings.adaptivePredictionWeight)
-                        : [:]
+                    // Mirror the router's preference: the engine's word-aware
+                    // distribution when present, the English tables otherwise.
+                    let factors: [Character: Double] = if !adaptive {
+                        [:]
+                    } else if let dist = live.predictedDistribution {
+                        AdaptiveHitbox.factorMap(distribution: dist,
+                                                 grow: settings.adaptiveGrow,
+                                                 shrink: settings.adaptiveShrink)
+                    } else {
+                        AdaptiveHitbox.factorMap(prev: touch.predictedFrom,
+                                                 grow: settings.adaptiveGrow,
+                                                 shrink: settings.adaptiveShrink,
+                                                 predictionWeight: settings.adaptivePredictionWeight)
+                    }
                     ForEach(anchors.sorted(by: { $0.key < $1.key }), id: \.key) { pair in
                         let f = proxy[pair.value]
                         let letter = adaptive ? glyphLetter(specs[pair.key]) : nil

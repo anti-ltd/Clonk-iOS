@@ -180,6 +180,10 @@ public final class KeyTouchRouter {
     fileprivate var adaptiveShrink: Double = AdaptiveHitbox.defaultShrink
     fileprivate var adaptivePredictionWeight: Double = AdaptiveHitbox.defaultPredictionWeight
     fileprivate var adaptivePredictAtWordStart: Bool = true
+    /// Pulls the host's word-aware next-letter distribution (lexicon-derived,
+    /// per-language) at touch time. nil → fall back to `LetterPredictor`'s
+    /// built-in English tables driven by `predictedFrom`.
+    @ObservationIgnored fileprivate var predictedDistribution: () -> [Character: Double]? = { nil }
     /// The last letter typed (lowercased), driving the next-letter prediction.
     /// nil at a word boundary (after space / function keys). Published so the
     /// debug overlay can mirror the same prediction.
@@ -241,6 +245,7 @@ public final class KeyTouchRouter {
                             adaptiveShrink: Double,
                             adaptivePredictionWeight: Double,
                             adaptivePredictAtWordStart: Bool,
+                            predictedDistribution: @escaping () -> [Character: Double]?,
                             cursorStride: CGFloat,
                             cursorActivationDelay: TimeInterval,
                             cursorLineStride: Int,
@@ -278,6 +283,7 @@ public final class KeyTouchRouter {
         self.adaptiveShrink = adaptiveShrink
         self.adaptivePredictionWeight = adaptivePredictionWeight
         self.adaptivePredictAtWordStart = adaptivePredictAtWordStart
+        self.predictedDistribution = predictedDistribution
         self.cursorStride = cursorStride
         self.cursorActivationDelay = cursorActivationDelay
         self.cursorLineStride = cursorLineStride
@@ -440,7 +446,15 @@ public final class KeyTouchRouter {
         // their plain size. With adaptive off the map is empty → every factor is
         // 1.0 and this reduces to the original nearest-frame routing.
         let factors: [Character: Double]
-        if adaptiveEnabled, predictedFrom != nil || adaptivePredictAtWordStart {
+        if adaptiveEnabled, let dist = predictedDistribution(),
+           predictedFrom != nil || adaptivePredictAtWordStart {
+            // Word-aware distribution from the engine (per-language, derived
+            // from the actual completions of the partial word being typed).
+            factors = AdaptiveHitbox.factorMap(distribution: dist,
+                                               grow: adaptiveGrow,
+                                               shrink: adaptiveShrink)
+        } else if adaptiveEnabled, predictedFrom != nil || adaptivePredictAtWordStart {
+            // Fallback: built-in English letter-bigram tables.
             factors = AdaptiveHitbox.factorMap(prev: predictedFrom,
                                                grow: adaptiveGrow,
                                                shrink: adaptiveShrink,
@@ -1185,6 +1199,7 @@ struct MultiTouchSurface: UIViewRepresentable {
     let adaptiveShrink: Double
     let adaptivePredictionWeight: Double
     let adaptivePredictAtWordStart: Bool
+    let predictedDistribution: () -> [Character: Double]?
     let cursorStride: CGFloat
     let cursorActivationDelay: TimeInterval
     let cursorLineStride: Int
@@ -1215,6 +1230,7 @@ struct MultiTouchSurface: UIViewRepresentable {
                       adaptiveGrow: adaptiveGrow, adaptiveShrink: adaptiveShrink,
                       adaptivePredictionWeight: adaptivePredictionWeight,
                       adaptivePredictAtWordStart: adaptivePredictAtWordStart,
+                      predictedDistribution: predictedDistribution,
                       cursorStride: cursorStride,
                       cursorActivationDelay: cursorActivationDelay,
                       cursorLineStride: cursorLineStride,
@@ -1246,6 +1262,7 @@ struct MultiTouchSurface: UIViewRepresentable {
                       adaptiveGrow: adaptiveGrow, adaptiveShrink: adaptiveShrink,
                       adaptivePredictionWeight: adaptivePredictionWeight,
                       adaptivePredictAtWordStart: adaptivePredictAtWordStart,
+                      predictedDistribution: predictedDistribution,
                       cursorStride: cursorStride,
                       cursorActivationDelay: cursorActivationDelay,
                       cursorLineStride: cursorLineStride,

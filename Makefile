@@ -37,7 +37,7 @@ EXPORT_DIR     := $(BUILD_DIR)/export
 IPA            := $(EXPORT_DIR)/$(APP_NAME).ipa
 EXPORT_OPTIONS := ExportOptions.plist
 
-.PHONY: all project icon emoji build run sim install clean stop help test \
+.PHONY: all project icon emoji lexicons build run sim install clean stop help test \
         device device-install device-launch build-device \
         device-showcase build-device-showcase \
         archive package validate-asc upload-asc bump
@@ -89,6 +89,12 @@ icon: $(ICON_OUT)
 # from Tools/emoji-test.txt. Re-run after vendoring a newer emoji-test.txt.
 emoji:
 	swift Tools/GenerateEmojiData.swift
+
+# Regenerate Resources/Lexicons/*.clex|*.cngm (frequency dictionaries + bigram
+# models for the prediction engine) from the word lists under Tools/wordlists.
+# The raw lists are gitignored — see Tools/wordlists/README.md for downloads.
+lexicons:
+	swift Tools/GenerateLexicons.swift
 
 # Regenerate the xcodeproj from project.yml. XcodeGen is the source of truth.
 project:

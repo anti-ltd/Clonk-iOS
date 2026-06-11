@@ -25,6 +25,8 @@ struct SuggestionsView: View {
                               isOn: $model.settings.revertAutocorrectOnDelete)
                 }
             }
+            // Learning (remembering words, suppressing rejected corrections) now
+            // lives on its own Adaptation page under Customization.
         }
         .navigationTitle("Suggestions")
         .navigationBarTitleDisplayMode(.inline)

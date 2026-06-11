@@ -34,6 +34,36 @@ public final class SuggestionEngine {
     /// across all active languages. Kept in sync with `languages` by `setLanguages`.
     /// See `LanguageHeuristics`.
     private var heuristics = LanguageHeuristics.forLanguages(["en_US"])
+    /// The compiled frequency lexicons for the active languages (see `Lexicon`).
+    /// Empty when no `.clex` resources are bundled — every consumer degrades to
+    /// the checker-only behavior in that case.
+    private var lexicon = LexiconRepository.shared.merged(for: ["en_US"])
+    /// Opt-in user learning (see `UserAdaptation`). nil when the learning
+    /// setting is off — every read below treats nil as "no adaptation".
+    private var adaptation: UserAdaptation?
+    /// Confidence model for spelling fixes (see `CorrectionScorer`). Its
+    /// adjacency table tracks the active layout via `setLayout`.
+    private var scorer = CorrectionScorer()
+
+    /// Tell the scorer which physical layout is active so adjacent-key typos
+    /// ("hwllo" → "hello") cost less than arbitrary substitutions.
+    public func setLayout(_ layout: KeyboardLayout) {
+        scorer.adjacency = KeyAdjacency.forLayout(layout)
+        correctionCache = nil
+    }
+
+    /// Attach/detach the learning store (driven by the `learningEnabled`
+    /// setting). Clears caches whose contents depend on learned words.
+    public func setAdaptation(_ adaptation: UserAdaptation?) {
+        guard (self.adaptation == nil) != (adaptation == nil) else {
+            self.adaptation = adaptation
+            return
+        }
+        self.adaptation = adaptation
+        correctionCache = nil
+        swipeVocabCache = nil
+        prebuildSwipeVocabulary()
+    }
 
     /// Point the engine at one or more spelling/completion languages (`UITextChecker`
     /// identifiers such as "en_US" / "fr_FR"). Each is resolved to a language the
@@ -52,8 +82,10 @@ public final class SuggestionEngine {
         guard resolved != languages else { return }
         languages = resolved
         heuristics = LanguageHeuristics.forLanguages(resolved)
+        lexicon = LexiconRepository.shared.merged(for: resolved)
         correctionCache = nil
         swipeVocabCache = nil
+        prebuildSwipeVocabulary()
     }
 
     /// Single-language convenience — sets the active set to just `identifier`.
@@ -167,8 +199,12 @@ public final class SuggestionEngine {
         }
     }
 
+    /// `previousWord` is the completed word before the cursor (drives next-word
+    /// prediction when there's no partial); `context` is the word before the
+    /// *partial* being typed (drives correction confidence via bigrams).
     public func compute(partial: String, previousWord: String?, sentenceStart: Bool,
-                        autocorrect: Bool, autoPunctuation: Bool, rejected: String?) -> Result {
+                        autocorrect: Bool, autoPunctuation: Bool, rejected: String?,
+                        context: String? = nil) -> Result {
         // No partial yet → predict the next word so the bar is never blank.
         guard !partial.isEmpty else {
             return Result(predictions: nextWords(previousWord: previousWord, sentenceStart: sentenceStart),
@@ -181,12 +217,19 @@ public final class SuggestionEngine {
         // almond). Guesses = spelling fixes (e.g. "almo" → also). For a prefix,
         // a completion is usually what's intended, so completions lead — and we
         // rank them so common words ("almost") beat rare ones ("almoner").
-        let completions = rank(mergedCompletions(partial, range))
+        // The bundled frequency lexicon surfaces everyday words the device
+        // checker is too shallow for ("hey", "lol", "yeah") and provides the
+        // frequency ranking; checker completions add the long tail (names,
+        // locale words) on top.
+        let lexiconCompletions = lexicon.topCompletions(prefix: partial, limit: 6)
+        // Learned words complete too — a name typed daily beats the dictionary.
+        let learnedCompletions = adaptation?.completions(prefix: partial, limit: 3) ?? []
+        let completions = rank(learnedCompletions + lexiconCompletions + mergedCompletions(partial, range))
         let guesses = mergedGuesses(partial, range)
         let isMisspelled = misspelledEverywhere(partial, range)
 
-        // Bar candidates: common-ranked pool of completions + guesses, minus the
-        // literal (the bar shows that itself).
+        // Bar candidates: frequency-ranked pool of completions + guesses, minus
+        // the literal (the bar shows that itself).
         var pool = rank(completions + guesses).filter { $0.caseInsensitiveCompare(partial) != .orderedSame }
 
         // Lexicon prefix matches (contact names, shortcuts) lead the bar so a
@@ -211,10 +254,10 @@ public final class SuggestionEngine {
         // moments later (same word) is a free lookup.
         let correction = resolveCorrection(
             partial: partial, autocorrect: autocorrect, autoPunctuation: autoPunctuation,
-            rejected: rejected, isMisspelled: isMisspelled,
+            rejected: rejected, context: context, isMisspelled: isMisspelled,
             guesses: guesses, completions: completions)
         store(correction, partial: partial, autocorrect: autocorrect,
-              autoPunctuation: autoPunctuation, rejected: rejected)
+              autoPunctuation: autoPunctuation, rejected: rejected, context: context)
 
         // When we're not correcting, lead the bar with the literal so the user
         // can see/keep what they typed; otherwise the bar shows it as the "keep"
@@ -236,22 +279,24 @@ public final class SuggestionEngine {
     /// Returns the same correction `compute` would, and shares its cache — so if
     /// the debounced bar already evaluated this word, this is a dictionary hit.
     public func correction(for partial: String, autocorrect: Bool,
-                           autoPunctuation: Bool, rejected: String?) -> Autocorrection? {
+                           autoPunctuation: Bool, rejected: String?,
+                           context: String? = nil) -> Autocorrection? {
         guard !partial.isEmpty else { return nil }
         let key = CorrectionKey(partial: partial, autocorrect: autocorrect,
-                                autoPunctuation: autoPunctuation, rejected: rejected)
+                                autoPunctuation: autoPunctuation, rejected: rejected,
+                                context: context)
         if let c = correctionCache, c.key == key { return c.value }
         // Compute the checker inputs lazily: `resolveCorrection` only forces them
         // if the cheap contraction/lexicon paths miss and the word is misspelled.
         let range = NSRange(location: 0, length: partial.utf16.count)
         let result = resolveCorrection(
             partial: partial, autocorrect: autocorrect, autoPunctuation: autoPunctuation,
-            rejected: rejected,
+            rejected: rejected, context: context,
             isMisspelled: self.misspelledEverywhere(partial, range),
             guesses: self.mergedGuesses(partial, range),
             completions: self.rank(self.mergedCompletions(partial, range)))
         store(result, partial: partial, autocorrect: autocorrect,
-              autoPunctuation: autoPunctuation, rejected: rejected)
+              autoPunctuation: autoPunctuation, rejected: rejected, context: context)
         return result
     }
 
@@ -262,6 +307,7 @@ public final class SuggestionEngine {
     /// `completions` aren't evaluated until the logic actually needs them.
     private func resolveCorrection(
         partial: String, autocorrect: Bool, autoPunctuation: Bool, rejected: String?,
+        context: String?,
         isMisspelled: @autoclosure () -> Bool,
         guesses: @autoclosure () -> [String],
         completions: @autoclosure () -> [String]
@@ -269,7 +315,11 @@ public final class SuggestionEngine {
         // Auto-punctuation: turn an apostrophe-less contraction into its real
         // form (ive → I've, dont → don't). Takes precedence over the spelling
         // path; no length floor, so 2-char "im" works. No checker needed.
-        if autoPunctuation, partial != rejected,
+        // A correction the user has repeatedly rejected (reverted or cancelled)
+        // is suppressed permanently, not just for the session.
+        let persistentlyRejected = adaptation?.isRejected(partial) == true
+
+        if autoPunctuation, partial != rejected, !persistentlyRejected,
            let fix = heuristics.contractions[partial.lowercased()],
            fix.caseInsensitiveCompare(partial) != .orderedSame {
             // Honour a typed leading capital; never downcase (I-forms keep their I).
@@ -284,16 +334,20 @@ public final class SuggestionEngine {
         // A user lexicon shortcut that exactly matches what's typed expands like
         // the native keyboard's text replacement ("omw" → "On my way!"). Also no
         // checker — a plain dictionary lookup.
-        if autocorrect, partial != rejected,
+        if autocorrect, partial != rejected, !persistentlyRejected,
            let expansion = lexiconExact[partial.lowercased()],
            expansion.caseInsensitiveCompare(partial) != .orderedSame {
             return Autocorrection(from: partial, to: expansion)
         }
 
         // Everything past here is a spelling fix: needs autocorrect on, the word
-        // not rejected, and — first checker touch — the word actually misspelled.
-        // A correctly-spelled word stops right here, one cheap call in.
-        guard autocorrect, partial != rejected, isMisspelled() else { return nil }
+        // not rejected, not one the user has *taught* the keyboard (a learned
+        // word is treated as correctly spelled even if every checker disagrees),
+        // and — first checker touch — actually misspelled. A correctly-spelled
+        // word stops right here, one cheap call in.
+        guard autocorrect, partial != rejected, !persistentlyRejected,
+              adaptation?.isLearned(partial) != true,
+              isMisspelled() else { return nil }
 
         // Highest-confidence spelling fix: a single adjacent-letter transposition
         // that yields a real word ("teh" → "the", "adn" → "and"). This is the
@@ -303,17 +357,44 @@ public final class SuggestionEngine {
             return Autocorrection(from: partial, to: swap)
         }
 
-        // General spelling correction — only when the candidate is *close* to what
-        // was typed. We gate on Damerau-Levenshtein distance so a far-flung guess
-        // still shows in the bar (the user can tap it) but is never silently
-        // committed on space. The ≥3 floor stays: 2-char fragments are too
-        // ambiguous for a generic guess (transpositions/contractions above handle
-        // the confident short cases).
-        if partial.count >= 3,
-           let best = guesses().first ?? completions().first,
-           best.caseInsensitiveCompare(partial) != .orderedSame,
-           editDistance(partial, best) <= 2 {
-            return Autocorrection(from: partial, to: best)
+        // General spelling correction. The ≥3 floor stays: 2-char fragments are
+        // too ambiguous for a generic guess (transpositions/contractions above
+        // handle the confident short cases).
+        guard partial.count >= 3 else { return nil }
+
+        // With no frequency data (no .clex bundled) fall back to the legacy
+        // rule: first checker guess within Damerau-Levenshtein distance 2.
+        guard !lexicon.isEmpty else {
+            if let best = guesses().first ?? completions().first,
+               best.caseInsensitiveCompare(partial) != .orderedSame,
+               editDistance(partial, best) <= 2 {
+                return Autocorrection(from: partial, to: best)
+            }
+            return nil
+        }
+
+        // Confidence-scored correction: pool the checker's guesses and
+        // completions, score each by keyboard-aware edit cost + frequency +
+        // bigram context, and only silently commit a fix that clears the auto
+        // threshold. A merely-plausible fix stays in the bar (the pool already
+        // contains it) where a deliberate tap can choose it — never a silent
+        // replacement the user has to fight.
+        let candidates = Array(guesses().prefix(6)) + Array(completions().prefix(4))
+        let best = scorer.best(
+            candidates: candidates, typed: partial,
+            logFrequency: { [lexicon, adaptation] word in
+                let lower = word.lowercased()
+                let logP = lexicon.logProbability(of: lower)
+                // A learned word ranks at least like a moderately-common one.
+                if adaptation?.isLearned(lower) == true { return max(logP ?? -9, -5) }
+                return logP
+            },
+            contextLogP: { [lexicon] word in
+                guard let context else { return nil }
+                return lexicon.contextLogProbability(of: word, given: context)
+            })
+        if let best, best.verdict == .autocorrect {
+            return Autocorrection(from: partial, to: best.word)
         }
         return nil
     }
@@ -331,13 +412,15 @@ public final class SuggestionEngine {
         let autocorrect: Bool
         let autoPunctuation: Bool
         let rejected: String?
+        let context: String?
     }
     private var correctionCache: (key: CorrectionKey, value: Autocorrection?)?
 
     private func store(_ value: Autocorrection?, partial: String, autocorrect: Bool,
-                       autoPunctuation: Bool, rejected: String?) {
+                       autoPunctuation: Bool, rejected: String?, context: String?) {
         correctionCache = (CorrectionKey(partial: partial, autocorrect: autocorrect,
-                                         autoPunctuation: autoPunctuation, rejected: rejected), value)
+                                         autoPunctuation: autoPunctuation, rejected: rejected,
+                                         context: context), value)
     }
 
     /// If swapping a single pair of adjacent letters turns a misspelled word into
@@ -383,59 +466,145 @@ public final class SuggestionEngine {
         return d[n][m]
     }
 
-    /// Stable sort putting common words first (so "almost" outranks "almond"),
-    /// preserving the checker's original order among equally-common words.
+    /// Stable sort by corpus frequency (so "almost" outranks "almond"),
+    /// preserving the checker's original order among equally-ranked words.
+    /// Words the lexicon doesn't know sort below known ones, with the old
+    /// `commonWords` membership as the tie-break so behavior degrades to the
+    /// pre-lexicon ranking when no `.clex` resources are bundled.
     private func rank(_ words: [String]) -> [String] {
         words.enumerated().sorted { l, r in
-            let lc = heuristics.commonWords.contains(l.element.lowercased())
-            let rc = heuristics.commonWords.contains(r.element.lowercased())
-            if lc != rc { return lc }
+            let ls = rankScore(l.element), rs = rankScore(r.element)
+            if ls != rs { return ls > rs }
             return l.offset < r.offset
         }.map(\.element)
+    }
+
+    /// Ranking key for one bar candidate: lexicon log10 probability when known
+    /// (−9…0), else a floor that still lets `commonWords` members beat unknowns.
+    /// Learned words ride on top — a word the user types often outranks a
+    /// merely-common one, and a learned word the corpus has never seen still
+    /// surfaces (floor −7 puts it above rare dictionary words).
+    private func rankScore(_ word: String) -> Double {
+        let lower = word.lowercased()
+        let boost = adaptation?.rankBoost(for: lower) ?? 0
+        if let logP = lexicon.logProbability(of: lower) { return logP + boost }
+        if boost > 0 { return -7 + boost }
+        return heuristics.commonWords.contains(lower) ? -10 : -12
+    }
+
+    /// Next-letter probability distribution for the adaptive hitboxes: derived
+    /// from the lexicon's actual completion set for the partial word being
+    /// typed (word-aware, per-language), falling back to the compiled
+    /// letter-bigram matrix at a word start or off-dictionary prefix. nil when
+    /// no lexicons are bundled — the router then uses its built-in English
+    /// tables. Point lookups on the mmapped lexicon: safe to call per keystroke.
+    public func nextLetterDistribution(partial: String) -> [Character: Double]? {
+        guard !lexicon.isEmpty else { return nil }
+        let lower = partial.lowercased()
+        if !lower.isEmpty, let d = lexicon.nextLetterDistribution(prefix: lower) {
+            return d
+        }
+        return lexicon.letterDistribution(after: lower.last)
     }
 
     // MARK: - Next-word prediction (offline, dictionary-based)
 
     /// Up to three predictions for the next word, so the bar is never empty.
-    /// Sentence starters at a sentence start; otherwise words that commonly
-    /// follow `previousWord`, falling back to high-frequency words.
+    /// Sentence starters at a sentence start; otherwise the corpus bigram
+    /// model's most likely followers of `previousWord`, then the hand-written
+    /// heuristic bigrams, then high-frequency filler — in that order, so the
+    /// real language model leads whenever it knows the word.
     private func nextWords(previousWord: String?, sentenceStart: Bool) -> [String] {
         if sentenceStart || previousWord == nil {
             return heuristics.sentenceStarters
         }
-        let picks = heuristics.bigrams[previousWord!.lowercased()] ?? heuristics.commonFallback
+        let prev = previousWord!.lowercased()
+        let modeled = lexicon.nextWords(after: prev, limit: 3)
+        if !modeled.isEmpty { return modeled }
+        let picks = heuristics.bigrams[prev] ?? heuristics.commonFallback
         return Array(picks.prefix(3))
     }
 
     // MARK: - Swipe / glide typing
 
     private let swipeDecoder = SwipeDecoder()
-    /// Lowercased word pool for swipe decoding: the languages' heuristic tables
-    /// plus the system dictionary from UITextChecker (seeded a–z per active
-    /// language). Built once per active-language set and cached; rebuilt when the
-    /// set changes.
-    private var swipeVocabCache: (languages: [String], words: [String])?
+    /// Background worker for the heavier lexicon scans (vocab builds).
+    private let core = PredictionCore()
+    /// Per-language word budget for the swipe vocabulary when lexicons are
+    /// bundled. ~20k covers everything realistically swipeable; the decoder's
+    /// anchor buckets keep the per-swipe scan far smaller.
+    private static let swipeWordsPerLanguage = 20_000
+    /// Lowercased word pool for swipe decoding. With lexicons bundled it's the
+    /// per-language top words + heuristics + learned words, prebuilt off-main
+    /// by `PredictionCore` whenever languages/learning change (with a sync
+    /// first-swipe fallback). Without lexicons it's the legacy build:
+    /// heuristics + bundled SwipeLexicon + a–z checker seeding.
+    private var swipeVocabCache: (key: SwipeVocabKey, words: [String])?
+
+    private struct SwipeVocabKey: Equatable {
+        let languages: [String]
+        let learnedCount: Int
+    }
+
+    private var swipeVocabKey: SwipeVocabKey {
+        SwipeVocabKey(languages: languages,
+                      learnedCount: adaptation?.learnedWords().count ?? 0)
+    }
+
+    /// Main-actor-only vocabulary contributions: the heuristic tables and the
+    /// user's learned words. Cheap to gather.
+    private func swipeExtras() -> [String] {
+        var out: [String] = []
+        out.append(contentsOf: heuristics.commonWords)
+        out.append(contentsOf: heuristics.commonFallback)
+        out.append(contentsOf: heuristics.sentenceStarters)
+        for (k, vs) in heuristics.bigrams {
+            out.append(k)
+            out.append(contentsOf: vs)
+        }
+        if let adaptation { out.append(contentsOf: adaptation.learnedWords()) }
+        return out
+    }
+
+    /// Kick an off-main vocabulary rebuild so the first swipe never pays for
+    /// it. No-op when the cache is already current or no lexicons are bundled
+    /// (the legacy build needs the main-actor checker anyway).
+    private func prebuildSwipeVocabulary() {
+        guard !lexicon.isEmpty else { return }
+        let key = swipeVocabKey
+        guard swipeVocabCache?.key != key else { return }
+        let lex = lexicon
+        let extras = swipeExtras()
+        Task { [weak self, core] in
+            let words = await core.swipeVocabulary(
+                lexicon: lex, perLanguage: Self.swipeWordsPerLanguage, extras: extras)
+            guard let self else { return }
+            // Languages/learning may have moved on while we built — only a
+            // result that still matches the current inputs may land.
+            if self.swipeVocabKey == key { self.swipeVocabCache = (key, words) }
+        }
+    }
 
     private func swipeVocabulary() -> [String] {
-        if let c = swipeVocabCache, c.languages == languages { return c.words }
-        var set = Set<String>()
-        set.formUnion(heuristics.commonWords)
-        set.formUnion(heuristics.commonFallback.map { $0.lowercased() })
-        set.formUnion(heuristics.sentenceStarters.map { $0.lowercased() })
-        for (k, vs) in heuristics.bigrams {
-            set.insert(k)
-            for v in vs { set.insert(v.lowercased()) }
+        let key = swipeVocabKey
+        if let c = swipeVocabCache, c.key == key { return c.words }
+
+        // Lexicon-backed build (sync fallback for a swipe that beat the
+        // prebuild): top words per language + the main-actor extras.
+        if !lexicon.isEmpty {
+            let words = PredictionCore.makeSwipeVocabulary(
+                lexicon: lexicon, perLanguage: Self.swipeWordsPerLanguage,
+                extras: swipeExtras())
+            swipeVocabCache = (key, words)
+            return words
         }
-        // The bundled frequency list is the real backbone of the swipe vocabulary.
-        // UITextChecker's completions are too shallow to surface everyday words
-        // ("hey"/"lol" never came back), so this list guarantees they're scoreable —
-        // and its frequency order feeds the decoder's tie-break (see swipeCandidates).
-        // For non-English it's only a fallback layer under the language heuristics.
+
+        // Legacy build (no .clex bundled): heuristics + bundled frequency list
+        // + a light single-letter UITextChecker pass for device-/locale-specific
+        // long-tail words (~26 calls per active language).
+        var set = Set<String>()
+        for w in swipeExtras() { set.insert(w.lowercased()) }
         set.formUnion(SwipeLexicon.words)
-        // A light single-letter UITextChecker pass adds device-/language-specific
-        // long-tail words (names, locale words the static lists miss). Cheap (~26
-        // calls per active language), cached; two-letter seeding was dropped — it
-        // cost ~676 calls for words the bundled list already covers.
         for lang in languages {
             for ch in "abcdefghijklmnopqrstuvwxyz" {
                 let seed = String(ch)
@@ -446,7 +615,7 @@ public final class SuggestionEngine {
             }
         }
         let words = Array(set)
-        swipeVocabCache = (languages, words)
+        swipeVocabCache = (key, words)
         return words
     }
 
@@ -462,10 +631,22 @@ public final class SuggestionEngine {
                                 limit: Int = 4) -> [String] {
         let bias = Set(nextWords(previousWord: previousWord, sentenceStart: sentenceStart)
                         .map { $0.lowercased() })
+        let lex = lexicon
+        let adapt = adaptation
         let words = swipeDecoder.decode(path: path,
                                         keyCenters: keyCenters,
                                         vocabulary: swipeVocabulary(),
                                         bias: bias,
+                                        logFrequency: lex.isEmpty ? nil : { word in
+                                            // Learned words score like moderately
+                                            // common ones, so they're swipeable
+                                            // even when the corpus is silent.
+                                            let logP = lex.logProbability(of: word)
+                                            if adapt?.isLearned(word) == true {
+                                                return max(logP ?? -9, -5)
+                                            }
+                                            return logP
+                                        },
                                         frequencyRank: SwipeLexicon.rank,
                                         limit: limit)
         // Capitalise the lead candidate at a sentence start, matching the bar's
