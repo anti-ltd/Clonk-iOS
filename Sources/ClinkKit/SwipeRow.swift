@@ -219,7 +219,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
         // Another row opened — close this one.
         .onChange(of: openID) { _, newValue in
             if newValue != id && offset != 0 {
-                withAnimation(.smooth(duration: 0.25)) { offset = 0 }
+                withAnimation(Motion.swipeRowSettle.animation) { offset = 0 }
             }
         }
         // The swipe lives on the whole (stable, full-width) row, NOT the card
@@ -275,7 +275,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 let ptx = mirror ? -value.predictedEndTranslation.width : value.predictedEndTranslation.width
                 let projected = base + ptx
                 let willOpen = projected < -openDistance / 2
-                withAnimation(.smooth(duration: 0.25)) {
+                withAnimation(Motion.swipeRowSettle.animation) {
                     offset = willOpen ? -openDistance : 0
                 }
                 // Opening this row makes it the sole open row.
@@ -442,7 +442,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
     }
 
     private func close() {
-        withAnimation(.smooth(duration: 0.25)) { offset = 0 }
+        withAnimation(Motion.swipeRowSettle.animation) { offset = 0 }
         if openID == id { openID = nil }
     }
 

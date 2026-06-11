@@ -236,7 +236,11 @@ private struct CursorModePreview: View {
     // MARK: Helpers
 
     private func startAnimation() {
-        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+        // Decorative repeat-forever: skipped entirely when the motion profile
+        // says ambience should rest (Reduce Motion / Low Power) — a forever
+        // loop can't be softened by a shorter curve, only not started.
+        guard MotionProfile.shared.allowsAmbientMotion else { return }
+        withAnimation(Motion.cursorPulse.animation.repeatForever(autoreverses: true)) {
             phase = 1
         }
     }

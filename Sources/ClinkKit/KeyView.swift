@@ -34,7 +34,11 @@ struct TapPulse: ViewModifier {
     @State private var fadeTask: Task<Void, Never>?
 
     func body(content: Content) -> some View {
-        if enabled, strength > 0.001 {
+        // The additive `.plusLighter` layer is the GPU-expensive part — skipped
+        // under power/thermal pressure (the profile gate), where it historically
+        // cost frames on older GPUs. Reading the profile here also subscribes
+        // this view to tier changes, so flashes resume when pressure lifts.
+        if enabled, strength > 0.001, MotionProfile.shared.allowsExpensiveEffects {
             content.overlay {
                 shape.fill(.white)
                     .opacity(flash)
@@ -43,11 +47,11 @@ struct TapPulse: ViewModifier {
             }
             .onChange(of: trigger) { _, _ in
                 fadeTask?.cancel()
-                withAnimation(.linear(duration: 0.05)) { flash = strength }   // snap bright
+                withAnimation(Motion.tapFlashIn.animation) { flash = strength }   // snap bright
                 fadeTask = Task { @MainActor in
                     try? await Task.sleep(for: .seconds(0.05))
                     guard !Task.isCancelled else { return }
-                    withAnimation(.easeOut(duration: 0.20)) { flash = 0 }     // ease back out
+                    withAnimation(Motion.tapFlashOut.animation) { flash = 0 }     // ease back out
                 }
             }
         } else {
@@ -202,7 +206,7 @@ struct KeyView: View {
             // it flows rather than snaps, and keyed only to its own value so it never
             // disturbs the press bloom below. Multiplies with the press scale.
             .scaleEffect(swipeScale, anchor: .center)
-            .animation(.interactiveSpring(response: 0.16, dampingFraction: 0.72), value: swipeScale)
+            .animation(Motion.swipeRipple.animation, value: swipeScale)
             .scaleEffect(x: w.scaleX, y: w.scaleY, anchor: .center)
             // The lean offset rides BEFORE the springs below. While dragging, only
             // `dragX` (the offset) changes — `isPressed`/`cursorActive` are steady —
@@ -217,15 +221,15 @@ struct KeyView: View {
             // `cursorActive` clear in the same frame — settles on ONE spring instead
             // of two different ones fighting over the scale (the release stutter).
             .animation(spec.isSpace
-                       ? .interactiveSpring(response: physics.spaceSpringResponse, dampingFraction: physics.spaceSpringDamping)
+                       ? physics.spaceSpringAnimation
                        : (pressWarp && !spec.isShift && !physics.instant
-                          ? .interactiveSpring(response: physics.springResponse, dampingFraction: physics.springDamping) : nil),
+                          ? physics.keySpringAnimation : nil),
                        value: isPressed)
             // The space bar's trackpad shrink in/out — a one-shot at engage/release,
             // matched to the spring above. Scoped to space so a space drag never
             // re-animates any other key.
             .animation(spec.isSpace
-                       ? .interactiveSpring(response: physics.spaceSpringResponse, dampingFraction: physics.spaceSpringDamping) : nil,
+                       ? physics.spaceSpringAnimation : nil,
                        value: cursorActive)
             // Additive "tap registered" flash. The bloom above is sprung on
             // `isPressed`, which never re-toggles when the SAME key is tapped
@@ -355,7 +359,7 @@ struct KeyView: View {
                 // dropping the glyph. Only a real shift ⇄ caps-lock swap
                 // changes identity and cross-fades.
                 .id(name)
-                .animation(.snappy(duration: 0.25), value: name)
+                .animation(Motion.glyphSwap.animation, value: name)
         }
     }
 

@@ -76,7 +76,7 @@ struct ShowcaseView: View {
             .background(alignment: .bottom) {
                 typer.tray.swiftUIView.ignoresSafeArea(edges: .bottom)
             }
-            .animation(.easeInOut(duration: 0.3), value: typer.controller.showEmoji)
+            .animation(Motion.showcaseFade.animation, value: typer.controller.showEmoji)
     }
 
     /// The letter keyboard or the emoji keyboard, swapped with a slide+fade when

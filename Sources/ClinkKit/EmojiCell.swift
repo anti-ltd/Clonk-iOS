@@ -39,7 +39,7 @@ struct EmojiCell: View {
                         .font(.system(size: glyphSize))
                         .fixedSize()
                         .scaleEffect(simulatedPressed ? 1.3 : 1)
-                        .animation(.interactiveSpring(response: 0.22, dampingFraction: 0.6), value: simulatedPressed)
+                        .animation(Motion.emojiCellPress.animation, value: simulatedPressed)
                 }
                 .contentShape(Rectangle())
         }
@@ -99,22 +99,21 @@ struct EmojiGlassFlashView: View {
     /// the keyframes traced — scale 0.55 → 1.08 (0.15s) settling to 0.97
     /// (0.23s), opacity blooming to 0.85 (0.06s) then easing away (0.32s).
     private func play() {
+        MotionDiagnostics.event("emoji.flash")
         playTask?.cancel()
         var snap = Transaction()
         snap.disablesAnimations = true
         withTransaction(snap) { scale = 0.55; opacity = 0 }
-        playTask = Task { @MainActor in
-            // A fresh runloop turn, so the reset above is committed and these
-            // animate from the rest pose instead of coalescing with it.
-            withAnimation(.linear(duration: 0.06)) { opacity = 0.85 }   // bloom in
-            withAnimation(.easeOut(duration: 0.15)) { scale = 1.08 }    // morph out past full
-            try? await Task.sleep(for: .seconds(0.06))
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.32)) { opacity = 0 }     // ease away
-            try? await Task.sleep(for: .seconds(0.09))                  // 0.15 from start
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeInOut(duration: 0.23)) { scale = 0.97 }  // settle back in
-        }
+        // A fresh runloop turn (the sequence task), so the reset above is
+        // committed and these animate from the rest pose instead of coalescing.
+        playTask = runMotionSequence([
+            MotionStep(animation: Motion.emojiFlashBloom.animation)  { opacity = 0.85 }, // bloom in
+            MotionStep(animation: Motion.emojiFlashMorph.animation)  { scale = 1.08 },   // morph out past full
+            MotionStep(delay: .seconds(0.06),
+                       animation: Motion.emojiFlashFade.animation)   { opacity = 0 },    // ease away
+            MotionStep(delay: .seconds(0.09),                                            // 0.15 from start
+                       animation: Motion.emojiFlashSettle.animation) { scale = 0.97 },   // settle back in
+        ])
     }
 }
 
@@ -125,7 +124,7 @@ struct EmojiBloomStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 1.3 : 1)
-            .animation(.interactiveSpring(response: 0.22, dampingFraction: 0.6),
+            .animation(Motion.emojiCellPress.animation,
                        value: configuration.isPressed)
     }
 }

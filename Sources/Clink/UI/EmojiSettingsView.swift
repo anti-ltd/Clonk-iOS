@@ -44,7 +44,7 @@ struct EmojiSettingsView: View {
                 .padding(.horizontal, UX.screenPadding)
                 .padding(.top, UX.cardSpacing)
                 .padding(.bottom, UX.screenPadding)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.emojiEnabled)
+                .animation(Motion.settingsReveal.animation, value: model.settings.emojiEnabled)
             }
             .id(selectedTab)
 
@@ -106,7 +106,7 @@ struct EmojiSettingsView: View {
                 }
             }
             .transition(.opacity.combined(with: .move(edge: .bottom)))
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.showRecentEmoji)
+            .animation(Motion.settingsReveal.animation, value: model.settings.showRecentEmoji)
         }
     }
 

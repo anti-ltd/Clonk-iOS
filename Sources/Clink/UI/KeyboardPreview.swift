@@ -185,7 +185,7 @@ struct ThemedChipPicker<Tag: Hashable>: View {
                         in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
-            .animation(.easeInOut(duration: 0.15), value: isSelected)
+            .animation(Motion.selectionFade.animation, value: isSelected)
         }
     }
 }
@@ -205,7 +205,7 @@ struct ThemedFillButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .background(fill, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
             .opacity(configuration.isPressed ? 0.7 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(Motion.previewKeyPress.animation, value: configuration.isPressed)
     }
 }
 
@@ -238,7 +238,7 @@ struct ThemedTabPicker<Tag: Hashable>: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isDisabled)
-                .animation(.easeInOut(duration: 0.15), value: isSelected)
+                .animation(Motion.selectionFade.animation, value: isSelected)
             }
         }
         .padding(4)
@@ -809,7 +809,7 @@ private struct ThemePopoverModifier<PopoverContent: View>: ViewModifier {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                withAnimation(.snappy(duration: 0.2)) { isPresented = false }
+                                withAnimation(Motion.previewPopup.animation) { isPresented = false }
                             }
                         menuCard
                             .padding(.top, 8)
@@ -818,7 +818,7 @@ private struct ThemePopoverModifier<PopoverContent: View>: ViewModifier {
                     .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .topTrailing)))
                 }
             }
-            .animation(.snappy(duration: 0.2), value: isPresented)
+            .animation(Motion.previewPopup.animation, value: isPresented)
     }
 
     @ViewBuilder private var menuCard: some View {

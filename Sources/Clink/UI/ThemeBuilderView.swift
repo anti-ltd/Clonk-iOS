@@ -733,13 +733,13 @@ private struct ThemedColorPickerModifier: ViewModifier {
                     cornerRadius: cardCornerRadius,
                     title: "Color",
                     maxHeightFraction: 0.42,
-                    onDismiss: { withAnimation(.spring(response: 0.35)) { presenter.dismiss() } }
+                    onDismiss: { withAnimation(Motion.popupDismiss.animation) { presenter.dismiss() } }
                 ) {
                     ColorPickerContent(presenter: presenter)
                 }
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.88), value: presenter.isPresented)
+        .animation(Motion.sheetPresent.animation, value: presenter.isPresented)
     }
 }
 

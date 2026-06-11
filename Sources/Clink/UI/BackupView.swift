@@ -184,6 +184,54 @@ private struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
+// MARK: - Theme import sheet
+
+/// Content of the themed sheet shown when a `.clinktheme` file is opened from
+/// the share menu or Files. Shows a live keyboard preview of the incoming theme
+/// so the user can decide before anything is saved.
+struct ThemeImportContent: View {
+    @Environment(AppModel.self) private var model
+    let theme: Theme
+
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 4) {
+                Text(theme.name.isEmpty ? "Unnamed Theme" : theme.name)
+                    .font(.title3.weight(.semibold))
+                Text("Preview the theme below, then choose whether to import it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            KeyboardPreview(settings: model.settings)
+                .environment(\.resolvedKeyboardTheme, theme)
+                .environment(\.cardCornerRadius, model.settings.keyCornerRadius)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            HStack(spacing: 12) {
+                Button("Cancel") {
+                    model.pendingThemeImport = nil
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .buttonStyle(.plain)
+
+                Button("Import Theme") {
+                    model.confirmThemeImport()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.tint.opacity(0.15), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .fontWeight(.semibold)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(UX.screenPadding)
+    }
+}
+
 #if DEBUG
 #Preview { BackupView().clinkPreview() }
 #endif

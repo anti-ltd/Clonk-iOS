@@ -50,7 +50,7 @@ struct SoundsView: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.soundEnabled)
+        .animation(Motion.settingsReveal.animation, value: model.settings.soundEnabled)
     }
 
     @ViewBuilder

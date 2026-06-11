@@ -111,7 +111,7 @@ struct RootView: View {
     }
 
     private let sidebarWidth: CGFloat = 290
-    private let sidebarAnim = Animation.spring(response: 0.32, dampingFraction: 0.86)
+    private var sidebarAnim: Animation { Motion.sidebar.animation }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -174,6 +174,12 @@ struct RootView: View {
         // Nav buttons: top-aligned overlay occupies only the 44pt nav bar strip,
         // so no full-screen frame that would swallow touches to content below.
         .overlay(alignment: .top) { navButtonLayer }
+        #if DEBUG
+        // Frame-rate meter for hand-tuning animations (`--motion-hud` launch arg).
+        .overlay(alignment: .topTrailing) {
+            if FeatureFlags.motionHUD { MotionHUD().padding(.trailing, 12) }
+        }
+        #endif
         .animation(sidebarAnim, value: sidebar.isOpen)
         .gesture(
             DragGesture(minimumDistance: 12)
@@ -375,6 +381,7 @@ private struct DetailHost: View {
 /// which has no custom theme environment keys.
 private struct SidebarSheetHost: View {
     let sidebar: SidebarState
+    @Environment(AppModel.self) private var model
 
     var body: some View {
         Color.clear
@@ -389,6 +396,24 @@ private struct SidebarSheetHost: View {
                                               set: { sidebar.showBackupSheet = $0 }),
                          title: "Backup & Restore") {
                 BackupControls()
+            }
+            .themedSheet(isPresented: Binding(get: { model.pendingThemeImport != nil },
+                                              set: { if !$0 { model.pendingThemeImport = nil } }),
+                         title: "New Theme") {
+                if let theme = model.pendingThemeImport {
+                    ThemeImportContent(theme: theme)
+                }
+            }
+            .confirmationDialog(
+                "Replace your settings with the imported file?",
+                isPresented: Binding(get: { model.pendingConfigImport != nil },
+                                     set: { if !$0 { model.pendingConfigImport = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Replace settings", role: .destructive) { model.confirmConfigImport() }
+                Button("Cancel", role: .cancel) { model.pendingConfigImport = nil }
+            } message: {
+                Text("This will overwrite all your current settings. Your themes are kept.")
             }
     }
 }
@@ -541,8 +566,8 @@ private struct SidebarPanel: View {
         .overlay(alignment: .bottomTrailing) {
             scrollCaret("chevron.down").opacity(canScrollDown ? 1 : 0)
         }
-        .animation(.easeInOut(duration: 0.2), value: canScrollUp)
-        .animation(.easeInOut(duration: 0.2), value: canScrollDown)
+        .animation(Motion.scrollHintFade.animation, value: canScrollUp)
+        .animation(Motion.scrollHintFade.animation, value: canScrollDown)
         .foregroundColor(themeTextColor)
     }
 
@@ -644,7 +669,7 @@ private struct SidebarPanel: View {
 
     private func select(_ d: RootView.SidebarDestination) {
         destination = d
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) { sidebar.isOpen = false }
+        withAnimation(Motion.sidebar.animation) { sidebar.isOpen = false }
     }
 }
 
@@ -872,7 +897,7 @@ private struct ExtensionReorderList: View {
         .shadow(color: isDragged ? .black.opacity(0.12) : .clear, radius: 6, y: 3)
         .offset(y: yOff)
         .zIndex(isDragged ? 1 : 0)
-        .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.8), value: yOff)
+        .animation(Motion.dragSnap.animation, value: yOff)
     }
 
     private func visualOffset(for idx: Int) -> CGFloat {
@@ -890,7 +915,7 @@ private struct ExtensionReorderList: View {
         guard let fromIdx = order.firstIndex(of: extID) else { return }
         let toIdx = clamped(fromIdx + Int((dragY / rowH).rounded()))
         guard fromIdx != toIdx else { return }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withAnimation(Motion.cardSpring.animation) {
             order.move(fromOffsets: IndexSet(integer: fromIdx),
                        toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx)
         }

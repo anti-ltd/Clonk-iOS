@@ -226,7 +226,7 @@ public struct EmojiCanvas: View {
                 Button {
                     onAnyTap()
                     if query.isEmpty {
-                        withAnimation(.snappy(duration: 0.28)) { searching = false }
+                        withAnimation(Motion.emojiSearchToggle.animation) { searching = false }
                     } else {
                         query = ""
                     }
@@ -260,7 +260,7 @@ public struct EmojiCanvas: View {
                 if !searching {
                     touchCatcher {
                         onAnyTap()
-                        withAnimation(.snappy(duration: 0.28)) { searching = true }
+                        withAnimation(Motion.emojiSearchToggle.animation) { searching = true }
                     }
                 }
             }
@@ -370,10 +370,10 @@ public struct EmojiCanvas: View {
             })
             .onChange(of: scrollTarget) { _, e in
                 guard let e else { return }
-                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(e, anchor: .center) }
+                withAnimation(Motion.emojiScroll.animation) { proxy.scrollTo(e, anchor: .center) }
             }
             .onChange(of: category) { _, _ in
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(Motion.emojiScroll.animation) {
                     proxy.scrollTo("top", anchor: horizontal ? .leading : .top)
                 }
             }
@@ -388,7 +388,10 @@ public struct EmojiCanvas: View {
     /// mounted while `flash` is set (cleared shortly after the morph) so there's
     /// zero glass cost at rest — never one per cell.
     @ViewBuilder private func flashOverlay() -> some View {
+        // Gated on the motion profile: the glass droplet is the kind of
+        // GPU-expensive layer that rests under power/thermal pressure.
         if let flash, let tint = emojiFlashTint, let cell = cellFrames[flash.emoji],
+           MotionProfile.shared.allowsExpensiveEffects,
            #available(iOS 26.0, *) {
             GeometryReader { geo in
                 let origin = geo.frame(in: .global).origin
@@ -455,7 +458,7 @@ public struct EmojiCanvas: View {
         let current = resolvedTone(base)
         let anchorIndex = SkinTone.allCases.firstIndex(of: current) ?? 0
         let centerX = SkinTonePicker.center(cellMidX: cell.midX, anchorIndex: anchorIndex, in: gridFrame)
-        withAnimation(.snappy(duration: 0.16)) {
+        withAnimation(Motion.skinTonePick.animation) {
             picking = TonePicking(base: base, centerX: centerX, tone: current)
         }
     }
@@ -479,7 +482,7 @@ public struct EmojiCanvas: View {
         onInsert(EmojiSkinTone.applied(tone, to: base))
         onRecordRecent(base)
         holdCommitAt = Date()   // swallow the stray cell tap on this same release
-        withAnimation(.snappy(duration: 0.16)) { picking = nil }
+        withAnimation(Motion.skinTonePick.animation) { picking = nil }
     }
 
     /// A cell tap fired. Insert the resolved glyph — unless it's the stray tap UIKit
@@ -568,7 +571,7 @@ public struct EmojiCanvas: View {
             settings: Self.searchKeyboardSettings(settings),
             onInsert: { s in
                 if s == "\n" {
-                    withAnimation(.snappy(duration: 0.28)) { searching = false }
+                    withAnimation(Motion.emojiSearchToggle.animation) { searching = false }
                 } else {
                     query += s
                 }
@@ -646,7 +649,7 @@ public struct EmojiCanvas: View {
                                     onRelease: { pressedTab = nil },
                                     onCommit: { idx in
                                         onAnyTap()
-                                        withAnimation(.snappy(duration: 0.26)) { category = idx }
+                                        withAnimation(Motion.emojiTabSelect.animation) { category = idx }
                                     })
                                 // Glyphs drawn last so they sit above both the glass
                                 // and the tap surface (which is transparent + lets
@@ -670,7 +673,7 @@ public struct EmojiCanvas: View {
             // Keep the active tab in view as it changes — whether tapped here or
             // driven externally (e.g. the showcase simulator).
             .onChange(of: category) { _, c in
-                withAnimation(.snappy(duration: 0.24)) { proxy.scrollTo(c, anchor: .center) }
+                withAnimation(Motion.emojiTabScroll.animation) { proxy.scrollTo(c, anchor: .center) }
             }
         }
     }
@@ -709,7 +712,7 @@ public struct EmojiCanvas: View {
         }
         .frame(width: 38, height: 38)
         .scaleEffect(pressedTab == idx ? 1.18 : 1)
-        .animation(.interactiveSpring(response: 0.26, dampingFraction: 0.6), value: pressedTab)
+        .animation(Motion.emojiTabPress.animation, value: pressedTab)
         .contentShape(shape)
         // Publish this tile's frame (in scroll-content space) for the tap surface
         // and the glyph layer.
@@ -728,8 +731,8 @@ public struct EmojiCanvas: View {
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(idx == category ? Color.white : theme.specialKeyText.color)
                     .scaleEffect(pressedTab == idx ? 1.18 : 1)
-                    .animation(.interactiveSpring(response: 0.26, dampingFraction: 0.6), value: pressedTab)
-                    .animation(.easeInOut(duration: 0.2), value: category)
+                    .animation(Motion.emojiTabPress.animation, value: pressedTab)
+                    .animation(Motion.emojiScroll.animation, value: category)
                     .position(x: f.midX, y: f.midY)
             }
         }

@@ -30,7 +30,7 @@ struct NotepadView: View {
                     }
                 }
                 .padding(UX.screenPadding)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.notepadEnabled)
+                .animation(Motion.settingsReveal.animation, value: model.settings.notepadEnabled)
             }
             .id(selectedTab)
 

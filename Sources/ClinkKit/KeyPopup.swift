@@ -157,7 +157,9 @@ struct BalloonPopup: View {
             .scaleEffect(x: emerged ? 1 : 0.9, y: emerged ? 1 : 0.5, anchor: .bottom)
             .opacity(emerged ? 1 : 0.5)
             .onAppear {
-                withAnimation(.spring(response: springResponse, dampingFraction: springDamping)) { emerged = true }
+                // User-tuned popup spring, resolved through the motion profile.
+                withAnimation(MotionToken(curve: .spring(response: springResponse, damping: springDamping),
+                                          role: .essential).animation) { emerged = true }
             }
     }
 }

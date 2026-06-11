@@ -634,7 +634,7 @@ final class KeyboardViewController: UIInputViewController {
             onRequestHeight: { [weak self] height in self?.setKeyboardHeight(height) },
             onSetSkinTone: { [weak self] base, tone in self?.saveSkinTone(tone, for: base) },
             onReturnToLetters: { [weak self] in
-                withAnimation(.snappy(duration: 0.22)) { self?.keyboard.showEmoji = false }
+                withAnimation(Motion.pickerOpen.animation) { self?.keyboard.showEmoji = false }
             },
             onRecordRecent: { [weak self] base in self?.recordRecentEmoji(base) }
         )
@@ -666,7 +666,8 @@ final class KeyboardViewController: UIInputViewController {
         heightConstraint.constant = height
         hostContentHeight?.constant = height
         (view as? ClinkInputView)?.targetHeight = height
-        UIView.animate(withDuration: 0.28) { self.view.layoutIfNeeded() }
+        MotionDiagnostics.event("keyboard.heightChange")
+        UIView.animate(withDuration: Motion.keyboardHeight.uiDuration) { self.view.layoutIfNeeded() }
     }
 
     /// Persist a per-emoji skin-tone choice into the shared store, re-loading first

@@ -66,7 +66,7 @@ struct AccentPicker: View {
                 .fill(theme.accent.color)
                 .frame(width: box, height: box)
                 .offset(x: hlCenterX - box / 2)
-                .animation(.snappy(duration: 0.14), value: selected)
+                .animation(Motion.accentHighlight.animation, value: selected)
         }
         .background {
             if theme.material == .liquidGlass, #available(iOS 26.0, *) {

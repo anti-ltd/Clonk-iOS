@@ -58,7 +58,7 @@ struct SkinTonePicker: View {
                     .frame(width: Self.swatch, height: Self.swatch)
             }
         }
-        .animation(.snappy(duration: 0.16), value: highlighted)
+        .animation(Motion.skinTonePick.animation, value: highlighted)
         .padding(.horizontal, Self.hPadding)
         .frame(height: Self.height)
         // The selection highlight sits *behind* the swatches — positioned by exact
@@ -71,7 +71,7 @@ struct SkinTonePicker: View {
                 .overlay(swatchShape.strokeBorder(theme.accent.color, lineWidth: 2.5))
                 .frame(width: box, height: box)
                 .offset(x: hlCenterX - box / 2)
-                .animation(.snappy(duration: 0.16), value: highlighted)
+                .animation(Motion.skinTonePick.animation, value: highlighted)
         }
         .background {
             if theme.material == .liquidGlass, #available(iOS 26.0, *) {

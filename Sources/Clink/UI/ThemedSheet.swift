@@ -171,7 +171,7 @@ struct ThemedSheetOverlay<Content: View>: View {
                 let computed = min(h + headerHeight + 40, maxH)
                 naturalHeight = computed
                 panelHeight = computed
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                withAnimation(Motion.sheetPresent.animation) {
                     isIn = true
                 }
             }
@@ -194,7 +194,7 @@ struct ThemedSheetOverlay<Content: View>: View {
 
     private func dismiss() {
         isExpanded = false
-        withAnimation(.spring(response: 0.3)) { isIn = false }
+        withAnimation(Motion.sheetDismiss.animation) { isIn = false }
         // Let the slide-out animation complete before removing the overlay.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onDismiss() }
     }
@@ -233,30 +233,30 @@ struct ThemedSheetOverlay<Content: View>: View {
                     let predicted = value.predictedEndTranslation.height
                     if isExpanded {
                         if dy > 60 || predicted > 150 {
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                            withAnimation(Motion.sheetExpand.animation) {
                                 isExpanded = false
                                 panelHeight = naturalHeight
                                 dragOffset = 0
                             }
                         } else {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                            withAnimation(Motion.sheetPresent.animation) {
                                 dragOffset = 0
                             }
                         }
                     } else {
                         if dy < -60 || predicted < -150 {
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                            withAnimation(Motion.sheetExpand.animation) {
                                 isExpanded = true
                                 panelHeight = maxSheetHeight
                                 dragOffset = 0
                             }
                         } else if dy > 80 || predicted > 200 {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                            withAnimation(Motion.sheetPresent.animation) {
                                 dragOffset = 0
                             }
                             dismiss()
                         } else {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.88)) {
+                            withAnimation(Motion.sheetPresent.animation) {
                                 dragOffset = 0
                             }
                         }

@@ -87,7 +87,7 @@ struct AnimationView: View {
                 $0 < 0.005 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.keyPressInstant)
+        .animation(Motion.settingsReveal.animation, value: model.settings.keyPressInstant)
         CardSection("Space bar") {
             PresetChips(presets: TuningPresets.spaceBar)
                 .padding(.vertical, UX.rowVPadding)
@@ -150,7 +150,7 @@ struct AnimationView: View {
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.keyPopupEnabled)
+        .animation(Motion.settingsReveal.animation, value: model.settings.keyPopupEnabled)
     }
 
     @ViewBuilder

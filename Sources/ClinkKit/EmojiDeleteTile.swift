@@ -49,7 +49,7 @@ struct DeleteTile: View {
             }
         }
         .scaleEffect(pressWarp && pressed ? 1.12 : 1)
-        .animation(.interactiveSpring(response: 0.26, dampingFraction: 0.6), value: pressed)
+        .animation(Motion.emojiTabPress.animation, value: pressed)
         .modifier(EmojiTapPulse(trigger: tapTick, shape: shape, enabled: pressWarp))
         .overlay { HoldRepeatSurface(onDown: down, onUp: up) }
     }
@@ -107,7 +107,9 @@ struct EmojiTapPulse<S: Shape>: ViewModifier {
     @State private var fadeTask: Task<Void, Never>?
 
     func body(content: Content) -> some View {
-        if enabled {
+        // Same expensive-effects gate as `TapPulse`: the additive layer rests
+        // under power/thermal pressure.
+        if enabled, MotionProfile.shared.allowsExpensiveEffects {
             content.overlay {
                 shape.fill(.white)
                     .opacity(flash)
@@ -116,11 +118,11 @@ struct EmojiTapPulse<S: Shape>: ViewModifier {
             }
             .onChange(of: trigger) { _, _ in
                 fadeTask?.cancel()
-                withAnimation(.linear(duration: 0.05)) { flash = 0.34 }   // snap bright
+                withAnimation(Motion.tapFlashIn.animation) { flash = 0.34 }   // snap bright
                 fadeTask = Task { @MainActor in
                     try? await Task.sleep(for: .seconds(0.05))
                     guard !Task.isCancelled else { return }
-                    withAnimation(.easeOut(duration: 0.20)) { flash = 0 } // ease back out
+                    withAnimation(Motion.tapFlashOut.animation) { flash = 0 } // ease back out
                 }
             }
         } else {

@@ -227,7 +227,7 @@ private struct ClipboardEntryRow: View {
             Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 14))
                 .foregroundStyle(isCopied ? Color.green : Color.secondary)
-                .animation(.easeInOut(duration: 0.15), value: isCopied)
+                .animation(Motion.selectionFade.animation, value: isCopied)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

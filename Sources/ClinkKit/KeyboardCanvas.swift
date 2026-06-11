@@ -36,6 +36,28 @@ struct KeyPressPhysics {
     var popupSpringDamping: Double   = 0.62
 }
 
+/// The user-tuned springs, wrapped as motion tokens so they resolve through
+/// `MotionProfile` like the fixed `Motion` vocabulary — one chokepoint for the
+/// whole motion system — while keeping every knob live in the app's Animation
+/// screen. Pure repackaging of the construction: the values and the spring
+/// kinds (`interactiveSpring` for presses, `spring` for the popup) are exactly
+/// what the call sites built inline before.
+extension KeyPressPhysics {
+    /// Press bloom for generic keys.
+    @MainActor var keySpringAnimation: Animation {
+        MotionToken.userSpring(response: springResponse, damping: springDamping).animation
+    }
+    /// The space bar's own press / cursor-shrink spring.
+    @MainActor var spaceSpringAnimation: Animation {
+        MotionToken.userSpring(response: spaceSpringResponse, damping: spaceSpringDamping).animation
+    }
+    /// The balloon popup's droplet emerge.
+    @MainActor var popupSpringAnimation: Animation {
+        MotionToken(curve: .spring(response: popupSpringResponse, damping: popupSpringDamping),
+                    role: .essential).animation
+    }
+}
+
 /// Collects each popover-picker row's frame (in global/window coords) so both the
 /// button drag and the 123 slide-up drag can hit-test the finger against options.
 private struct PanelRowFrameKey: PreferenceKey {
@@ -464,7 +486,8 @@ public struct KeyboardCanvas: View {
             activate(panels[0])
         } else {
             pickerOrigin = .slideUp
-            withAnimation(.snappy(duration: 0.22)) { pickerOpen = true }
+            MotionDiagnostics.event("panel.pickerOpen")
+            withAnimation(Motion.pickerOpen.animation) { pickerOpen = true }
         }
     }
 
@@ -486,7 +509,7 @@ public struct KeyboardCanvas: View {
         if let hover = panelRowFrames.first(where: { $0.value.contains(windowPoint) })?.key {
             activate(hover)
         } else {
-            withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }
+            withAnimation(Motion.pickerClose.animation) { pickerOpen = false }
         }
     }
 
@@ -504,7 +527,8 @@ public struct KeyboardCanvas: View {
         pickerOpen = false
         switch panel.kind {
         case .emoji:
-            withAnimation(.snappy(duration: 0.22)) { controller.showEmoji = true }
+            MotionDiagnostics.event("panel.emojiOpen")
+            withAnimation(Motion.pickerOpen.animation) { controller.showEmoji = true }
         case .clipboard, .notepad, .calculator, .extensions, .customPanels, .customPanel:
             live.activePanel = panel
         }
@@ -523,7 +547,7 @@ public struct KeyboardCanvas: View {
     private func backToPicker() {
         let canPick = settings.panelPickerStyle == .cards && enabledPanels.count >= 2
         guard canPick else { closePanel(); return }
-        withAnimation(.snappy(duration: 0.22)) {
+        withAnimation(Motion.pickerOpen.animation) {
             live.activePanel = nil
             notepadBrowsing = false
             pickerOpen = true
@@ -534,7 +558,7 @@ public struct KeyboardCanvas: View {
     /// user resumed typing rather than choosing a panel.
     private func dismissPickerOnInput() {
         guard pickerOpen else { return }
-        withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }
+        withAnimation(Motion.pickerClose.animation) { pickerOpen = false }
     }
 
     /// The top-left button (single icon) plus its divider, shown when at least
@@ -585,7 +609,7 @@ public struct KeyboardCanvas: View {
                     pickerDragMoved = false
                     if !pickerOpen {
                         pickerOrigin = .icon
-                        withAnimation(.snappy(duration: 0.18)) { pickerOpen = true }
+                        withAnimation(Motion.pickerClose.animation) { pickerOpen = true }
                     }
                 }
                 let moved = hypot(v.location.x - v.startLocation.x,
@@ -602,9 +626,9 @@ public struct KeyboardCanvas: View {
                 if let hover = panelRowFrames.first(where: { $0.value.contains(v.location) })?.key {
                     activate(hover)                       // released over an option → select
                 } else if pickerDragMoved {
-                    withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }   // dragged off → dismiss
+                    withAnimation(Motion.pickerClose.animation) { pickerOpen = false }   // dragged off → dismiss
                 } else if pickerWasOpenAtStart {
-                    withAnimation(.snappy(duration: 0.18)) { pickerOpen = false }   // tap on open menu → close
+                    withAnimation(Motion.pickerClose.animation) { pickerOpen = false }   // tap on open menu → close
                 }
                 // else: a tap that opened the menu — leave it open for a follow-up tap.
             }
@@ -947,9 +971,9 @@ public struct KeyboardCanvas: View {
                     .padding(.bottom, CGFloat(settings.keyboardBottomPadding))
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: live.activePanel)
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: pickerOpen)
-        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: notepadBrowsing)
+        .animation(Motion.panelTransition.animation, value: live.activePanel)
+        .animation(Motion.panelTransition.animation, value: pickerOpen)
+        .animation(Motion.panelTransition.animation, value: notepadBrowsing)
         // Backdrop. By default transparent so the keyboard blends with whatever
         // sits behind it — iOS's own keyboard surface in the extension, the
         // preview's backdrop in-app — and only the keys carry colour, reading as
@@ -973,7 +997,7 @@ public struct KeyboardCanvas: View {
                         // centre in sync with the bar, instead of snapping.
                         .offset(x: g.offsetX)
                         .position(x: proxy[g.anchor].midX, y: proxy[g.anchor].midY)
-                        .animation(settings.keyPressInstant ? nil : .interactiveSpring(response: settings.keySpringResponse, dampingFraction: settings.keySpringDamping), value: g.scaleX)
+                        .animation(settings.keyPressInstant ? nil : MotionToken.userSpring(response: settings.keySpringResponse, damping: settings.keySpringDamping).animation, value: g.scaleX)
                         // GlassEffectContainer's implicit animation bleeds into this
                         // ForEach, fading out removed items (e.g. delete glyph at its
                         // old keyID) before the replacement fades in — leaving a gap.
@@ -1090,7 +1114,7 @@ public struct KeyboardCanvas: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeOut(duration: 0.15), value: touch.spaceCursorActive)
+        .animation(Motion.spaceCursorFade.animation, value: touch.spaceCursorActive)
         // Floating picker menu (popover style) — anchored under the top-left
         // button, with a transparent catcher behind it to tap-dismiss. Added LAST
         // so it sits above the key-glyph overlay (which is itself an overlay layer
@@ -1142,7 +1166,7 @@ public struct KeyboardCanvas: View {
                     // the glyph (the intermittent delete-icon vanish). A real
                     // name swap changes identity and still animates below.
                     .id(g.glyph)
-                    .animation(.snappy(duration: 0.25), value: g.glyph)
+                    .animation(Motion.glyphSwap.animation, value: g.glyph)
             } else {
                 Text(g.glyph)
                     .font(.system(size: g.fontSize ?? (g.multiChar ? 16 : 22),
@@ -1158,7 +1182,7 @@ public struct KeyboardCanvas: View {
         // drop the glyph. No-op on every non-delete glyph.
         .scaleEffect(g.deleteSwiping ? 1.18 : 1, anchor: .center)
         .offset(x: g.deleteSwiping ? -4 : 0)
-        .animation(.snappy(duration: 0.22), value: g.deleteSwiping)
+        .animation(Motion.deleteSwipe.animation, value: g.deleteSwiping)
     }
 
     /// Corner radius shared by the popup chrome — tracks the key roundness, a

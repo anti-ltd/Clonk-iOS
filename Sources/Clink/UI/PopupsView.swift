@@ -56,7 +56,7 @@ struct PopupsView: View {
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.settings.keyPopupEnabled)
+        .animation(Motion.settingsReveal.animation, value: model.settings.keyPopupEnabled)
         .navigationTitle("Popups")
         .navigationBarTitleDisplayMode(.inline)
     }

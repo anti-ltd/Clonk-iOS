@@ -44,6 +44,8 @@ final class AppModel {
         if let slug = AppStage.slug {
             settings = AppStage.settings(for: slug)
         }
+        // Daily OS-collected animation hitch + hang metrics, logged to console.
+        MotionMetrics.shared.start()
         #endif
         refreshStatus()
     }
@@ -90,13 +92,28 @@ final class AppModel {
         if settings.darkThemeID == id { settings.darkThemeID = Theme.defaultDark.id }
     }
 
-    /// Import a theme from a `.clink` URL (e.g. opened from Files.app).
+    /// Staged import: decoded theme waiting for user confirmation. Set by
+    /// `importTheme(from:)`; consumed by `confirmThemeImport()`.
+    var pendingThemeImport: Theme? = nil
+
+    /// Staged import: raw config data waiting for user confirmation. Set by
+    /// `importConfigurationFromURL(_:)`; consumed by `confirmConfigImport()`.
+    var pendingConfigImport: Data? = nil
+
+    /// Parse a shared `.clinktheme` URL and stage it for confirmation instead of
+    /// applying immediately — lets the UI show a preview sheet first.
     func importTheme(from url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url),
               var theme = try? JSONDecoder().decode(Theme.self, from: data) else { return }
         theme.id = "custom-\(UUID().uuidString.prefix(8))"
+        pendingThemeImport = theme
+    }
+
+    /// Apply the staged theme import and clear the pending state.
+    func confirmThemeImport() {
+        guard let theme = pendingThemeImport else { return }
         saveCustomTheme(theme)
         if settings.matchSystemAppearance {
             if theme.isDark { settings.darkThemeID = theme.id }
@@ -104,6 +121,7 @@ final class AppModel {
         } else {
             settings.themeID = theme.id
         }
+        pendingThemeImport = nil
     }
 
     // MARK: - Resetting
@@ -177,11 +195,20 @@ final class AppModel {
         settings = merged
     }
 
+    /// Parse a shared `.clinkconfig` URL and stage it for confirmation instead of
+    /// applying immediately — lets the UI show a warning dialog first.
     func importConfigurationFromURL(_ url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else { return }
+        pendingConfigImport = data
+    }
+
+    /// Apply the staged config import and clear the pending state.
+    func confirmConfigImport() {
+        guard let data = pendingConfigImport else { return }
         importConfiguration(from: data)
+        pendingConfigImport = nil
     }
 
     func refreshStatus() {
