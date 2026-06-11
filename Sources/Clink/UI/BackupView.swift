@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 /// The document type for an exported configuration — the whole `KeyboardSettings`
 /// as JSON in a `.clinkconfig` file. Mirrors `.clinkTheme`, just a wider snapshot.
 extension UTType {
-    static var clinkConfig: UTType { UTType("ltd.anti.clink.config") ?? .json }
+    static var clinkConfig: UTType { UTType(exportedAs: "ltd.anti.clink.config") }
 }
 
 /// Backup & restore the whole configuration, plus the reset actions. These are

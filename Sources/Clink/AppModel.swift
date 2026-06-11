@@ -145,6 +145,8 @@ final class AppModel {
         settings.spaceCursorDragScale = d.spaceCursorDragScale
         settings.popupSpringResponse = d.popupSpringResponse
         settings.popupSpringDamping = d.popupSpringDamping
+        settings.glassBloomFactor = d.glassBloomFactor
+        settings.glassReleaseResponse = d.glassReleaseResponse
         settings.repeatHoldDelay = d.repeatHoldDelay
         settings.repeatInitialInterval = d.repeatInitialInterval
         settings.repeatMinInterval = d.repeatMinInterval

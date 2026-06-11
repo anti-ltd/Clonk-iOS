@@ -180,7 +180,9 @@ struct KeyView: View {
         // Visible bloom on press for the generic keys. The shift key opts out —
         // it has its own interactive-glass morph (see `glass` / `surface`).
         if pressWarp, isPressed, !showsPopup, !spec.isShift {
-            return (physics.bloomScale, physics.bloomScale, 0)
+            // Softened on glass (see `effectiveBloomScale`) so the key grows
+            // less into its neighbours — cheaper for the container to merge.
+            return (physics.effectiveBloomScale, physics.effectiveBloomScale, 0)
         }
         return (1, 1, 0)
     }
@@ -223,7 +225,12 @@ struct KeyView: View {
             .animation(spec.isSpace
                        ? physics.spaceSpringAnimation
                        : (pressWarp && !spec.isShift && !physics.instant
-                          ? physics.keySpringAnimation : nil),
+                          // Bloom RISES with the tuned (bouncy) spring, RETURNS
+                          // with the calmer settle — body re-evaluates when
+                          // `isPressed` flips, so the active spring matches the
+                          // direction. The return's collapsed ring is what stops
+                          // the glass lens re-compositing through a long bounce.
+                          ? (isPressed ? physics.keySpringAnimation : physics.keyReleaseAnimation) : nil),
                        value: isPressed)
             // The space bar's trackpad shrink in/out — a one-shot at engage/release,
             // matched to the spring above. Scoped to space so a space drag never

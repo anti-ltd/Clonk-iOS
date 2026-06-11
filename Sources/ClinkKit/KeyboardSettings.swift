@@ -461,6 +461,18 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var popupSpringResponse: Double
     /// Spring damping for the key popup emerge animation.
     public var popupSpringDamping: Double
+    // Liquid Glass press
+    /// On Liquid Glass themes, how much of the tuned key bloom growth is applied
+    /// (0 = no bloom, 1 = the full `keyBloomScale`). A pressed key scales inside
+    /// a shared `GlassEffectContainer` and liquid-merges with its neighbours — a
+    /// per-frame GPU recomposite — so a gentler bloom is far cheaper to render on
+    /// older devices. Glass themes only; solid themes always use the full bloom.
+    public var glassBloomFactor: Double
+    /// On Liquid Glass themes, the spring response (seconds) for a key RETURNING
+    /// to rest. Lower = a quicker snap = fewer frames of the expensive glass
+    /// merge = less chance of an on-release hitch. The press *rise* still uses
+    /// `keySpringResponse`. Glass themes only.
+    public var glassReleaseResponse: Double
     // Backspace auto-repeat timing
     /// How long (ms) to hold backspace before auto-repeat begins.
     public var repeatHoldDelay: Double
@@ -625,6 +637,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         spaceCursorDragScale: Double = 0.90,
         popupSpringResponse: Double = 0.32,
         popupSpringDamping: Double = 0.62,
+        glassBloomFactor: Double = 0.5,
+        glassReleaseResponse: Double = 0.12,
         repeatHoldDelay: Double = 450,
         repeatInitialInterval: Double = 110,
         repeatMinInterval: Double = 40,
@@ -744,6 +758,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.spaceCursorDragScale = spaceCursorDragScale
         self.popupSpringResponse = popupSpringResponse
         self.popupSpringDamping = popupSpringDamping
+        self.glassBloomFactor = glassBloomFactor
+        self.glassReleaseResponse = glassReleaseResponse
         self.repeatHoldDelay = repeatHoldDelay
         self.repeatInitialInterval = repeatInitialInterval
         self.repeatMinInterval = repeatMinInterval
@@ -889,6 +905,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         spaceCursorDragScale = try c.decodeIfPresent(Double.self, forKey: .spaceCursorDragScale) ?? 0.90
         popupSpringResponse = try c.decodeIfPresent(Double.self, forKey: .popupSpringResponse) ?? 0.32
         popupSpringDamping = try c.decodeIfPresent(Double.self, forKey: .popupSpringDamping) ?? 0.62
+        glassBloomFactor = try c.decodeIfPresent(Double.self, forKey: .glassBloomFactor) ?? 0.5
+        glassReleaseResponse = try c.decodeIfPresent(Double.self, forKey: .glassReleaseResponse) ?? 0.12
         repeatHoldDelay = try c.decodeIfPresent(Double.self, forKey: .repeatHoldDelay) ?? 450
         repeatInitialInterval = try c.decodeIfPresent(Double.self, forKey: .repeatInitialInterval) ?? 110
         repeatMinInterval = try c.decodeIfPresent(Double.self, forKey: .repeatMinInterval) ?? 40

@@ -16,6 +16,12 @@ struct AnimationView: View {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
     }
 
+    /// The glass-press dials only do anything on a Liquid Glass theme (solid
+    /// themes have no neighbour merge), so the card is shown only then.
+    private var isGlassTheme: Bool {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).material == .liquidGlass
+    }
+
     var body: some View {
         @Bindable var model = model
         PinnedPreviewLayout(settings: model.settings,
@@ -88,6 +94,27 @@ struct AnimationView: View {
             }
         }
         .animation(Motion.settingsReveal.animation, value: model.settings.keyPressInstant)
+        Group {
+            if isGlassTheme {
+                CardSection("Liquid Glass") {
+                    SliderRow("Bloom on glass",
+                              tooltip: "How much a key grows when pressed on Liquid Glass themes. A pressed key liquid-merges with its neighbours, which is expensive to redraw on older devices — lower keeps that merge gentler and smoother. 0% removes the size bloom (the tap flash still fires).",
+                              value: $model.settings.glassBloomFactor,
+                              in: 0...1, step: 0.05) {
+                        $0 <= 0.001 ? "Off" : "\(Int(($0 * 100).rounded()))%"
+                    }
+                    Divider()
+                    SliderRow("Return on glass",
+                              tooltip: "Base speed a key settles back to rest on Liquid Glass themes (the press itself still uses the Keys speed above). Lower is snappier. A bigger Bloom automatically eases back a little longer than this so the larger collapse stays smooth instead of jumping.",
+                              value: $model.settings.glassReleaseResponse,
+                              in: 0.06...0.4, step: 0.02) {
+                        String(format: "%.2fs", $0)
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .animation(Motion.settingsReveal.animation, value: isGlassTheme)
         CardSection("Space bar") {
             PresetChips(presets: TuningPresets.spaceBar)
                 .padding(.vertical, UX.rowVPadding)

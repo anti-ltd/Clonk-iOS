@@ -34,6 +34,22 @@ struct KeyPressPhysics {
     var spaceCursorDragScale: CGFloat = 0.90
     var popupSpringResponse: Double  = 0.32
     var popupSpringDamping: Double   = 0.62
+    /// True on Liquid Glass themes. The press bloom there scales a key inside a
+    /// shared `GlassEffectContainer`, so it liquid-merges with its neighbours —
+    /// a per-frame GPU recomposite that on A-series GPUs can't keep up with a
+    /// big, lingering, bouncy bloom (the key visibly hangs at full bloom, then
+    /// jerks to rest as dropped frames catch up). So on glass the bloom is
+    /// gentler and the return is quick (see `effectiveBloomScale` /
+    /// `keyReleaseAnimation`), and the canvas drops the post-release linger —
+    /// the expensive merged state is on screen for the fewest frames. Solid
+    /// themes have no merge and keep the full tuned bloom.
+    var onGlass: Bool                = false
+    /// Fraction of the tuned bloom growth applied on glass (see
+    /// `effectiveBloomScale`). User-tunable via `glassBloomFactor`.
+    var glassBloomFactor: Double     = 0.5
+    /// Spring response (s) for a glass key's return-to-rest snap (see
+    /// `keyReleaseAnimation`). User-tunable via `glassReleaseResponse`.
+    var glassReleaseResponse: Double = 0.12
 }
 
 /// The user-tuned springs, wrapped as motion tokens so they resolve through
@@ -47,6 +63,37 @@ extension KeyPressPhysics {
     @MainActor var keySpringAnimation: Animation {
         MotionToken.userSpring(response: springResponse, damping: springDamping).animation
     }
+    /// The generic-key bloom scale actually applied. On glass it's softened to
+    /// half the tuned growth (1.12 → 1.06) so the key grows less into its
+    /// neighbours — far cheaper for the `GlassEffectContainer` to merge — while
+    /// still reading as a bloom. Solid themes use the full tuned scale.
+    var effectiveBloomScale: CGFloat {
+        onGlass ? 1 + (bloomScale - 1) * CGFloat(glassBloomFactor) : bloomScale
+    }
+
+    /// The press bloom RETURNING to rest. Off glass: same response as the rise,
+    /// damping floored so the underdamped ring's long tail collapses (a bouncy
+    /// return re-composited the lens for ~0.5s — the on-release fps dip). On
+    /// glass: a CRITICALLY-damped (monotonic, no overshoot) settle whose duration
+    /// grows with the bloom size. A held key sits at full bloom with a deep
+    /// neighbour-merge; collapsing a big one in a fixed quick snap renders in too
+    /// few frames on A-series GPUs — each step is large = the "jerky return when
+    /// bloom is up". So `glassReleaseResponse` is the FLOOR (gentle blooms keep
+    /// the quick snap) and a larger bloom eases back a touch longer, capped so it
+    /// never drags. The rise still uses `keySpringAnimation`, untouched.
+    @MainActor var keyReleaseAnimation: Animation {
+        if onGlass {
+            let bloomDelta = max(0, Double(effectiveBloomScale) - 1)   // 0 … ~0.12+
+            let response = min(0.30, glassReleaseResponse + min(bloomDelta, 0.12))
+            return MotionToken.userSpring(response: response, damping: 1.0).animation
+        }
+        return MotionToken.userSpring(response: springResponse,
+                                      damping: min(1.0, max(springDamping, Self.releaseDampingFloor))).animation
+    }
+    /// Damping floor for the return-to-rest settle on solid themes (see
+    /// `keyReleaseAnimation`).
+    static let releaseDampingFloor: Double = 0.82
+
     /// The space bar's own press / cursor-shrink spring.
     @MainActor var spaceSpringAnimation: Animation {
         MotionToken.userSpring(response: spaceSpringResponse, damping: spaceSpringDamping).animation
@@ -301,7 +348,10 @@ public struct KeyboardCanvas: View {
             spaceLeanMultiplier: CGFloat(settings.spaceLeanMultiplier),
             spaceCursorDragScale: CGFloat(settings.spaceCursorDragScale),
             popupSpringResponse: settings.popupSpringResponse,
-            popupSpringDamping: settings.popupSpringDamping)
+            popupSpringDamping: settings.popupSpringDamping,
+            onGlass: theme.material == .liquidGlass,
+            glassBloomFactor: settings.glassBloomFactor,
+            glassReleaseResponse: settings.glassReleaseResponse)
     }
 
     /// The keyboard backdrop: clear unless the theme opts in, then a photo (when
@@ -928,7 +978,12 @@ public struct KeyboardCanvas: View {
                                 // Pressing any key while the picker is open
                                 // dismisses it — the user's typing, not choosing.
                                 onPressDown: { dismissPickerOnInput(); onAnyTap() },
-                                lingerDuration: settings.keyPressLinger,
+                                // On glass, drop the post-release linger that
+                                // holds the (expensive) merged bloom an extra
+                                // beat — `minPressVisible` still floors a quick
+                                // tap's visibility, but a normal/long press
+                                // releases at once so the merge dissolves fast.
+                                lingerDuration: theme.material == .liquidGlass ? 0 : settings.keyPressLinger,
                                 minPressVisible: settings.minPressVisible,
                                 hitboxScale: settings.hitboxScale,
             adaptiveEnabled: settings.adaptiveHitboxes,
@@ -997,7 +1052,12 @@ public struct KeyboardCanvas: View {
                         // centre in sync with the bar, instead of snapping.
                         .offset(x: g.offsetX)
                         .position(x: proxy[g.anchor].midX, y: proxy[g.anchor].midY)
-                        .animation(settings.keyPressInstant ? nil : MotionToken.userSpring(response: settings.keySpringResponse, damping: settings.keySpringDamping).animation, value: g.scaleX)
+                        // Matches the key SURFACE: rises with the tuned spring,
+                        // returns with the calmer settle (scaleX back at rest),
+                        // so the glyph never keeps ringing after its key calms.
+                        .animation(settings.keyPressInstant ? nil
+                                   : (abs(g.scaleX - 1) < 0.001 ? physics.keyReleaseAnimation : physics.keySpringAnimation),
+                                   value: g.scaleX)
                         // GlassEffectContainer's implicit animation bleeds into this
                         // ForEach, fading out removed items (e.g. delete glyph at its
                         // old keyID) before the replacement fades in — leaving a gap.
