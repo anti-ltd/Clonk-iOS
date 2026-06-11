@@ -163,6 +163,13 @@ struct AnimationView: View {
                       in: 0...0.4, step: 0.02) {
                 $0 < 0.005 ? "Off" : "\(Int(($0 * 1000).rounded()))ms"
             }
+            Divider()
+            SliderRow("Min highlight",
+                      tooltip: "Shortest time a key stays lit after you tap it. Raise this if keys near the screen edge type but don't visibly highlight on a quick tap.",
+                      value: $model.settings.minPressVisible,
+                      in: 0...0.25, step: 0.01) {
+                $0 < 0.005 ? "Off" : "\(Int(($0 * 1000).rounded()))ms"
+            }
         }
     }
 

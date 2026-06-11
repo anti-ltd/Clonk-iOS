@@ -182,6 +182,7 @@ public final class KeyTouchRouter {
                             resolveSpec: @escaping (String) -> KeySpec?,
                             onPressDown: @escaping () -> Void,
                             lingerDuration: TimeInterval,
+                            minPressVisible: TimeInterval,
                             hitboxScale: Double,
                             adaptiveEnabled: Bool,
                             adaptiveGrow: Double,
@@ -210,6 +211,7 @@ public final class KeyTouchRouter {
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
         self.lingerDuration = lingerDuration
+        self.minPressVisible = minPressVisible
         self.hitboxScale = hitboxScale
         self.adaptiveEnabled = adaptiveEnabled
         self.adaptiveGrow = adaptiveGrow
@@ -323,6 +325,18 @@ public final class KeyTouchRouter {
     /// centre happens to be closer. Rect distance gives every bottom-row key a
     /// vertical distance of 0 across that whole band, so a touch there can never
     /// jump up a row.
+    ///
+    /// Rect distance alone still isn't enough at the *sides*: the home row is
+    /// indented (the `A`…`L` row sits inset from the edges), so a tap near the
+    /// left/right edge at the home row's vertical level is horizontally far from
+    /// `A`/`L` but vertically in their band — while the un-indented row above/below
+    /// reaches closer to the edge. By plain Euclid that neighbour row wins and
+    /// `A`/`L` never light up (the reported "tap close on the edge" miss). So we
+    /// tier the ranking: a key whose vertical band *contains* the point always
+    /// beats one that doesn't, and only within a tier does distance decide. A touch
+    /// at a row's level therefore binds to that row's nearest key (the indented
+    /// `A`/`L` claim their whole side margin); full rect distance still resolves the
+    /// vertical gaps *between* rows, where no band contains the point.
     fileprivate func key(at point: CGPoint) -> String? {
         // Adaptive: each letter key's frame is flexed by its predicted likelihood
         // (the previous letter drives the prediction). Non-letter keys stay at
@@ -340,17 +354,30 @@ public final class KeyTouchRouter {
         var best: String?
         var bestDist = CGFloat.greatestFiniteMagnitude
         var bestFactor = 0.0
+        var bestInBand = false
         for (id, f) in frames {
             var factor = 1.0
             if adaptiveEnabled, let c = letterOfKey(id) { factor = factors[c] ?? 1.0 }
             let sf = scaledFrame(f, extra: factor)
             let dx = max(sf.minX - point.x, 0, point.x - sf.maxX)
             let dy = max(sf.minY - point.y, 0, point.y - sf.maxY)
+            // In-band = the point sits within this key's vertical span. Such a key
+            // always outranks one that isn't, so an edge/inset tap at a row's level
+            // can't jump to a closer-by-Euclid neighbour row (the indented A/L case).
+            let inBand = dy == 0
             let d = dx * dx + dy * dy
-            // On a tie (overlapping enlarged frames both contain the point), the
-            // more-likely key wins — otherwise dictionary order would decide.
-            if d < bestDist || (d == bestDist && factor > bestFactor) {
-                bestDist = d; best = id; bestFactor = factor
+            let better: Bool
+            if inBand != bestInBand {
+                better = inBand
+            } else if d != bestDist {
+                better = d < bestDist
+            } else {
+                // On a tie (overlapping enlarged frames both contain the point), the
+                // more-likely key wins — otherwise dictionary order would decide.
+                better = factor > bestFactor
+            }
+            if better {
+                bestInBand = inBand; bestDist = d; best = id; bestFactor = factor
             }
         }
         return best
@@ -392,6 +419,7 @@ public final class KeyTouchRouter {
         // into the touch surface's local space for accent-swatch hit-testing.
         viewOrigin = CGPoint(x: windowPoint.x - localPoint.x, y: windowPoint.y - localPoint.y)
         heldCounts[id, default: 0] += 1
+        pressStart[id] = Date()     // for the minimum-visible-press floor (see startLinger)
         cancelLinger(id)            // pressed again → stop any pending fade-out
         recomputePressed()
         tapTicks[id, default: 0] &+= 1   // fire the per-press tap pulse
@@ -658,6 +686,18 @@ public final class KeyTouchRouter {
     private var heldCounts: [String: Int] = [:]
     private var lingering: Set<String> = []
     private var lingerTasks: [String: Task<Void, Never>] = [:]
+    /// Touch-down timestamp per key, used to floor how long a press stays visible.
+    private var pressStart: [String: Date] = [:]
+    /// Minimum time a key reads pressed after touch-down, no matter how fast it's
+    /// released or cancelled. Screen-edge taps in the keyboard extension are
+    /// deferred by iOS's edge system-gestures and then delivered as a near-instant
+    /// down+up, collapsing the press to a sub-frame flicker — the letter types but
+    /// `A`/`L` never visibly highlight (the reported edge-tap miss). Guaranteeing a
+    /// minimum on-screen press makes an edge tap bloom like a held centre tap. The
+    /// post-release `lingerDuration` fade rides on top of this; the floor only
+    /// raises the total when the press itself was briefer than the floor. Pushed in
+    /// from `KeyboardSettings.minPressVisible` each layout pass (see `update`).
+    fileprivate var minPressVisible: TimeInterval = 0.09
 
     /// Drop one finger from a key; once none remain, start its linger fade-out.
     private func releaseHold(_ id: String) {
@@ -681,6 +721,7 @@ public final class KeyTouchRouter {
     /// can't receive its normal release.
     private func clearPress(_ id: String) {
         heldCounts[id] = nil
+        pressStart[id] = nil
         cancelLinger(id)
         recomputePressed()
     }
@@ -690,14 +731,20 @@ public final class KeyTouchRouter {
     /// Full Access granted; a silent no-op otherwise (never crashes).
     private let dragHaptic = UIImpactFeedbackGenerator(style: .rigid)
 
-    /// Keep a just-released key visually pressed for `lingerDuration`, then clear
-    /// it — so a quick tap blooms fully before springing back.
+    /// Keep a just-released key visually pressed, then clear it — so a quick tap
+    /// blooms fully before springing back. The hold is the longer of the
+    /// post-release `lingerDuration` and whatever remains of the `minPressVisible`
+    /// floor measured from touch-down, so a press the system collapsed to an
+    /// instant (a deferred screen-edge tap) still stays lit long enough to bloom.
     private func startLinger(_ id: String) {
-        guard lingerDuration > 0 else { return }
+        let held = pressStart[id].map { Date().timeIntervalSince($0) } ?? 0
+        pressStart[id] = nil
+        let duration = max(lingerDuration, minPressVisible - held)
+        guard duration > 0 else { return }
         lingering.insert(id)
         lingerTasks[id]?.cancel()
         lingerTasks[id] = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(lingerDuration))
+            try? await Task.sleep(for: .seconds(duration))
             if Task.isCancelled { return }
             lingering.remove(id)
             lingerTasks[id] = nil
@@ -1010,6 +1057,7 @@ struct MultiTouchSurface: UIViewRepresentable {
     let resolveSpec: (String) -> KeySpec?
     let onPressDown: () -> Void
     let lingerDuration: TimeInterval
+    let minPressVisible: TimeInterval
     let hitboxScale: Double
     let adaptiveEnabled: Bool
     let adaptiveGrow: Double
@@ -1039,6 +1087,7 @@ struct MultiTouchSurface: UIViewRepresentable {
         let v = KeyGridTouchView(router: router)
         router.update(frames: frames, resolveSpec: resolveSpec,
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
+                      minPressVisible: minPressVisible,
                       hitboxScale: hitboxScale, adaptiveEnabled: adaptiveEnabled,
                       adaptiveGrow: adaptiveGrow, adaptiveShrink: adaptiveShrink,
                       adaptivePredictionWeight: adaptivePredictionWeight,
@@ -1067,6 +1116,7 @@ struct MultiTouchSurface: UIViewRepresentable {
     func updateUIView(_ uiView: KeyGridTouchView, context: Context) {
         router.update(frames: frames, resolveSpec: resolveSpec,
                       onPressDown: onPressDown, lingerDuration: lingerDuration,
+                      minPressVisible: minPressVisible,
                       hitboxScale: hitboxScale, adaptiveEnabled: adaptiveEnabled,
                       adaptiveGrow: adaptiveGrow, adaptiveShrink: adaptiveShrink,
                       adaptivePredictionWeight: adaptivePredictionWeight,

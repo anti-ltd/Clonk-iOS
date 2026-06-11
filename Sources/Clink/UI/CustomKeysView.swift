@@ -15,8 +15,9 @@ struct CustomKeysView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius
 
-    /// Non-nil while the key editor sheet is up.
-    @State private var editing: KeyEdit?
+    /// Non-nil while the key editor sheet is up. Owned by the host screen
+    /// (`LayoutView`) so the themed sheet can be presented full-screen.
+    @Binding var editing: KeyEdit?
 
     private var settings: KeyboardSettings { model.settings }
 
@@ -26,11 +27,11 @@ struct CustomKeysView: View {
 
     var body: some View {
         CardSection("Beside space bar") {
-            Text("Drop keys to the left and right of the space bar — the quick-comma / quick-period layout.")
+            Text("Put your own keys next to the space bar, like a quick comma and period.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 4)
+                .padding(.vertical, UX.rowVPadding)
             Divider()
             flankEditor("Left of space", keys: settings.spaceBarLeadingKeys, location: .leading)
             Divider()
@@ -43,7 +44,7 @@ struct CustomKeysView: View {
                     Label("Add comma & period", systemImage: "wand.and.stars")
                 }
                 .buttonStyle(ThemedFillButtonStyle(fill: themeAccent, corner: cardCornerRadius))
-                .padding(.top, 4)
+                .padding(.vertical, UX.rowVPadding)
             }
         }
 
@@ -52,7 +53,7 @@ struct CustomKeysView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 4)
+                .padding(.vertical, UX.rowVPadding)
             ForEach(settings.customRows) { row in
                 Divider()
                 rowEditor(row)
@@ -64,12 +65,7 @@ struct CustomKeysView: View {
                 Label("Add row", systemImage: "plus")
             }
             .buttonStyle(ThemedFillButtonStyle(fill: themeAccent, corner: cardCornerRadius))
-            .padding(.top, 4)
-        }
-        .sheet(item: $editing) { edit in
-            CustomKeyEditorSheet(initial: edit.key) { saved in
-                commit(edit, saved)
-            }
+            .padding(.vertical, UX.rowVPadding)
         }
     }
 
@@ -81,7 +77,7 @@ struct CustomKeysView: View {
             Text(title).font(.subheadline.weight(.medium))
             keyChips(keys, location: location)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     // MARK: - Custom row editor
@@ -90,11 +86,9 @@ struct CustomKeysView: View {
     private func rowEditor(_ row: CustomRow) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Picker("", selection: positionBinding(row)) {
-                    ForEach(CustomRowPosition.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                ThemedTabPicker(
+                    options: CustomRowPosition.allCases.map { ($0.label, $0) },
+                    selection: positionBinding(row))
                 Button(role: .destructive) {
                     model.settings.customRows.removeAll { $0.id == row.id }
                 } label: {
@@ -105,7 +99,7 @@ struct CustomKeysView: View {
             }
             keyChips(row.keys, location: .row(row.id))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, UX.rowVPadding)
     }
 
     // MARK: - Shared chip strip (tap to edit, + to add)
@@ -149,7 +143,7 @@ struct CustomKeysView: View {
             .foregroundStyle(filled ? AnyShapeStyle(.white) : AnyShapeStyle(themeAccent))
             .background(filled ? AnyShapeStyle(themeAccent)
                                : AnyShapeStyle(themeAccent.opacity(0.18)),
-                        in: Capsule())
+                        in: RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -182,7 +176,9 @@ struct CustomKeysView: View {
     }
 
     /// Insert (when `index == nil`) or replace the edited key at its location.
-    private func commit(_ edit: KeyEdit, _ key: CustomKey) {
+    /// Static so the host screen (`LayoutView`), which presents the themed sheet,
+    /// can commit the result back into settings.
+    static func commit(model: AppModel, edit: KeyEdit, key: CustomKey) {
         switch edit.location {
         case .leading:  write(&model.settings.spaceBarLeadingKeys, edit.index, key)
         case .trailing: write(&model.settings.spaceBarTrailingKeys, edit.index, key)
@@ -192,11 +188,26 @@ struct CustomKeysView: View {
         }
     }
 
-    private func write(_ keys: inout [CustomKey], _ index: Int?, _ key: CustomKey) {
+    private static func write(_ keys: inout [CustomKey], _ index: Int?, _ key: CustomKey) {
         if let index, keys.indices.contains(index) {
             keys[index] = key
         } else {
             keys.append(key)
+        }
+    }
+
+    /// Delete the edited key from its location (existing keys only).
+    static func remove(model: AppModel, edit: KeyEdit) {
+        guard let index = edit.index else { return }
+        func drop(_ keys: inout [CustomKey]) {
+            if keys.indices.contains(index) { keys.remove(at: index) }
+        }
+        switch edit.location {
+        case .leading:  drop(&model.settings.spaceBarLeadingKeys)
+        case .trailing: drop(&model.settings.spaceBarTrailingKeys)
+        case let .row(id):
+            guard let r = model.settings.customRows.firstIndex(where: { $0.id == id }) else { return }
+            drop(&model.settings.customRows[r].keys)
         }
     }
 
@@ -224,15 +235,21 @@ struct CustomKeysView: View {
     }
 }
 
-// MARK: - Key editor sheet
+// MARK: - Key editor (themed-sheet content)
 
 /// Edits a single `CustomKey`: glyph, action, long-press alternates, width.
-/// Owns a working copy seeded from `initial`; `onSave` returns the built key.
-private struct CustomKeyEditorSheet: View {
+/// Rendered as the content of a `themedSheet` (the host provides the handle bar
+/// + scroll + padding), so it's just a stack of cards plus Save / Remove. Owns a
+/// working copy seeded from `initial`; `onSave` returns the built key.
+struct CustomKeyEditorBody: View {
     let initial: CustomKey
+    /// Show the destructive Remove button (only for an existing key).
+    var canRemove: Bool = false
     let onSave: (CustomKey) -> Void
+    var onRemove: () -> Void = {}
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.resolvedKeyboardTheme) private var theme
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
 
     @State private var glyph: String
     @State private var isSymbol: Bool
@@ -242,9 +259,12 @@ private struct CustomKeyEditorSheet: View {
     @State private var width: Double
     @State private var newAlternate: String = ""
 
-    init(initial: CustomKey, onSave: @escaping (CustomKey) -> Void) {
+    init(initial: CustomKey, canRemove: Bool = false,
+         onSave: @escaping (CustomKey) -> Void, onRemove: @escaping () -> Void = {}) {
         self.initial = initial
+        self.canRemove = canRemove
         self.onSave = onSave
+        self.onRemove = onRemove
         _glyph = State(initialValue: initial.glyph)
         _isSymbol = State(initialValue: initial.isSymbol)
         _kind = State(initialValue: ActionKind(initial.action))
@@ -268,78 +288,71 @@ private struct CustomKeyEditorSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: UX.cardSpacing) {
-                    CardSection("Action") {
-                        Picker("Action", selection: $kind) {
-                            ForEach(ActionKind.allCases) { Text($0.label).tag($0) }
-                        }
-                        .pickerStyle(.menu)
-                        if kind == .insert {
-                            Divider()
-                            TextFieldRow("Types", prompt: "e.g. , or :)", text: $insertText)
-                        }
-                    }
+        VStack(spacing: UX.cardSpacing) {
+            CardSection("Action") {
+                Picker("Action", selection: $kind) {
+                    ForEach(ActionKind.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.menu)
+                if kind == .insert {
+                    Divider()
+                    TextFieldRow("Types", prompt: "e.g. , or :)", text: $insertText)
+                }
+            }
 
-                    CardSection("Cap") {
-                        TextFieldRow(isSymbol ? "Symbol" : "Label",
-                                     prompt: isSymbol ? "e.g. arrow.left" : "shown on the key",
-                                     text: $glyph)
+            CardSection("Cap") {
+                TextFieldRow(isSymbol ? "Symbol" : "Label",
+                             prompt: isSymbol ? "e.g. arrow.left" : "shown on the key",
+                             text: $glyph)
+                Divider()
+                ToggleRow("SF Symbol",
+                          subtitle: "Draw the cap as an SF Symbol (use a symbol name above).",
+                          isOn: $isSymbol)
+                if kind == .insert {
+                    Text("Leave the label blank to show what the key types.")
+                        .font(.caption).foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            if alternatesAllowed {
+                CardSection("Long-press alternates") {
+                    Text("Hold the key to pick one of these, Gboard-style.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if !alternates.isEmpty {
                         Divider()
-                        ToggleRow("SF Symbol",
-                                  subtitle: "Draw the cap as an SF Symbol (use a symbol name above).",
-                                  isOn: $isSymbol)
-                        if kind == .insert {
-                            Text("Leave the label blank to show what the key types.")
-                                .font(.caption).foregroundStyle(.tertiary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-
-                    if alternatesAllowed {
-                        CardSection("Long-press alternates") {
-                            Text("Hold the key to pick one of these, Gboard-style.")
-                                .font(.caption).foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            if !alternates.isEmpty {
-                                Divider()
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 8) {
-                                        ForEach(Array(alternates.enumerated()), id: \.offset) { idx, alt in
-                                            Chip(alt, onRemove: { alternates.remove(at: idx) })
-                                        }
-                                    }
-                                    .padding(.vertical, 2)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(alternates.enumerated()), id: \.offset) { idx, alt in
+                                    Chip(alt, onRemove: { alternates.remove(at: idx) })
                                 }
                             }
-                            Divider()
-                            TextFieldRow("Add", prompt: "a character", text: $newAlternate,
-                                         onSubmit: addAlternate) {
-                                Button(action: addAlternate) { Image(systemName: "plus.circle.fill") }
-                                    .disabled(newAlternate.isEmpty)
-                            }
+                            .padding(.vertical, 2)
                         }
                     }
-
-                    CardSection("Size") {
-                        SliderRow("Width", value: $width, in: 0.5...2.5, step: 0.1) {
-                            String(format: "%.1f keys", $0)
-                        }
+                    Divider()
+                    TextFieldRow("Add", prompt: "a character", text: $newAlternate,
+                                 onSubmit: addAlternate) {
+                        Button(action: addAlternate) { Image(systemName: "plus.circle.fill") }
+                            .disabled(newAlternate.isEmpty)
                     }
                 }
-                .padding(.horizontal, UX.screenPadding)
-                .padding(.vertical, UX.cardSpacing)
             }
-            .navigationTitle("Custom key")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+
+            CardSection("Size") {
+                SliderRow("Width", value: $width, in: 0.5...2.5, step: 0.1) {
+                    String(format: "%.1f keys", $0)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }.disabled(!canSave)
-                }
+            }
+
+            Button { save() } label: { Text("Save key") }
+                .buttonStyle(ThemedFillButtonStyle(fill: theme.accent.color, corner: cardCornerRadius))
+                .disabled(!canSave)
+
+            if canRemove {
+                Button(role: .destructive) { onRemove() } label: { Text("Remove key") }
+                    .buttonStyle(ThemedFillButtonStyle(fill: .red.opacity(0.85), corner: cardCornerRadius))
             }
         }
     }
@@ -368,7 +381,6 @@ private struct CustomKeyEditorSheet: View {
                          action: action,
                          alternates: alternatesAllowed ? alternates : [],
                          width: width))
-        dismiss()
     }
 
     /// UI-facing mirror of `CustomKeyAction` (no associated value), for the picker.
@@ -403,5 +415,5 @@ private struct CustomKeyEditorSheet: View {
 }
 
 #if DEBUG
-#Preview { LayoutPickerView().clinkPreview() }
+#Preview { LayoutView().clinkPreview() }
 #endif

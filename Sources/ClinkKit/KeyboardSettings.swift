@@ -209,6 +209,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// reach full strength (it reads dim); lingering lets it bloom then fade. 0
     /// disables the hold (instant release).
     public var keyPressLinger: Double
+    /// Minimum time a key reads pressed after touch-down, in seconds, no matter how
+    /// fast it's released or cancelled. Screen-edge taps in the extension are
+    /// deferred by iOS's edge system-gestures then delivered as a near-instant
+    /// down+up, collapsing the press to a sub-frame flicker — the letter types but
+    /// the key never visibly highlights. This floor keeps an edge tap lit long
+    /// enough to bloom like a held centre tap. 0 disables the floor.
+    public var minPressVisible: Double
     /// Height of a single key row, in points. Drives the keyboard's overall
     /// height; smaller = shorter keys.
     public var keyHeight: Double
@@ -537,6 +544,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         homeRowInsetAmount: Double = 0.01,
         keyPressWarp: Bool = true,
         keyPressLinger: Double = 0.0,
+        minPressVisible: Double = 0.09,
         keyHeight: Double = 51,
         numberRowHeightScale: Double = 1.0,
         numberRowFontSize: Double = 22,
@@ -654,6 +662,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.homeRowInsetAmount = homeRowInsetAmount
         self.keyPressWarp = keyPressWarp
         self.keyPressLinger = keyPressLinger
+        self.minPressVisible = minPressVisible
         self.keyHeight = keyHeight
         self.numberRowHeightScale = numberRowHeightScale
         self.numberRowFontSize = numberRowFontSize
@@ -797,6 +806,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         homeRowInsetAmount = try c.decodeIfPresent(Double.self, forKey: .homeRowInsetAmount) ?? 0.01
         keyPressWarp = try c.decodeIfPresent(Bool.self, forKey: .keyPressWarp) ?? true
         keyPressLinger = try c.decodeIfPresent(Double.self, forKey: .keyPressLinger) ?? 0.06
+        minPressVisible = try c.decodeIfPresent(Double.self, forKey: .minPressVisible) ?? 0.09
         keyHeight = try c.decodeIfPresent(Double.self, forKey: .keyHeight) ?? 46
         numberRowHeightScale = try c.decodeIfPresent(Double.self, forKey: .numberRowHeightScale) ?? 1.0
         numberRowFontSize = try c.decodeIfPresent(Double.self, forKey: .numberRowFontSize) ?? 22

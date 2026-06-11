@@ -901,6 +901,7 @@ public struct KeyboardCanvas: View {
                                 // dismisses it — the user's typing, not choosing.
                                 onPressDown: { dismissPickerOnInput(); onAnyTap() },
                                 lingerDuration: settings.keyPressLinger,
+                                minPressVisible: settings.minPressVisible,
                                 hitboxScale: settings.hitboxScale,
             adaptiveEnabled: settings.adaptiveHitboxes,
             adaptiveGrow: settings.adaptiveGrow,

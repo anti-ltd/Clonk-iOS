@@ -10,6 +10,9 @@ struct LayoutView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab: Tab = .layout
+    /// Non-nil while the custom-key editor sheet is up. Hosted here (the screen
+    /// root) so the themed sheet presents full-screen.
+    @State private var keyEditing: CustomKeysView.KeyEdit?
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
@@ -45,12 +48,29 @@ struct LayoutView: View {
             case .rows:
                 rowsTab(model: model)
             case .custom:
-                CustomKeysView()
+                CustomKeysView(editing: $keyEditing)
             }
         }
         .tint(themeAccent)
         .navigationTitle("Layout")
         .navigationBarTitleDisplayMode(.inline)
+        .themedSheet(isPresented: Binding(get: { keyEditing != nil },
+                                          set: { if !$0 { keyEditing = nil } }),
+                     title: "Custom key") {
+            if let edit = keyEditing {
+                CustomKeyEditorBody(
+                    initial: edit.key,
+                    canRemove: edit.index != nil,
+                    onSave: { saved in
+                        CustomKeysView.commit(model: model, edit: edit, key: saved)
+                        keyEditing = nil
+                    },
+                    onRemove: {
+                        CustomKeysView.remove(model: model, edit: edit)
+                        keyEditing = nil
+                    })
+            }
+        }
     }
 
     // MARK: - Tabs
