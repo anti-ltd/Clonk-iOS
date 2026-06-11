@@ -216,6 +216,11 @@ public struct KeyboardCanvas: View {
     /// For `.popover` it floats a menu; for `.inline` it expands the bar.
     @State private var pickerOpen = false
 
+    /// How the popover picker was opened, so it can anchor itself near whatever
+    /// the user touched: under the top-left icon, or above the 123 key.
+    private enum PickerOrigin { case icon, slideUp }
+    @State private var pickerOrigin: PickerOrigin = .icon
+
     /// While the notepad is in `notes` mode, whether the saved-notes archive is
     /// taking over the full keyboard (browsing) versus the inline compose strip.
     @State private var notepadBrowsing = false
@@ -440,6 +445,7 @@ public struct KeyboardCanvas: View {
         } else if live.activePanel != nil {
             closePanel()
         } else {
+            pickerOrigin = .icon
             pickerOpen.toggle()
         }
     }
@@ -452,6 +458,7 @@ public struct KeyboardCanvas: View {
         if panels.count == 1 {
             activate(panels[0])
         } else {
+            pickerOrigin = .slideUp
             withAnimation(.snappy(duration: 0.22)) { pickerOpen = true }
         }
     }
@@ -569,6 +576,7 @@ public struct KeyboardCanvas: View {
                     pickerWasOpenAtStart = pickerOpen
                     pickerDragMoved = false
                     if !pickerOpen {
+                        pickerOrigin = .icon
                         withAnimation(.snappy(duration: 0.18)) { pickerOpen = true }
                     }
                 }
@@ -650,10 +658,35 @@ public struct KeyboardCanvas: View {
         }
     }
 
-    /// The popover picker: a small floating menu under the button, over a
-    /// transparent tap-to-dismiss catcher that fills the keyboard.
-    private var panelPopover: some View {
-        ZStack(alignment: .topLeading) {
+    /// Width of the floating popover menu.
+    private static let popoverWidth: CGFloat = 168
+    /// Height of one popover row (matches the row `.frame(height:)` below).
+    private static let popoverRowHeight: CGFloat = 40
+
+    /// The popover picker: a small floating menu, over a transparent
+    /// tap-to-dismiss catcher that fills the keyboard. It anchors near whatever
+    /// the user touched to open it — under the top-left icon for icon
+    /// activation, or floating just above the 123 key for a 123 slide-up.
+    /// `slideUpKeyFrame` is the 123 key's frame (in this overlay's coordinate
+    /// space) when opened via slide-up; `nil` anchors under the icon.
+    private func panelPopover(slideUpKeyFrame: CGRect?) -> some View {
+        // Estimated menu height from the rows (height + 0.5pt dividers), so the
+        // slide-up variant can sit its bottom edge just above the 123 key.
+        let rows = CGFloat(enabledPanels.count)
+        let menuHeight = rows * Self.popoverRowHeight + max(rows - 1, 0) * 0.5
+        let originX: CGFloat
+        let originY: CGFloat
+        let scaleAnchor: UnitPoint
+        if let kf = slideUpKeyFrame {
+            originX = kf.minX
+            originY = kf.minY - 6 - menuHeight
+            scaleAnchor = .bottomLeading
+        } else {
+            originX = 6
+            originY = Metrics.suggestionBarHeight - 4
+            scaleAnchor = .topLeading
+        }
+        return ZStack(alignment: .topLeading) {
             Color.black.opacity(0.001)
                 .contentShape(Rectangle())
                 .onTapGesture { pickerOpen = false }
@@ -690,7 +723,7 @@ public struct KeyboardCanvas: View {
                 }
             }
             .onPreferenceChange(PanelRowFrameKey.self) { panelRowFrames = $0 }
-            .frame(width: 168)
+            .frame(width: Self.popoverWidth)
             .background {
                 let r = CGFloat(settings.keyCornerRadius)
                 let shape = RoundedRectangle(cornerRadius: r, style: .continuous)
@@ -704,9 +737,8 @@ public struct KeyboardCanvas: View {
                 }
             }
             .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
-            .padding(.leading, 6)
-            .offset(y: Metrics.suggestionBarHeight - 4)
-            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .topLeading)))
+            .offset(x: originX, y: originY)
+            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: scaleAnchor)))
         }
     }
 
@@ -1034,9 +1066,15 @@ public struct KeyboardCanvas: View {
         // button, with a transparent catcher behind it to tap-dismiss. Added LAST
         // so it sits above the key-glyph overlay (which is itself an overlay layer
         // — otherwise the letters behind the menu bleed through it).
-        .overlay(alignment: .topLeading) {
+        .overlayPreferenceValue(KeyFrameKey.self) { anchors in
             if pickerOpen && settings.panelPickerStyle == .popover && enabledPanels.count >= 2 {
-                panelPopover
+                GeometryReader { proxy in
+                    // The 123 key (bottom row, index 0) in this overlay's space,
+                    // so a slide-up popover can float right above it. Falls back
+                    // to the icon anchor if the frame isn't available.
+                    let keyFrame = anchors["bottom-0"].map { proxy[$0] }
+                    panelPopover(slideUpKeyFrame: pickerOrigin == .slideUp ? keyFrame : nil)
+                }
             }
         }
         .onChange(of: live.activePanel) { _, new in
