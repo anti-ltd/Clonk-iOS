@@ -409,7 +409,7 @@ public struct KeyboardCanvas: View {
     /// separate `EmojiCanvas`), so it's never an in-canvas overlay.
     private func panelIsOverlay(_ panel: ActionPanel) -> Bool {
         switch panel.kind {
-        case .clipboard:   return settings.clipboardStyle == .overlay
+        case .clipboard:   return settings.clipboardStyle != .bar
         case .notepad:     return settings.notepadMode == .notes && notepadBrowsing
         case .emoji:       return false
         case .calculator, .extensions, .customPanels, .customPanel: return true
@@ -772,6 +772,7 @@ public struct KeyboardCanvas: View {
                         entries: clipboard.history,
                         theme: theme,
                         cornerRadius: CGFloat(settings.keyCornerRadius),
+                        gridLayout: settings.clipboardStyle == .grid,
                         onTap: { text in onClipboardInsert(text) },
                         onSave: { clipboard.captureFromPasteboard() },
                         onDismiss: { closePanel() },

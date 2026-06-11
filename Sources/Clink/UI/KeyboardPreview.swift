@@ -450,8 +450,9 @@ struct EmojiPreview: View {
 }
 
 /// A live preview of the clipboard panel — a `ClipboardPanel` loaded with sample
-/// entries, pinned above the controls in `ClipboardHistoryView`. Only relevant for
-/// `clipboardStyle == .overlay`; bar style lives in the suggestion row.
+/// entries, pinned above the controls in `ClipboardHistoryView`. Relevant for the
+/// full-keyboard styles (`.overlay` list and `.grid`); bar style lives in the
+/// suggestion row.
 struct ClipboardPreview: View {
     @Environment(\.resolvedKeyboardTheme) private var envTheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius
@@ -480,6 +481,7 @@ struct ClipboardPreview: View {
             entries: Self.sampleEntries,
             theme: envTheme,
             cornerRadius: cardCornerRadius,
+            gridLayout: settings.clipboardStyle == .grid,
             onTap: { _ in },
             onSave: {},
             onDismiss: {},

@@ -25,7 +25,7 @@ struct ClipboardHistoryView: View {
     var body: some View {
         @Bindable var model = model
         VStack(spacing: 0) {
-            if model.settings.clipboardEnabled && model.settings.clipboardStyle == .overlay {
+            if model.settings.clipboardEnabled && model.settings.clipboardStyle != .bar {
                 ClipboardPreview(settings: model.settings)
                     .padding(.horizontal, UX.screenPadding)
                     .padding(.top, UX.screenPadding)

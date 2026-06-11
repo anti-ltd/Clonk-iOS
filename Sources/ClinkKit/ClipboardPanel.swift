@@ -12,6 +12,9 @@ struct ClipboardPanel: View {
     let entries: [ClipboardEntry]
     let theme: Theme
     let cornerRadius: CGFloat
+    /// Lay entries out as a two-column grid of tappable cards (long-press for
+    /// actions) instead of the default full-width swipeable card list.
+    var gridLayout: Bool = false
     let onTap: (String) -> Void
     let onSave: () -> Void
     let onDismiss: () -> Void
@@ -52,9 +55,15 @@ struct ClipboardPanel: View {
             } else {
                 GeometryReader { vp in
                     ScrollView(.vertical, showsIndicators: false) {
-                        cardList(viewportHeight: vp.size.height)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
+                        Group {
+                            if gridLayout {
+                                gridContent
+                            } else {
+                                cardList(viewportHeight: vp.size.height)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
                     }
                     // Soft fade at the scrolling edges, like the emoji grid.
                     .mask(
@@ -96,6 +105,55 @@ struct ClipboardPanel: View {
                     entryText(entry)
                 }
             }
+        }
+    }
+
+    /// Two-column grid of tappable cards. Tap inserts; a long-press context menu
+    /// carries the copy / pin / delete actions the list shows as swipe buttons.
+    private var gridContent: some View {
+        let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+        return LazyVGrid(columns: columns, spacing: 6) {
+            ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                gridCell(index, entry)
+            }
+        }
+    }
+
+    private func gridCell(_ index: Int, _ entry: ClipboardEntry) -> some View {
+        Button { onTap(entry.text) } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .top, spacing: 6) {
+                    Text(entry.text)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(theme.keyText.color)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                    if entry.pinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme.accent.color)
+                    }
+                }
+                Spacer(minLength: 0)
+                if entry.date != .distantPast {
+                    Text(entry.date.clipboardRelative)
+                        .font(.system(size: 10))
+                        .foregroundStyle(theme.keyText.color.opacity(0.45))
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
+            .background(cardSurface)
+            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button { onCopy(index) } label: { Label("Copy", systemImage: "doc.on.doc") }
+            Button { onTogglePin(index) } label: {
+                Label(entry.pinned ? "Unpin" : "Pin", systemImage: entry.pinned ? "pin.slash" : "pin")
+            }
+            Button(role: .destructive) { onDelete(index) } label: { Label("Delete", systemImage: "trash") }
         }
     }
 

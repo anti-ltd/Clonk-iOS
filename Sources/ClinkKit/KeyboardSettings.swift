@@ -26,14 +26,18 @@ public enum KeyPopupStyle: String, Codable, Sendable, CaseIterable, Identifiable
 public enum ClipboardStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     /// Replaces the suggestion bar with a horizontal scroll of chips.
     case bar
-    /// Pops an overlay panel over the keys — cards with text and timestamps.
+    /// Pops an overlay panel over the keys — swipeable cards with text + timestamps.
     case overlay
+    /// Full-keyboard overlay laying entries out as a two-column grid of tappable
+    /// cards (long-press for copy / pin / delete).
+    case grid
 
     public var id: String { rawValue }
     public var label: String {
         switch self {
         case .bar:     return "Bar"
         case .overlay: return "Panel"
+        case .grid:    return "Grid"
         }
     }
 }
