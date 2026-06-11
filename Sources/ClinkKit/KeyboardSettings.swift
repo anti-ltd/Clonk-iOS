@@ -164,6 +164,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var themeApp: Bool
     // Mechanics
     public var layoutID: String
+    /// User-defined keys placed to the left of the space bar in the bottom row
+    /// (the Gboard quick-comma layout). Empty by default. Letters plane only.
+    public var spaceBarLeadingKeys: [CustomKey]
+    /// User-defined keys placed to the right of the space bar, before the return
+    /// key (the Gboard quick-period layout). Empty by default. Letters plane only.
+    public var spaceBarTrailingKeys: [CustomKey]
+    /// Whole rows of user-defined keys, placed above or below the letter rows on
+    /// the letters plane. Empty by default.
+    public var customRows: [CustomRow]
     /// The languages the suggestion bar, autocomplete, and auto-correction run in,
     /// as `UITextChecker` identifiers (e.g. "en_US", "fr_FR"). More than one means
     /// simultaneous bilingual typing: completions/predictions are merged and a word
@@ -514,6 +523,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         backgroundVisible: Bool = false,
         themeApp: Bool = false,
         layoutID: String = KeyboardLayout.default.id,
+        spaceBarLeadingKeys: [CustomKey] = [],
+        spaceBarTrailingKeys: [CustomKey] = [],
+        customRows: [CustomRow] = [],
         keyboardLanguages: [String] = ["en_US"],
         accentPopupsEnabled: Bool = true,
         showNumberRow: Bool = false,
@@ -628,6 +640,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.backgroundVisible = backgroundVisible
         self.themeApp = themeApp
         self.layoutID = layoutID
+        self.spaceBarLeadingKeys = spaceBarLeadingKeys
+        self.spaceBarTrailingKeys = spaceBarTrailingKeys
+        self.customRows = customRows
         self.keyboardLanguages = keyboardLanguages.isEmpty ? ["en_US"] : keyboardLanguages
         self.accentPopupsEnabled = accentPopupsEnabled
         self.showNumberRow = showNumberRow
@@ -756,6 +771,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         backgroundVisible = try c.decodeIfPresent(Bool.self, forKey: .backgroundVisible) ?? false
         themeApp = try c.decodeIfPresent(Bool.self, forKey: .themeApp) ?? false
         layoutID = try c.decodeIfPresent(String.self, forKey: .layoutID) ?? KeyboardLayout.default.id
+        spaceBarLeadingKeys = try c.decodeIfPresent([CustomKey].self, forKey: .spaceBarLeadingKeys) ?? []
+        spaceBarTrailingKeys = try c.decodeIfPresent([CustomKey].self, forKey: .spaceBarTrailingKeys) ?? []
+        customRows = try c.decodeIfPresent([CustomRow].self, forKey: .customRows) ?? []
         // Prefer the new multi-language array; migrate a payload that only has the
         // legacy single `keyboardLanguage` string; default to English otherwise.
         if let langs = try c.decodeIfPresent([String].self, forKey: .keyboardLanguages), !langs.isEmpty {

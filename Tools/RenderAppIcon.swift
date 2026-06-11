@@ -22,12 +22,17 @@ let outDir = "Resources/Assets.xcassets/AppIcon.appiconset"
 let outPath = "\(outDir)/icon-1024.png"
 let galleryPath = "Resources/icon-512.png"
 
-// Key style: "light" (white cap, indigo C) is the default; "dark" renders a
-// graphite cap with a light C. Pass `dark` as the first arg to preview it.
-let style = CommandLine.arguments.dropFirst().first ?? "light"
-let isDark = (style == "dark")
+// Appearance to render, matching the three iOS icon appearances:
+//   • "light"  — white cap, indigo C, on the luminous indigo field (App Store
+//                icon: opaque, no alpha).
+//   • "dark"   — white cap, indigo C, on a deepened near-black indigo field.
+//   • "tinted" — grayscale cap on a transparent field; iOS maps luminance to
+//                the user's tint over its own dark backdrop.
+// With no arg, all three are rendered into the asset catalog.
+let arg = CommandLine.arguments.dropFirst().first ?? "all"
+let modes = (arg == "all") ? ["light", "dark", "tinted"] : [arg]
 
-func renderPNG(size: CGFloat) -> Data? {
+func renderPNG(size: CGFloat, mode: String) -> Data? {
     let px = Int(size)
     guard let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px,
@@ -36,7 +41,7 @@ func renderPNG(size: CGFloat) -> Data? {
           let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = ctx
-    draw(in: ctx.cgContext, size: size)
+    draw(in: ctx.cgContext, size: size, mode: mode)
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])
 }
@@ -64,7 +69,9 @@ func glyphPath(_ string: String, fontSize: CGFloat, weight: NSFont.Weight) -> (C
     return (path, path.boundingBoxOfPath)
 }
 
-func draw(in cg: CGContext, size: CGFloat) {
+func draw(in cg: CGContext, size: CGFloat, mode: String) {
+    let isDark   = (mode == "dark")
+    let isTinted = (mode == "tinted")
     let space = CGColorSpaceCreateDeviceRGB()
     func rgb(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) -> CGColor {
         CGColor(red: r, green: g, blue: b, alpha: a)
@@ -73,32 +80,42 @@ func draw(in cg: CGContext, size: CGFloat) {
 
     let rect = CGRect(x: 0, y: 0, width: size, height: size)
 
-    // ── Background — luminous indigo, drawn full-bleed and opaque ─────────────
-    let bgGrad = CGGradient(colorsSpace: space, colors: [
-        rgb(0.46, 0.36, 0.80),     // violet, top-left
-        rgb(0.24, 0.30, 0.70),     // mid blue
-        rgb(0.07, 0.09, 0.24),     // navy, bottom-right
-    ] as CFArray, locations: [0, 0.52, 1])!
-    cg.drawLinearGradient(bgGrad,
-                          start: CGPoint(x: rect.minX, y: rect.maxY),
-                          end: CGPoint(x: rect.maxX, y: rect.minY),
-                          options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-    // Soft overhead key-light bloom centred above the keycap.
-    let bloomC = CGPoint(x: rect.midX, y: rect.midY + size * 0.16)
-    let bloom = CGGradient(colorsSpace: space, colors: [
-        rgb(0.78, 0.86, 1.00, 0.40),
-        rgb(0.60, 0.70, 1.00, 0.00),
-    ] as CFArray, locations: [0, 1])!
-    cg.drawRadialGradient(bloom, startCenter: bloomC, startRadius: 0,
-                          endCenter: bloomC, endRadius: size * 0.55, options: [])
-    // Warm magenta accent low-right, for depth in the field.
-    let warmC = CGPoint(x: rect.maxX - size * 0.10, y: rect.minY + size * 0.12)
-    let warm = CGGradient(colorsSpace: space, colors: [
-        rgb(0.80, 0.34, 0.74, 0.32),
-        rgb(0.80, 0.34, 0.74, 0.00),
-    ] as CFArray, locations: [0, 1])!
-    cg.drawRadialGradient(warm, startCenter: warmC, startRadius: 0,
-                          endCenter: warmC, endRadius: size * 0.5, options: [])
+    // ── Background ────────────────────────────────────────────────────────────
+    // Tinted leaves the field transparent (iOS supplies its own dark backdrop
+    // and tint); light and dark paint the indigo field, dark simply deepened.
+    if !isTinted {
+        let bgGrad = isDark
+            ? CGGradient(colorsSpace: space, colors: [
+                rgb(0.16, 0.13, 0.32),     // muted violet, top-left
+                rgb(0.08, 0.10, 0.26),     // deep blue
+                rgb(0.02, 0.03, 0.10),     // near-black, bottom-right
+              ] as CFArray, locations: [0, 0.52, 1])!
+            : CGGradient(colorsSpace: space, colors: [
+                rgb(0.46, 0.36, 0.80),     // violet, top-left
+                rgb(0.24, 0.30, 0.70),     // mid blue
+                rgb(0.07, 0.09, 0.24),     // navy, bottom-right
+              ] as CFArray, locations: [0, 0.52, 1])!
+        cg.drawLinearGradient(bgGrad,
+                              start: CGPoint(x: rect.minX, y: rect.maxY),
+                              end: CGPoint(x: rect.maxX, y: rect.minY),
+                              options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+        // Soft overhead key-light bloom centred above the keycap.
+        let bloomC = CGPoint(x: rect.midX, y: rect.midY + size * 0.16)
+        let bloom = CGGradient(colorsSpace: space, colors: [
+            rgb(0.78, 0.86, 1.00, isDark ? 0.20 : 0.40),
+            rgb(0.60, 0.70, 1.00, 0.00),
+        ] as CFArray, locations: [0, 1])!
+        cg.drawRadialGradient(bloom, startCenter: bloomC, startRadius: 0,
+                              endCenter: bloomC, endRadius: size * 0.55, options: [])
+        // Warm magenta accent low-right, for depth in the field.
+        let warmC = CGPoint(x: rect.maxX - size * 0.10, y: rect.minY + size * 0.12)
+        let warm = CGGradient(colorsSpace: space, colors: [
+            rgb(0.80, 0.34, 0.74, isDark ? 0.20 : 0.32),
+            rgb(0.80, 0.34, 0.74, 0.00),
+        ] as CFArray, locations: [0, 1])!
+        cg.drawRadialGradient(warm, startCenter: warmC, startRadius: 0,
+                              endCenter: warmC, endRadius: size * 0.5, options: [])
+    }
 
     // ── Keycap geometry ───────────────────────────────────────────────────────
     // Top face is a rounded square; the body is extruded straight down from it
@@ -113,25 +130,34 @@ func draw(in cg: CGContext, size: CGFloat) {
     let topPath = CGPath(roundedRect: topRect, cornerWidth: radius,
                          cornerHeight: radius, transform: nil)
 
-    // ── Contact shadow — grounds the key on the surface ───────────────────────
-    cg.saveGState()
-    cg.translateBy(x: 0, y: -depth)
-    cg.addPath(topPath)
-    cg.setShadow(offset: CGSize(width: 0, height: -size * 0.022),
-                 blur: size * 0.06, color: rgb(0.01, 0.02, 0.06, 0.55))
-    cg.setFillColor(rgb(0, 0, 0, 1))
-    cg.fillPath()
-    cg.restoreGState()
+    // ── Contact shadow — grounds the key on the surface (skipped when tinted,
+    //    where a blurred halo on transparency would read as grime). ────────────
+    if !isTinted {
+        cg.saveGState()
+        cg.translateBy(x: 0, y: -depth)
+        cg.addPath(topPath)
+        cg.setShadow(offset: CGSize(width: 0, height: -size * 0.022),
+                     blur: size * 0.06, color: rgb(0.01, 0.02, 0.06, 0.55))
+        cg.setFillColor(rgb(0, 0, 0, 1))
+        cg.fillPath()
+        cg.restoreGState()
+    }
 
     // ── Extruded body — fill the top-face path at descending offsets so the
     //    side wall reads as one solid bevel, shaded dark at the base. ──────────
     let stepCount = Int(depth)
     for i in stride(from: stepCount, through: 0, by: -1) {
         let t = Double(i) / Double(stepCount)          // 1 at base, 0 at top edge
-        // Wall: darkening downward. Light key → grey bevel; dark key → near-black.
-        let r = isDark ? lerp(0.26, 0.08, t) : lerp(0.74, 0.40, t)
-        let g = isDark ? lerp(0.28, 0.09, t) : lerp(0.76, 0.42, t)
-        let b = isDark ? lerp(0.34, 0.13, t) : lerp(0.82, 0.52, t)
+        // Wall: darkening downward. Tinted → neutral grey bevel; light → cool
+        // grey; dark → near-black.
+        let r, g, b: Double
+        if isTinted {
+            r = lerp(0.62, 0.30, t); g = lerp(0.62, 0.30, t); b = lerp(0.62, 0.30, t)
+        } else if isDark {
+            r = lerp(0.26, 0.08, t); g = lerp(0.28, 0.09, t); b = lerp(0.34, 0.13, t)
+        } else {
+            r = lerp(0.74, 0.40, t); g = lerp(0.76, 0.42, t); b = lerp(0.82, 0.52, t)
+        }
         cg.saveGState()
         cg.translateBy(x: 0, y: -CGFloat(i))
         cg.addPath(topPath)
@@ -168,34 +194,52 @@ func draw(in cg: CGContext, size: CGFloat) {
     cg.saveGState()
     cg.addPath(topPath)
     cg.clip()
-    let face = isDark
-        ? CGGradient(colorsSpace: space, colors: [
+    let face: CGGradient
+    if isTinted {
+        face = CGGradient(colorsSpace: space, colors: [
+            rgb(0.98, 0.98, 0.98),     // top — bright so the tint reads light
+            rgb(0.90, 0.90, 0.90),     // mid
+            rgb(0.80, 0.80, 0.80),     // lower
+        ] as CFArray, locations: [0, 0.55, 1])!
+    } else if isDark {
+        face = CGGradient(colorsSpace: space, colors: [
             rgb(0.30, 0.32, 0.40),     // top
             rgb(0.22, 0.24, 0.32),     // mid
             rgb(0.15, 0.17, 0.24),     // lower
-          ] as CFArray, locations: [0, 0.55, 1])!
-        : CGGradient(colorsSpace: space, colors: [
+        ] as CFArray, locations: [0, 0.55, 1])!
+    } else {
+        face = CGGradient(colorsSpace: space, colors: [
             rgb(0.99, 1.00, 1.00),     // top
             rgb(0.93, 0.95, 0.99),     // mid
             rgb(0.84, 0.88, 0.96),     // lower
-          ] as CFArray, locations: [0, 0.55, 1])!
+        ] as CFArray, locations: [0, 0.55, 1])!
+    }
     cg.drawLinearGradient(face, start: CGPoint(x: 0, y: topRect.maxY),
                           end: CGPoint(x: 0, y: topRect.minY), options: [])
 
     // Dish: a soft darker vignette hugging the inner edge so the centre reads
     // as scooped, like a real keycap's concave top.
     let dishC = CGPoint(x: topRect.midX, y: topRect.midY)
-    let dish = isDark
-        ? CGGradient(colorsSpace: space, colors: [
+    let dish: CGGradient
+    if isTinted {
+        dish = CGGradient(colorsSpace: space, colors: [
+            rgb(0.55, 0.55, 0.55, 0.00),
+            rgb(0.55, 0.55, 0.55, 0.00),
+            rgb(0.45, 0.45, 0.45, 0.40),
+        ] as CFArray, locations: [0, 0.62, 1])!
+    } else if isDark {
+        dish = CGGradient(colorsSpace: space, colors: [
             rgb(0.10, 0.11, 0.16, 0.00),
             rgb(0.10, 0.11, 0.16, 0.00),
             rgb(0.06, 0.07, 0.11, 0.55),
-          ] as CFArray, locations: [0, 0.62, 1])!
-        : CGGradient(colorsSpace: space, colors: [
+        ] as CFArray, locations: [0, 0.62, 1])!
+    } else {
+        dish = CGGradient(colorsSpace: space, colors: [
             rgb(0.80, 0.85, 0.94, 0.00),
             rgb(0.80, 0.85, 0.94, 0.00),
             rgb(0.62, 0.68, 0.82, 0.45),
-          ] as CFArray, locations: [0, 0.62, 1])!
+        ] as CFArray, locations: [0, 0.62, 1])!
+    }
     cg.drawRadialGradient(dish, startCenter: dishC, startRadius: 0,
                           endCenter: dishC, endRadius: capSide * 0.62, options: [])
 
@@ -220,29 +264,43 @@ func draw(in cg: CGContext, size: CGFloat) {
     let glyph = rawGlyph.copy(using: &place)!
 
     // Engraved shadow below the letter (darker on light key; on the dark key a
-    // soft black so the bright glyph reads as raised).
+    // soft black so the bright glyph reads as raised; neutral on tinted).
     cg.saveGState()
     cg.addPath(glyph)
+    let glyphShadow = isTinted ? rgb(0.20, 0.20, 0.20, 0.45)
+                    : isDark   ? rgb(0, 0, 0, 0.55)
+                               : rgb(0.10, 0.14, 0.30, 0.40)
+    let glyphBase = isTinted ? rgb(0.34, 0.34, 0.34, 1)
+                  : isDark   ? rgb(0.05, 0.06, 0.10, 1)
+                             : rgb(0.20, 0.26, 0.52, 1)
     cg.setShadow(offset: CGSize(width: 0, height: -size * 0.004),
-                 blur: size * 0.012,
-                 color: isDark ? rgb(0, 0, 0, 0.55) : rgb(0.10, 0.14, 0.30, 0.40))
-    cg.setFillColor(isDark ? rgb(0.05, 0.06, 0.10, 1) : rgb(0.20, 0.26, 0.52, 1))
+                 blur: size * 0.012, color: glyphShadow)
+    cg.setFillColor(glyphBase)
     cg.fillPath()
     cg.restoreGState()
 
-    // Letter body fill: light key → indigo gradient; dark key → cool-white.
+    // Letter body fill: light key → indigo; dark key → cool-white; tinted →
+    // mid-grey, kept darker than the cap face so the tint keeps the C legible.
     cg.saveGState()
     cg.addPath(glyph)
     cg.clip()
-    let letterFill = isDark
-        ? CGGradient(colorsSpace: space, colors: [
+    let letterFill: CGGradient
+    if isTinted {
+        letterFill = CGGradient(colorsSpace: space, colors: [
+            rgb(0.46, 0.46, 0.46),     // top
+            rgb(0.34, 0.34, 0.34),     // bottom
+        ] as CFArray, locations: [0, 1])!
+    } else if isDark {
+        letterFill = CGGradient(colorsSpace: space, colors: [
             rgb(0.98, 0.99, 1.00),     // top
             rgb(0.82, 0.86, 0.96),     // bottom
-          ] as CFArray, locations: [0, 1])!
-        : CGGradient(colorsSpace: space, colors: [
+        ] as CFArray, locations: [0, 1])!
+    } else {
+        letterFill = CGGradient(colorsSpace: space, colors: [
             rgb(0.36, 0.34, 0.78),     // top, violet-indigo
             rgb(0.18, 0.22, 0.60),     // bottom, deep blue
-          ] as CFArray, locations: [0, 1])!
+        ] as CFArray, locations: [0, 1])!
+    }
     cg.drawLinearGradient(letterFill, start: CGPoint(x: 0, y: gBox.maxY + place.ty),
                           end: CGPoint(x: 0, y: gBox.minY + place.ty), options: [])
     cg.restoreGState()
@@ -275,17 +333,18 @@ func draw(in cg: CGContext, size: CGFloat) {
     cg.restoreGState()
 }
 
-// The default (light) style writes into the asset catalog; the dark style is a
-// preview only, written to /tmp so it never clobbers the shipped icon.
-guard let png1024 = renderPNG(size: size) else { fatalError("failed to render 1024") }
-if isDark {
-    let preview = "/tmp/clink-icon-dark.png"
-    try! png1024.write(to: URL(fileURLWithPath: preview))
-    print("→ \(preview)  (preview only)")
-} else {
-    try! png1024.write(to: URL(fileURLWithPath: outPath))
-    print("→ \(outPath)")
-    if let png512 = renderPNG(size: 512) {
+// Filenames for each appearance inside the appiconset.
+let fileFor = ["light": "icon-1024.png",
+               "dark": "icon-1024-dark.png",
+               "tinted": "icon-1024-tinted.png"]
+
+for mode in modes {
+    guard let name = fileFor[mode] else { fatalError("unknown mode: \(mode)") }
+    guard let png = renderPNG(size: size, mode: mode) else { fatalError("render failed: \(mode)") }
+    try! png.write(to: URL(fileURLWithPath: "\(outDir)/\(name)"))
+    print("→ \(outDir)/\(name)")
+    // Light is also the gallery/marketing copy at 512.
+    if mode == "light", let png512 = renderPNG(size: 512, mode: "light") {
         try! png512.write(to: URL(fileURLWithPath: galleryPath))
         print("→ \(galleryPath)")
     }

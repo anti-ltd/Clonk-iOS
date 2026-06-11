@@ -5,7 +5,7 @@ import SwiftUI
 import iUXiOS
 
 struct LayoutView: View {
-    private enum Tab { case layout, rows }
+    private enum Tab { case layout, rows, custom }
 
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
@@ -35,7 +35,8 @@ struct LayoutView: View {
         @Bindable var model = model
         PinnedPreviewLayout(settings: model.settings,
                             bottomBar: AnyView(
-                                ThemedTabPicker(options: [("Layout", Tab.layout), ("Rows", Tab.rows)],
+                                ThemedTabPicker(options: [("Layout", Tab.layout), ("Rows", Tab.rows),
+                                                          ("Custom", Tab.custom)],
                                                 selection: $selectedTab)
                             )) {
             switch selectedTab {
@@ -43,6 +44,8 @@ struct LayoutView: View {
                 layoutTab
             case .rows:
                 rowsTab(model: model)
+            case .custom:
+                CustomKeysView()
             }
         }
         .tint(themeAccent)

@@ -1274,9 +1274,9 @@ public struct KeyboardCanvas: View {
                     fixedHeight: CGFloat(settings.keyHeight) * CGFloat(settings.numberRowHeightScale))
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { idx, r in
-                // The middle letter row (index 1 of a 3-row letter layout) is
-                // the home row — the only one iOS indents.
-                let isHomeRow = plane == .letters && rows.count == 3 && idx == 1
+                // The middle letter row is the home row — the only one iOS indents.
+                // `homeRowIndex` accounts for any custom rows placed above letters.
+                let isHomeRow = idx == homeRowIndex
                 row(r, rowID: "r\(idx)")
                     .padding(.horizontal, isHomeRow && settings.homeRowInset ? homeInset : 0)
             }
@@ -1295,17 +1295,36 @@ public struct KeyboardCanvas: View {
 
     // MARK: - Plane → rows
 
+    /// Index within `currentRows` of the home (middle letter) row — the only row
+    /// iOS indents. Shifts down by however many non-empty custom rows sit above
+    /// the letters. nil off the letters plane or when the layout isn't 3 rows.
+    private var homeRowIndex: Int? {
+        guard plane == .letters, settings.layout.rows.count == 3 else { return nil }
+        let aboveCount = settings.customRows
+            .filter { $0.position == .aboveLetters && !$0.keys.isEmpty }.count
+        return aboveCount + 1
+    }
+
     private var currentRows: [[KeySpec]] {
         switch plane {
         case .letters:
             let rows = settings.layout.rows
-            return rows.enumerated().map { idx, keys in
+            let letterRows: [[KeySpec]] = rows.enumerated().map { idx, keys in
                 if idx == rows.count - 1 {
                     // Last letter row gets shift (lead) + backspace (trail).
                     return [shiftKey] + keys.map { letterKey($0) } + [backspaceKey]
                 }
                 return keys.map { letterKey($0) }
             }
+            // User-defined rows wrap the letters: `aboveLetters` on top (under the
+            // number row), `belowLetters` underneath (above the function row).
+            // Empty rows are skipped so they don't leave a blank gap.
+            func customSpecRows(_ pos: CustomRowPosition) -> [[KeySpec]] {
+                settings.customRows
+                    .filter { $0.position == pos && !$0.keys.isEmpty }
+                    .map { $0.keys.map { customKeySpec($0) } }
+            }
+            return customSpecRows(.aboveLetters) + letterRows + customSpecRows(.belowLetters)
         case .numbers:
             return symbolPlaneRows(KeyboardLayout.numberRows)
         case .symbols:
@@ -1367,6 +1386,11 @@ public struct KeyboardCanvas: View {
                 onNextKeyboard?()
             })
         }
+        // User-defined keys to the left of the space bar (the Gboard quick-comma
+        // layout). Letters plane only; the proportional row auto-narrows space.
+        if plane == .letters {
+            specs.append(contentsOf: settings.spaceBarLeadingKeys.map { customKeySpec($0) })
+        }
         // Blank space bar, like the system keyboard — no "space" caption. Taps
         // type a space; press-and-drag slides the cursor (trackpad mode).
         specs.append(.init(kind: .character, label: .text(""), weight: settings.spaceWidth,
@@ -1382,6 +1406,11 @@ public struct KeyboardCanvas: View {
                 lastKeyWasPunctuation = false
             }
         })
+        // User-defined keys to the right of the space bar, before the return key
+        // (the Gboard quick-period layout). Letters plane only.
+        if plane == .letters {
+            specs.append(contentsOf: settings.spaceBarTrailingKeys.map { customKeySpec($0) })
+        }
         // Return key follows the host field: a ⏎ glyph for a plain return, the
         // action word ("Go", "Search", "Send", …) otherwise — prominent (accent)
         // for action types, exactly like the system keyboard.
@@ -1512,6 +1541,60 @@ public struct KeyboardCanvas: View {
     private static let autoSpacePunctuation: Set<String> = [
         ".", ",", "?", "!", ";", ":",
     ]
+
+    /// A user-defined key (Layout → Custom tab). `insert` keys type their payload
+    /// and, when single-character, expose long-press alternates through the same
+    /// accent machinery as letter keys (independent of the letter-accent toggle
+    /// via `accentsAlwaysOn`). The other actions mirror behaviours the canvas
+    /// already drives — cursor nudge, plane switch, emoji panel, backspace.
+    private func customKeySpec(_ key: CustomKey) -> KeySpec {
+        let label: KeySpec.Label = key.isSymbol ? .system(key.glyph) : .text(key.glyph)
+        switch key.action {
+        case let .insert(text):
+            // Long-press alternates only for a single-character insert: the base
+            // is typed on touch-down and a chosen variant replaces it with a
+            // single backspace, which only lines up when the base is one glyph.
+            let options = (text.count == 1 && !key.alternates.isEmpty) ? [text] + key.alternates : []
+            return KeySpec(kind: .character, label: label, weight: key.width,
+                           accents: options,
+                           onAccentCommit: options.isEmpty ? nil : { [self] chosen in
+                               guard chosen != text else { return }
+                               backspace()
+                               insert(chosen)
+                           },
+                           accentsAlwaysOn: !options.isEmpty) {
+                insert(text)
+                lastKeyWasPunctuation = false
+            }
+        case .cursorLeft:
+            return KeySpec(kind: .function, label: label, weight: key.width) { [self] in
+                onCursorMove(-1)
+            }
+        case .cursorRight:
+            return KeySpec(kind: .function, label: label, weight: key.width) { [self] in
+                onCursorMove(1)
+            }
+        case .tab:
+            return KeySpec(kind: .character, label: label, weight: key.width) { [self] in
+                insert("\t")
+            }
+        case .numbersPlane:
+            return KeySpec(kind: .function, label: label, weight: key.width) { [self] in
+                plane = .numbers
+                lastKeyWasPunctuation = false
+            }
+        case .emoji:
+            return KeySpec(kind: .function, label: label, weight: key.width) { [self] in
+                activate(.emoji)
+            }
+        case .backspace:
+            return KeySpec(kind: .function, label: label, weight: key.width,
+                           isDestructive: true, isRepeatable: true,
+                           onDeleteWord: settings.swipeToDeleteWord ? { [self] in deleteWord() } : nil) { [self] in
+                backspace()
+            }
+        }
+    }
 
     private func planeKey(_ glyph: String, to target: Plane, weight: Double,
                           onDragUp: (() -> Void)? = nil,

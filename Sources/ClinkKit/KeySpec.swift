@@ -49,6 +49,10 @@ struct KeySpec: Identifiable {
     /// touch-down, so this replaces it (backspace + insert) when the picked glyph
     /// differs from the base. nil for keys with no accents.
     let onAccentCommit: ((String) -> Void)?
+    /// Show the long-press accent/alternates bar even when the global
+    /// `accentPopupsEnabled` toggle (which governs letter accents) is off. Set by
+    /// custom keys, whose alternates are an independent, deliberate user choice.
+    let accentsAlwaysOn: Bool
     /// Fired when this key is pressed and dragged horizontally (the backspace
     /// swipe-to-delete-word gesture): once per word as the finger glides left.
     /// When it engages, the key's auto-repeat is stopped. nil disables the gesture.
@@ -65,6 +69,7 @@ struct KeySpec: Identifiable {
          fontSize: CGFloat? = nil,
          accents: [String] = [],
          onAccentCommit: ((String) -> Void)? = nil,
+         accentsAlwaysOn: Bool = false,
          onDeleteWord: (() -> Void)? = nil,
          action: @escaping () -> Void) {
         self.kind = kind; self.label = label; self.weight = weight
@@ -75,6 +80,7 @@ struct KeySpec: Identifiable {
         self.onDragUpMove = onDragUpMove; self.onDragUpEnd = onDragUpEnd
         self.fontSize = fontSize
         self.accents = accents; self.onAccentCommit = onAccentCommit
+        self.accentsAlwaysOn = accentsAlwaysOn
         self.onDeleteWord = onDeleteWord
         self.action = action
     }

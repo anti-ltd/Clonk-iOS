@@ -431,7 +431,7 @@ public final class KeyTouchRouter {
                 // Schedule the accent bar if this key has variants and the
                 // feature is on. The base is already typed (above); a hold then
                 // raises the bar, and releasing on a variant replaces it.
-                if accentsEnabled, !spec.accents.isEmpty {
+                if (accentsEnabled || spec.accentsAlwaysOn), !spec.accents.isEmpty {
                     scheduleAccentHold(id: id, options: spec.accents)
                 }
             }
