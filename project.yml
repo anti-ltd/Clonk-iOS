@@ -102,15 +102,20 @@ targets:
             UTTypeTagSpecification:
               public.filename-extension:
                 - clinktheme
+        # Clink opens these files via the share sheet / Files but does not edit
+        # them in-place — set to NO so the system knows not to offer in-place editing.
+        LSSupportsOpeningDocumentsInPlace: false
         CFBundleDocumentTypes:
           - CFBundleTypeName: Clink Configuration
             LSItemContentTypes:
               - ltd.anti.clink.config
             CFBundleTypeRole: Editor
+            LSHandlerRank: Owner
           - CFBundleTypeName: Clink Theme
             LSItemContentTypes:
               - ltd.anti.clink.theme
             CFBundleTypeRole: Editor
+            LSHandlerRank: Owner
     entitlements:
       path: Resources/Clink.entitlements
       properties:

@@ -321,7 +321,18 @@ public struct KeyboardCanvas: View {
     // because `controller` is a class — mutating it doesn't mutate the struct.
     private var plane: Plane {
         get { controller.plane }
-        nonmutating set { controller.plane = newValue }
+        nonmutating set {
+            // Snap the grid to the new plane. The letter/number keys that swap
+            // already snap via `.transition(.identity)`, but the keys that
+            // PERSIST across the switch (shift / delete / return / the 123⇄ABC
+            // toggle) were getting caught in the `GlassEffectContainer`'s
+            // implicit appear/morph animation as the row's key set changed —
+            // that's the flash. Suppressing animation on the plane change keeps
+            // them rock-steady while the rest snaps over.
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { controller.plane = newValue }
+        }
     }
     private var shift: Shift {
         get { controller.shift }
