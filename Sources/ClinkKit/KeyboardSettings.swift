@@ -445,6 +445,16 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var repeatMinInterval: Double
     /// How many ms to subtract from the repeat interval each step (acceleration).
     public var repeatAccelStep: Double
+    /// Swipe left on the backspace key to delete a whole word at a time (keep
+    /// dragging for more). On by default; tapping/holding backspace is unchanged.
+    public var swipeToDeleteWord: Bool
+    /// Leftward travel (pt) on backspace before the swipe-to-delete-word gesture
+    /// engages. Lower = more sensitive. Only meaningful when `swipeToDeleteWord`.
+    public var deleteWordSwipeEngage: Double
+    /// Travel (pt) per additional word once the backspace swipe has engaged.
+    /// Lower deletes words faster as you keep dragging. Only meaningful when
+    /// `swipeToDeleteWord`.
+    public var deleteWordSwipeStride: Double
     // Gesture response thresholds
     /// How long (ms) a letter key must be held still before its accent/diacritic
     /// bar appears. Lower = accents pop sooner; higher = fewer accidental popups
@@ -589,6 +599,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         repeatInitialInterval: Double = 110,
         repeatMinInterval: Double = 40,
         repeatAccelStep: Double = 6,
+        swipeToDeleteWord: Bool = true,
+        deleteWordSwipeEngage: Double = 24,
+        deleteWordSwipeStride: Double = 42,
         accentHoldDelay: Double = 500,
         accentMoveCancel: Double = 12,
         emojiToneHoldDelay: Double = 280,
@@ -700,6 +713,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.repeatInitialInterval = repeatInitialInterval
         self.repeatMinInterval = repeatMinInterval
         self.repeatAccelStep = repeatAccelStep
+        self.swipeToDeleteWord = swipeToDeleteWord
+        self.deleteWordSwipeEngage = deleteWordSwipeEngage
+        self.deleteWordSwipeStride = deleteWordSwipeStride
         self.accentHoldDelay = accentHoldDelay
         self.accentMoveCancel = accentMoveCancel
         self.emojiToneHoldDelay = emojiToneHoldDelay
@@ -837,6 +853,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         repeatInitialInterval = try c.decodeIfPresent(Double.self, forKey: .repeatInitialInterval) ?? 110
         repeatMinInterval = try c.decodeIfPresent(Double.self, forKey: .repeatMinInterval) ?? 40
         repeatAccelStep = try c.decodeIfPresent(Double.self, forKey: .repeatAccelStep) ?? 6
+        swipeToDeleteWord = try c.decodeIfPresent(Bool.self, forKey: .swipeToDeleteWord) ?? true
+        deleteWordSwipeEngage = try c.decodeIfPresent(Double.self, forKey: .deleteWordSwipeEngage) ?? 24
+        deleteWordSwipeStride = try c.decodeIfPresent(Double.self, forKey: .deleteWordSwipeStride) ?? 42
         accentHoldDelay = try c.decodeIfPresent(Double.self, forKey: .accentHoldDelay) ?? 500
         accentMoveCancel = try c.decodeIfPresent(Double.self, forKey: .accentMoveCancel) ?? 12
         emojiToneHoldDelay = try c.decodeIfPresent(Double.self, forKey: .emojiToneHoldDelay) ?? 280

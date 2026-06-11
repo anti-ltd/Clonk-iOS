@@ -1,11 +1,12 @@
 /**
- Keys settings — Geometry tab (size & shape) and Backspace tab (repeat timing).
+ Keys settings — Geometry tab (size & shape) and Padding tab.
+ Backspace repeat timing lives under Gestures → Backspace.
  */
 import SwiftUI
 import iUXiOS
 
 struct KeysView: View {
-    private enum Tab { case geometry, padding, backspace }
+    private enum Tab { case geometry, padding }
 
     @Environment(AppModel.self) private var model
     @State private var selectedTab: Tab = .geometry
@@ -16,8 +17,7 @@ struct KeysView: View {
                             bottomBar: AnyView(
                                 ThemedTabPicker(
                                     options: [("Geometry", Tab.geometry),
-                                              ("Padding", Tab.padding),
-                                              ("Backspace", Tab.backspace)],
+                                              ("Padding", Tab.padding)],
                                     selection: $selectedTab)
                             )) {
             switch selectedTab {
@@ -25,8 +25,6 @@ struct KeysView: View {
                 geometryTab(model: model)
             case .padding:
                 paddingTab(model: model)
-            case .backspace:
-                backspaceTab(model: model)
             }
         }
         .navigationTitle("Keys")
@@ -94,45 +92,6 @@ struct KeysView: View {
                       tooltip: "Lifts the entire keyboard up from the bottom edge of the keyboard extension.",
                       value: $model.settings.keyboardBottomPadding,
                       in: 0...64, step: 1) { "\(Int($0))pt" }
-        }
-    }
-
-    @ViewBuilder
-    private func backspaceTab(model: AppModel) -> some View {
-        @Bindable var model = model
-        CardSection("Presets") {
-            PresetChips(presets: TuningPresets.timing)
-                .padding(.vertical, UX.rowVPadding)
-        }
-
-        CardSection("Values") {
-            SliderRow("Hold delay",
-                      tooltip: "How long you must hold backspace before rapid-delete kicks in.",
-                      value: $model.settings.repeatHoldDelay,
-                      in: 150...800, step: 25) {
-                "\(Int($0))ms"
-            }
-            Divider()
-            SliderRow("Start speed",
-                      tooltip: "Time between each deletion when rapid-delete starts. Higher is slower.",
-                      value: $model.settings.repeatInitialInterval,
-                      in: 50...200, step: 10) {
-                "\(Int($0))ms"
-            }
-            Divider()
-            SliderRow("Max speed",
-                      tooltip: "Fastest deletion rate after the key fully accelerates. Lower is faster.",
-                      value: $model.settings.repeatMinInterval,
-                      in: 20...80, step: 5) {
-                "\(Int($0))ms"
-            }
-            Divider()
-            SliderRow("Acceleration",
-                      tooltip: "How quickly repeat accelerates to max speed. Higher gets there faster.",
-                      value: $model.settings.repeatAccelStep,
-                      in: 1...20, step: 1) {
-                "\(Int($0))ms/step"
-            }
         }
     }
 }

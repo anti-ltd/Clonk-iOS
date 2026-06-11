@@ -75,6 +75,9 @@ public struct KeyboardCanvas: View {
     private let settings: KeyboardSettings
     private let onInsert: (String) -> Void
     private let onBackspace: () -> Void
+    /// Delete the word before the cursor (backspace swipe-to-delete-word). Defaults
+    /// to a no-op so the in-app preview / showcase canvases need not supply it.
+    private let onDeleteWord: () -> Void
     private let onAnyTap: () -> Void
     private let onNextKeyboard: (() -> Void)?
     private let onSuggestion: (String) -> Void
@@ -149,6 +152,7 @@ public struct KeyboardCanvas: View {
         previewCursorActive: Bool = false,
         onInsert: @escaping (String) -> Void,
         onBackspace: @escaping () -> Void,
+        onDeleteWord: @escaping () -> Void = {},
         onAnyTap: @escaping () -> Void = {},
         onNextKeyboard: (() -> Void)? = nil,
         onSuggestion: @escaping (String) -> Void = { _ in },
@@ -177,6 +181,7 @@ public struct KeyboardCanvas: View {
         self.previewCursorActive = previewCursorActive
         self.onInsert = onInsert
         self.onBackspace = onBackspace
+        self.onDeleteWord = onDeleteWord
         self.onAnyTap = onAnyTap
         self.onNextKeyboard = onNextKeyboard
         self.onSuggestion = onSuggestion
@@ -909,6 +914,8 @@ public struct KeyboardCanvas: View {
                                 accentsEnabled: settings.accentPopupsEnabled,
                                 accentHoldDelay: settings.accentHoldDelay / 1000,
                                 accentMoveCancel: CGFloat(settings.accentMoveCancel),
+                                deleteWordEngage: CGFloat(settings.deleteWordSwipeEngage),
+                                deleteWordStride: CGFloat(settings.deleteWordSwipeStride),
                                 dragUpThreshold: CGFloat(settings.dragUpThreshold),
                                 surfaceWidth: proxy.size.width,
                                 // Only while typing into the host — never with a
@@ -1435,7 +1442,8 @@ public struct KeyboardCanvas: View {
 
     private var backspaceKey: KeySpec {
         KeySpec(kind: .function, label: .system("delete.left"), weight: settings.funcKeyWidth,
-                isDestructive: true, isRepeatable: true) {
+                isDestructive: true, isRepeatable: true,
+                onDeleteWord: settings.swipeToDeleteWord ? { [self] in deleteWord() } : nil) {
             backspace()
         }
     }
@@ -1522,6 +1530,20 @@ public struct KeyboardCanvas: View {
             if !notepad.scratch.isEmpty { notepad.scratch.removeLast() }
         } else {
             onBackspace()
+        }
+    }
+
+    /// Delete the whole word before the cursor (backspace swipe gesture). Routed
+    /// like `backspace`; on the notepad scratch buffer it strips trailing
+    /// whitespace and then the preceding word locally.
+    private func deleteWord() {
+        if live.activePanel == .notepad {
+            var s = notepad.scratch
+            while let last = s.last, last == " " || last == "\n" || last == "\t" { s.removeLast() }
+            while let last = s.last, !(last == " " || last == "\n" || last == "\t") { s.removeLast() }
+            notepad.scratch = s
+        } else {
+            onDeleteWord()
         }
     }
 

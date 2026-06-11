@@ -132,6 +132,12 @@ public final class KeyTouchRouter {
     /// the threshold to enter cursor-trackpad mode. Larger = less sensitive (see
     /// `KeyboardSettings.spaceCursorStride`).
     fileprivate var cursorStride: CGFloat = 10
+    /// Backspace swipe-to-delete-word: leftward travel (pt) before the gesture
+    /// engages (deleting the first word and stopping char-repeat), then the travel
+    /// per additional word as the finger keeps gliding left. User-tunable via
+    /// `KeyboardSettings.deleteWordSwipeEngage` / `…Stride`.
+    fileprivate var deleteWordEngage: CGFloat = 24
+    fileprivate var deleteWordStride: CGFloat = 42
     /// Seconds the space bar must be held before cursor mode can engage (0 = instant).
     fileprivate var cursorActivationDelay: TimeInterval = 0
     /// Characters jumped per vertical "line" step when a space drag moves up/down
@@ -189,6 +195,8 @@ public final class KeyTouchRouter {
                             accentsEnabled: Bool,
                             accentHoldDelay: TimeInterval,
                             accentMoveCancel: CGFloat,
+                            deleteWordEngage: CGFloat,
+                            deleteWordStride: CGFloat,
                             dragUpThreshold: CGFloat,
                             surfaceWidth: CGFloat,
                             swipeEnabled: Bool,
@@ -215,6 +223,8 @@ public final class KeyTouchRouter {
         self.accentsEnabled = accentsEnabled
         self.accentHoldDelay = accentHoldDelay
         self.accentMoveCancel = accentMoveCancel
+        self.deleteWordEngage = deleteWordEngage
+        self.deleteWordStride = deleteWordStride
         self.dragUpThreshold = dragUpThreshold
         self.surfaceWidth = surfaceWidth
         self.swipeEnabled = swipeEnabled
@@ -227,6 +237,15 @@ public final class KeyTouchRouter {
     /// Whether swipe typing is on (read by the touch view to decide whether to
     /// track a path at all).
     fileprivate var isSwipeEnabled: Bool { swipeEnabled }
+
+    /// True while an accent bar is up (`accentKeyID`) or its hold is still pending
+    /// (`accentPendingID`). Swipe tracking checks this so the two gestures stay
+    /// mutually exclusive: sliding up to the accent bar crosses other letter keys
+    /// and would otherwise engage a swipe at the same time as the diacritic pick,
+    /// double-mutating the document (the "mañ → mñnm" bug). A genuine drag-to-swipe
+    /// is unaffected — it first trips `accentMoveCancel`, clearing the pending hold
+    /// before this would block it.
+    fileprivate var accentActive: Bool { accentKeyID != nil || accentPendingID != nil }
 
     /// Whether a key types a letter on the current plane — gates which keys a
     /// swipe may start on / engage into.
@@ -416,6 +435,13 @@ public final class KeyTouchRouter {
             if spec.isRepeatable {
                 startRepeating(spec)
             }
+            // Prime backspace swipe-to-delete-word tracking (the only key with an
+            // `onDeleteWord` hook). A later leftward drag engages it; see `touchMoved`.
+            if spec.onDeleteWord != nil {
+                deleteWordKeyID = id
+                deleteWordEngaged = false
+                deleteWordSteps = 0
+            }
             // Other function keys (shift, plane toggle, globe, return) fire on
             // release — see `touchUp`.
         }
@@ -437,6 +463,33 @@ public final class KeyTouchRouter {
         }
 
         guard let spec = resolveSpec(id) else { return }
+
+        // Backspace swipe-to-delete-word: a leftward drag deletes whole words.
+        if let deleteWord = spec.onDeleteWord, deleteWordKeyID == id {
+            if !deleteWordEngaged {
+                // Engage only on a clearly-leftward, horizontal-dominant drag past
+                // the threshold — so holding (then a vertical wiggle) still
+                // auto-repeats char-by-char as before.
+                guard translationX <= -deleteWordEngage,
+                      abs(translationX) > abs(translationY) else { return }
+                deleteWordEngaged = true
+                stopRepeating()                 // switch from char-repeat to word-delete
+                deleteWordOriginX = translationX
+                deleteWordSteps = 0
+                dragHaptic.impactOccurred()
+                deleteWord()
+                deleteTick &+= 1
+                return
+            }
+            // Each further stride leftward removes another word.
+            let step = Int(((deleteWordOriginX - translationX) / deleteWordStride).rounded(.towardZero))
+            if step > deleteWordSteps {
+                for _ in 0..<(step - deleteWordSteps) { deleteWord(); deleteTick &+= 1 }
+                deleteWordSteps = step
+                dragHaptic.impactOccurred()
+            }
+            return
+        }
 
         // Drag-up keys (the 123 → panel-picker gesture): once the finger has
         // travelled far enough upward, fire once and mark the touch consumed so
@@ -514,6 +567,7 @@ public final class KeyTouchRouter {
 
     fileprivate func touchUp(id: String, windowPoint: CGPoint) {
         releaseHold(id)
+        if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false }
         // Pending accent hold that never fired (a quick tap) — drop it.
         if accentPendingID == id { cancelAccentHold() }
         // An accent bar is up for this key: commit the highlighted variant and
@@ -570,6 +624,7 @@ public final class KeyTouchRouter {
 
     fileprivate func touchCancelled(id: String) {
         releaseHold(id)
+        if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false }
         if accentPendingID == id { cancelAccentHold() }
         if accentKeyID == id { endAccentSession() }   // abandon the pick, type nothing extra
         let wasDragUp = dragUpFired.remove(id) != nil
@@ -721,6 +776,13 @@ public final class KeyTouchRouter {
     // MARK: - Backspace auto-repeat
 
     private var repeatTask: Task<Void, Never>?
+    /// Backspace word-swipe state: the key being tracked, whether the horizontal
+    /// swipe has engaged (char-repeat stopped, now deleting words), the X
+    /// translation captured at engage, and how many word-deletes have fired since.
+    private var deleteWordKeyID: String?
+    private var deleteWordEngaged = false
+    private var deleteWordOriginX: CGFloat = 0
+    private var deleteWordSteps = 0
     private var spaceSteps = 0
     /// Translation (pt) at the moment the space touch engaged cursor mode. Steps
     /// are counted from here, not the touch origin, so the first character moves
@@ -841,8 +903,12 @@ final class KeyGridTouchView: UIView {
             bindings[ObjectIdentifier(t)] = (id, p)
             router.touchDown(id: id, localPoint: p, windowPoint: t.location(in: nil))
             // Begin tracking a possible swipe when it lands on a letter — but never
-            // while another finger's swipe is already engaged (swipe is one-finger).
-            if router.isSwipeEnabled, router.isLetterKey(id),
+            // while another finger's swipe is already engaged (swipe is one-finger),
+            // nor while an accent bar is already up (a second finger mid-pick). We do
+            // NOT exclude a *pending* hold here: every accented key (most vowels, n, c…)
+            // arms one on touch-down, and a real drag from such a key cancels that hold
+            // before the swipe engages — so excluding pending would kill swipe-from-vowel.
+            if router.isSwipeEnabled, router.isLetterKey(id), router.accentKeyID == nil,
                !swipeTracks.values.contains(where: { $0.engaged }) {
                 swipeTracks[ObjectIdentifier(t)] = SwipeTrack(points: [p], startKeyID: id, engaged: false)
             }
@@ -865,9 +931,12 @@ final class KeyGridTouchView: UIView {
             } else {
                 // Engage once the finger has travelled far enough AND crossed into
                 // a different letter key — a deliberate glide, not a tap wobble.
+                // Suppressed while an accent bar is up/pending: `router.touchMoved`
+                // above already cancels a *pending* hold on a real drag, so this only
+                // blocks the engaged case (sliding to a diacritic swatch).
                 let travel = hypot(p.x - b.start.x, p.y - b.start.y)
                 let cur = router.key(at: p)
-                if travel >= swipeEngageTravel, let cur, cur != track.startKeyID,
+                if !router.accentActive, travel >= swipeEngageTravel, let cur, cur != track.startKeyID,
                    router.isLetterKey(cur) {
                     track.engaged = true
                     router.beginSwipe()
@@ -953,6 +1022,8 @@ struct MultiTouchSurface: UIViewRepresentable {
     let accentsEnabled: Bool
     let accentHoldDelay: TimeInterval
     let accentMoveCancel: CGFloat
+    let deleteWordEngage: CGFloat
+    let deleteWordStride: CGFloat
     let dragUpThreshold: CGFloat
     let surfaceWidth: CGFloat
     let swipeEnabled: Bool
@@ -978,6 +1049,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       accentsEnabled: accentsEnabled,
                       accentHoldDelay: accentHoldDelay,
                       accentMoveCancel: accentMoveCancel,
+                      deleteWordEngage: deleteWordEngage,
+                      deleteWordStride: deleteWordStride,
                       dragUpThreshold: dragUpThreshold,
                       surfaceWidth: surfaceWidth,
                       swipeEnabled: swipeEnabled,
@@ -1004,6 +1077,8 @@ struct MultiTouchSurface: UIViewRepresentable {
                       accentsEnabled: accentsEnabled,
                       accentHoldDelay: accentHoldDelay,
                       accentMoveCancel: accentMoveCancel,
+                      deleteWordEngage: deleteWordEngage,
+                      deleteWordStride: deleteWordStride,
                       dragUpThreshold: dragUpThreshold,
                       surfaceWidth: surfaceWidth,
                       swipeEnabled: swipeEnabled,

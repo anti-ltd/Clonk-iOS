@@ -470,6 +470,9 @@ final class KeyboardViewController: UIInputViewController {
                 self.isApplyingEdit = false
                 self.scheduleSuggestionUpdate()
             },
+            onDeleteWord: { [weak self] in
+                self?.deleteWordBackward()
+            },
             onAnyTap: { [weak self] in
                 guard let self else { return }
                 self.sound.play(settings: self.settings, hasFullAccess: self.hasFullAccess)
@@ -686,6 +689,36 @@ final class KeyboardViewController: UIInputViewController {
     /// Mark the mirror stale; the next `contextBeforeCursor()` re-seeds from the
     /// proxy. Cheap, and self-healing — worst case is one extra proxy read.
     private func invalidateMirror() { bufferValid = false }
+
+    /// Delete the whole word before the cursor — the backspace swipe-to-delete
+    /// gesture. Strips any trailing whitespace, then the run of non-whitespace
+    /// before it. Reads the *local mirror* (kept in sync synchronously by
+    /// `deleteBackwardMirrored`) rather than `documentContextBeforeInput`, because
+    /// a fast flick can fire several of these in one runloop and the cross-process
+    /// proxy read lags a tick behind — which would make back-to-back deletes act on
+    /// stale text. Clears the pending autocorrect-revert (a fresh, deliberate edit).
+    private func deleteWordBackward() {
+        pendingAutocorrectRevert = nil
+        let before = contextBeforeCursor()
+        let count = Self.trailingWordDeleteCount(before)
+        guard count > 0 else { return }
+        isApplyingEdit = true
+        deleteBackwardMirrored(count)
+        isApplyingEdit = false
+        scheduleSuggestionUpdate()
+    }
+
+    /// How many trailing characters make up "one word" to delete: the trailing
+    /// whitespace run, then the non-whitespace run before it. So "foo bar" → 3
+    /// ("bar"), "foo bar " → 4 ("bar" + the space), leaving the preceding space.
+    static func trailingWordDeleteCount(_ s: String) -> Int {
+        let isSep: (Character) -> Bool = { $0 == " " || $0 == "\n" || $0 == "\t" }
+        var chars = Array(s)
+        var n = 0
+        while let last = chars.last, isSep(last) { chars.removeLast(); n += 1 }
+        while let last = chars.last, !isSep(last) { chars.removeLast(); n += 1 }
+        return n
+    }
 
     // MARK: - Custom actions (Python extension SDK)
 
