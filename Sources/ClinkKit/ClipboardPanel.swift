@@ -123,7 +123,8 @@ struct ClipboardPanel: View {
     private func gridCell(_ index: Int, _ entry: ClipboardEntry, viewportHeight: CGFloat) -> some View {
         // Odd indices are the right column (LazyVGrid fills row-major) → mirror so
         // they swipe right and open their actions toward the centre gutter.
-        SwipeRow(id: index, cornerRadius: cornerRadius, actions: [
+        let isMirror = index % 2 == 1
+        let actions = [
             SwipeAction(icon: "doc.on.doc.fill", label: "Copy",
                         tint: .gray) { onCopy(index) },
             SwipeAction(icon: entry.pinned ? "pin.slash.fill" : "pin.fill",
@@ -131,9 +132,18 @@ struct ClipboardPanel: View {
                         tint: theme.accent.color) { onTogglePin(index) },
             SwipeAction(icon: "trash.fill", label: "Delete",
                         tint: .red) { onDelete(index) },
-        ], glass: theme.material == .liquidGlass,
-           mirror: index % 2 == 1,
+        ]
+        // Mirror the two columns AND keep delete nearest the centre gutter, copy
+        // outer, on both sides: left column (not mirrored, anchored toward centre)
+        // shows [copy, pin, delete]; right column (mirrored) shows the reverse.
+        // Smaller slots than the list so 3 actions + the inset fit a half-width
+        // cell with even margins on both columns (no flush-against-neighbour).
+        return SwipeRow(id: index, cornerRadius: cornerRadius,
+           actions: isMirror ? actions.reversed() : actions,
+           glass: theme.material == .liquidGlass,
+           mirror: isMirror,
            actionInset: 12,
+           slotWidth: 50, circle: 36,
            openID: $openRow, scrollSpace: scrollSpace, viewportHeight: viewportHeight,
            onTap: { onTap(entry.text) },
            cardBackground: { cardSurface }) {

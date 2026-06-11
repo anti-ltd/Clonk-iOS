@@ -75,8 +75,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
     // Row width, captured for right-edge swipe gating.
     @State private var rowWidth: CGFloat = 0
 
-    private let slotWidth: CGFloat = 56
-    private let circle: CGFloat = 40
+    private let slotWidth: CGFloat
+    private let circle: CGFloat
     private let lensDelay: CGFloat = 22
     private let edgeGrab: CGFloat = 50
 
@@ -86,6 +86,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 glass: Bool = false,
                 mirror: Bool = false,
                 actionInset: CGFloat = 0,
+                slotWidth: CGFloat = 56,
+                circle: CGFloat = 40,
                 openID: Binding<Int?> = .constant(nil),
                 scrollSpace: String? = nil,
                 viewportHeight: CGFloat = 0,
@@ -97,6 +99,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
         self.actions = actions
         self.glass = glass
         self.mirror = mirror
+        self.slotWidth = slotWidth
+        self.circle = circle
         self.actionInset = actionInset
         self._openID = openID
         self.scrollSpace = scrollSpace
