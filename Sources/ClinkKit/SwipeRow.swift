@@ -46,6 +46,12 @@ public struct SwipeRow<Content: View, Background: View>: View {
     private let actions: [SwipeAction]
     private let cornerRadius: CGFloat
     private let glass: Bool
+    /// When true the row reveals on a *rightward* swipe with the actions anchored
+    /// to the leading edge — a horizontal mirror of the default. Used by the
+    /// clipboard grid's right column so its actions open toward the centre gutter.
+    /// Only the anchoring, gesture direction, and reveal order flip; the open
+    /// magnitude (`offset`/`slid`) and the glass-morph math are identical.
+    private let mirror: Bool
     private let onTap: (() -> Void)?
     private let cardBackground: Background
     private let content: Content
@@ -73,6 +79,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 cornerRadius: CGFloat = 14,
                 actions: [SwipeAction],
                 glass: Bool = false,
+                mirror: Bool = false,
                 openID: Binding<Int?> = .constant(nil),
                 scrollSpace: String? = nil,
                 viewportHeight: CGFloat = 0,
@@ -83,6 +90,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
         self.cornerRadius = cornerRadius
         self.actions = actions
         self.glass = glass
+        self.mirror = mirror
         self._openID = openID
         self.scrollSpace = scrollSpace
         self.viewportHeight = viewportHeight
@@ -108,6 +116,9 @@ public struct SwipeRow<Content: View, Background: View>: View {
         // and the clear spacer isn't hit-testable, so taps in the gap reach the
         // action circles behind it.
         HStack(spacing: 0) {
+            // Mirror: the vacated gap sits on the leading side so the card shrinks
+            // from the left and actions reveal there.
+            if mirror { Color.clear.frame(width: slid) }
             content
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
@@ -115,35 +126,34 @@ public struct SwipeRow<Content: View, Background: View>: View {
                     if offset != 0 { close() } else { onTap?() }
                 }
                 // Tall transparent grab band so the swipe keeps tracking through
-                // vertical drift. The gesture lives on this left-anchored card
-                // (a stable origin — a trailing strip would slide under the finger
-                // as the card shrinks and feed back into the drag). Engagement is
-                // gated by `startLocation` to the card's right edge so the rest of
-                // the card scrolls the list freely.
+                // vertical drift. The gesture lives on this card (a stable origin —
+                // a sliding strip would feed back into the drag). Engagement is
+                // gated by `startLocation` to the card's open-side edge so the rest
+                // of the card scrolls the list freely.
                 .background {
                     Color.clear
                         .padding(.vertical, -28)
                         .contentShape(Rectangle())
                 }
                 .simultaneousGesture(swipeGesture)
-            Color.clear.frame(width: slid)
+            if !mirror { Color.clear.frame(width: slid) }
         }
         .background {
-            ZStack(alignment: .trailing) {
+            ZStack(alignment: mirror ? .leading : .trailing) {
                 // Glass layer: card surface + circle lenses in one container so they
                 // morph into a gooey bridge; sized to the foreground's height.
                 glassWrap(
-                    ZStack(alignment: .trailing) {
+                    ZStack(alignment: mirror ? .leading : .trailing) {
                         lensStrip(slid: slid)
                             .frame(width: openWidth)
                         cardBackground
                             .frame(maxWidth: .infinity)
-                            // Color-shifting glow on the card's inner right edge to
-                            // mask a lens as it emerges; clipped to the card so it
+                            // Color-shifting glow on the card's inner open-side edge
+                            // to mask a lens as it emerges; clipped to the card so it
                             // never spills outside.
-                            .overlay(alignment: .trailing) { edgeGlow(slid: slid) }
+                            .overlay(alignment: mirror ? .leading : .trailing) { edgeGlow(slid: slid) }
                             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                            .padding(.trailing, slid)
+                            .padding(mirror ? .leading : .trailing, slid)
                     }
                     // Expand the clip so a circle's press-morph isn't cut off.
                     .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).inset(by: -14))
@@ -157,7 +167,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
         // Transparent tap targets over the circle positions, in the FRONT so taps
         // land reliably (Buttons inside the background glass container can miss).
         // Only present while open so they don't block the closed card or scroll.
-        .overlay(alignment: .trailing) {
+        .overlay(alignment: mirror ? .leading : .trailing) {
             if slid > 1 {
                 HStack(spacing: 0) {
                     ForEach(Array(actions.enumerated()), id: \.element.id) { _, action in
@@ -217,20 +227,28 @@ public struct SwipeRow<Content: View, Background: View>: View {
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 14)
             .onChanged { value in
+                // `offset` is always negative when open (the open *magnitude*); for
+                // a mirror row a rightward drag opens, so negate its translation so
+                // the same negative-offset math drives both directions.
+                let tx = mirror ? -value.translation.width : value.translation.width
                 // Engage only on a predominantly-horizontal drag so vertical
                 // scrolling still works; once engaged, keep tracking live.
                 if dragStart == nil {
                     guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                    // Only engage from the card's (current) right edge so the rest
-                    // of the card scrolls the list freely.
+                    // Only engage from the card's (current) open-side edge so the
+                    // rest of the card scrolls the list freely: the right edge
+                    // normally, the left edge when mirrored.
                     let cardWidth = rowWidth + clamp(offset)   // rowWidth - slid
-                    guard rowWidth == 0 || value.startLocation.x > cardWidth - edgeGrab else { return }
+                    let nearOpenEdge = mirror
+                        ? value.startLocation.x < (rowWidth - cardWidth) + edgeGrab
+                        : value.startLocation.x > cardWidth - edgeGrab
+                    guard rowWidth == 0 || nearOpenEdge else { return }
                     dragStart = offset
                     // Claim the open slot as the swipe begins, so an already-open
                     // card animates closed in sync as this one opens.
                     openID = id
                 }
-                offset = clamp((dragStart ?? 0) + value.translation.width)
+                offset = clamp((dragStart ?? 0) + tx)
             }
             .onEnded { value in
                 let base = dragStart ?? offset
@@ -238,7 +256,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 // Decide open/close from the velocity-projected end so a fast flick
                 // opens even if it didn't travel past halfway. `offset` already
                 // holds the release position, so it animates smoothly from there.
-                let projected = base + value.predictedEndTranslation.width
+                let ptx = mirror ? -value.predictedEndTranslation.width : value.predictedEndTranslation.width
+                let projected = base + ptx
                 let willOpen = projected < -openDistance / 2
                 withAnimation(.smooth(duration: 0.25)) {
                     offset = willOpen ? -openDistance : 0
@@ -378,7 +397,7 @@ public struct SwipeRow<Content: View, Background: View>: View {
     /// trailing, so the rightmost button uncovers first; each circle scales and
     /// fades in over the one slot-width during which its slot appears.
     private func reveal(slid: CGFloat, index: Int) -> Double {
-        let start = openWidth - CGFloat(index + 1) * slotWidth
+        let start = openWidth - CGFloat(revealRank(index) + 1) * slotWidth
         return Double(min(1, max(0, (slid - start) / slotWidth)))
     }
 
@@ -386,8 +405,15 @@ public struct SwipeRow<Content: View, Background: View>: View {
     /// circle stays hidden until it's a bit past the card edge — no faint
     /// half-emerged blob.
     private func lensReveal(slid: CGFloat, index: Int) -> Double {
-        let start = openWidth - CGFloat(index + 1) * slotWidth + lensDelay
+        let start = openWidth - CGFloat(revealRank(index) + 1) * slotWidth + lensDelay
         return Double(min(1, max(0, (slid - start) / slotWidth)))
+    }
+
+    /// Order in which slots uncover. The strip uncovers from its anchored edge, so
+    /// the slot nearest the card emerges first: that's the last array index when
+    /// anchored trailing (default), and the first index when mirrored (leading).
+    private func revealRank(_ index: Int) -> Int {
+        mirror ? actions.count - 1 - index : index
     }
 
     /// Glyph reveal: begins after the lens has uncovered `glyphDelay` of its

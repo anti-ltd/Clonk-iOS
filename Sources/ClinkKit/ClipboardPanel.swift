@@ -57,7 +57,7 @@ struct ClipboardPanel: View {
                     ScrollView(.vertical, showsIndicators: false) {
                         Group {
                             if gridLayout {
-                                gridContent
+                                gridContent(viewportHeight: vp.size.height)
                             } else {
                                 cardList(viewportHeight: vp.size.height)
                             }
@@ -108,53 +108,62 @@ struct ClipboardPanel: View {
         }
     }
 
-    /// Two-column grid of tappable cards. Tap inserts; a long-press context menu
-    /// carries the copy / pin / delete actions the list shows as swipe buttons.
-    private var gridContent: some View {
+    /// Two-column grid of cards. Tap inserts; swipe reveals the same copy / pin /
+    /// delete action circles as the list — left-column cards swipe left, right-column
+    /// cards swipe right (mirrored), so the actions always open toward the centre.
+    private func gridContent(viewportHeight: CGFloat) -> some View {
         let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
         return LazyVGrid(columns: columns, spacing: 6) {
             ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
-                gridCell(index, entry)
+                gridCell(index, entry, viewportHeight: viewportHeight)
             }
         }
     }
 
-    private func gridCell(_ index: Int, _ entry: ClipboardEntry) -> some View {
-        Button { onTap(entry.text) } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top, spacing: 6) {
-                    Text(entry.text)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(theme.keyText.color)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                    Spacer(minLength: 0)
-                    if entry.pinned {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(theme.accent.color)
-                    }
-                }
+    private func gridCell(_ index: Int, _ entry: ClipboardEntry, viewportHeight: CGFloat) -> some View {
+        // Odd indices are the right column (LazyVGrid fills row-major) → mirror so
+        // they swipe right and open their actions toward the centre gutter.
+        SwipeRow(id: index, cornerRadius: cornerRadius, actions: [
+            SwipeAction(icon: "doc.on.doc.fill", label: "Copy",
+                        tint: .gray) { onCopy(index) },
+            SwipeAction(icon: entry.pinned ? "pin.slash.fill" : "pin.fill",
+                        label: entry.pinned ? "Unpin" : "Pin",
+                        tint: theme.accent.color) { onTogglePin(index) },
+            SwipeAction(icon: "trash.fill", label: "Delete",
+                        tint: .red) { onDelete(index) },
+        ], glass: theme.material == .liquidGlass,
+           mirror: index % 2 == 1,
+           openID: $openRow, scrollSpace: scrollSpace, viewportHeight: viewportHeight,
+           onTap: { onTap(entry.text) },
+           cardBackground: { cardSurface }) {
+            gridCellContent(entry)
+        }
+    }
+
+    private func gridCellContent(_ entry: ClipboardEntry) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 6) {
+                Text(entry.text)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.keyText.color)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
                 Spacer(minLength: 0)
-                if entry.date != .distantPast {
-                    Text(entry.date.clipboardRelative)
+                if entry.pinned {
+                    Image(systemName: "pin.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(theme.keyText.color.opacity(0.45))
+                        .foregroundStyle(theme.accent.color)
                 }
             }
-            .padding(10)
-            .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
-            .background(cardSurface)
-            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Button { onCopy(index) } label: { Label("Copy", systemImage: "doc.on.doc") }
-            Button { onTogglePin(index) } label: {
-                Label(entry.pinned ? "Unpin" : "Pin", systemImage: entry.pinned ? "pin.slash" : "pin")
+            Spacer(minLength: 0)
+            if entry.date != .distantPast {
+                Text(entry.date.clipboardRelative)
+                    .font(.system(size: 10))
+                    .foregroundStyle(theme.keyText.color.opacity(0.45))
             }
-            Button(role: .destructive) { onDelete(index) } label: { Label("Delete", systemImage: "trash") }
         }
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78, alignment: .topLeading)
     }
 
     private func entryText(_ entry: ClipboardEntry) -> some View {
