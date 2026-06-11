@@ -41,6 +41,10 @@ public final class KeyTouchRouter {
 
     /// Bumped on every backspace auto-repeat so the delete glyph bounces.
     public private(set) var deleteTick = 0
+    /// True while a backspace swipe-to-delete-word is engaged, so the delete glyph
+    /// can show a distinct "eating words" animation (emphasised + leaning) for the
+    /// duration of the drag. Cleared on lift/cancel.
+    public private(set) var deleteWordSwipeActive = false
 
     // MARK: - Swipe / glide typing
     //
@@ -473,6 +477,7 @@ public final class KeyTouchRouter {
                 guard translationX <= -deleteWordEngage,
                       abs(translationX) > abs(translationY) else { return }
                 deleteWordEngaged = true
+                deleteWordSwipeActive = true     // drive the delete-glyph animation
                 stopRepeating()                 // switch from char-repeat to word-delete
                 deleteWordOriginX = translationX
                 deleteWordSteps = 0
@@ -567,7 +572,7 @@ public final class KeyTouchRouter {
 
     fileprivate func touchUp(id: String, windowPoint: CGPoint) {
         releaseHold(id)
-        if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false }
+        if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false; deleteWordSwipeActive = false }
         // Pending accent hold that never fired (a quick tap) — drop it.
         if accentPendingID == id { cancelAccentHold() }
         // An accent bar is up for this key: commit the highlighted variant and
@@ -624,7 +629,7 @@ public final class KeyTouchRouter {
 
     fileprivate func touchCancelled(id: String) {
         releaseHold(id)
-        if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false }
+        if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false; deleteWordSwipeActive = false }
         if accentPendingID == id { cancelAccentHold() }
         if accentKeyID == id { endAccentSession() }   // abandon the pick, type nothing extra
         let wasDragUp = dragUpFired.remove(id) != nil

@@ -89,6 +89,8 @@ struct KeyView: View {
     private var dragX: CGFloat { router.spaceDragX }
     /// Bumped on every auto-repeat delete to bounce the glyph as feedback.
     private var deleteTick: Int { router.deleteTick }
+    /// True while a backspace swipe-to-delete-word is engaged (delete key only).
+    private var deleteSwiping: Bool { router.deleteWordSwipeActive }
 
     /// iOS-style destructive red for the pressed backspace key.
     private static let destructiveTint = Color(.sRGB, red: 0.91, green: 0.22, blue: 0.18)
@@ -248,7 +250,9 @@ struct KeyView: View {
             // feeds 0 so a delete burst doesn't jiggle shift / globe / return.
             // The key keeps its own glyph even while popping — the popup sits
             // above it (à la the system keyboard), so the letter stays put.
-            hidden: false, deleteTick: spec.isRepeatable ? deleteTick : 0, multiChar: multiChar,
+            hidden: false, deleteTick: spec.isRepeatable ? deleteTick : 0,
+            deleteSwiping: spec.onDeleteWord != nil ? deleteSwiping : false,
+            multiChar: multiChar,
             fontSize: spec.fontSize)
     }
 

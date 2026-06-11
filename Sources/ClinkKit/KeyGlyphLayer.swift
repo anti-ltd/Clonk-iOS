@@ -22,6 +22,9 @@ struct KeyGlyphInfo: Identifiable, Equatable {
     let offsetX: CGFloat
     let hidden: Bool
     let deleteTick: Int
+    /// True while a backspace swipe-to-delete-word is engaged on this key — drives
+    /// the emphasised "eating words" glyph animation. False for every other key.
+    let deleteSwiping: Bool
     let multiChar: Bool
     /// Override glyph point size (number row); nil = default sizing.
     var fontSize: CGFloat? = nil
