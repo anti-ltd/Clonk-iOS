@@ -18,6 +18,12 @@ struct SuggestionsView: View {
                 ToggleRow("Auto-correction",
                           subtitle: "Fix the word when you type a space or punctuation.",
                           isOn: $model.settings.autocorrectEnabled)
+                if model.settings.autocorrectEnabled {
+                    Divider()
+                    ToggleRow("Revert on delete",
+                              subtitle: "Press delete after a correction to restore the word you typed.",
+                              isOn: $model.settings.revertAutocorrectOnDelete)
+                }
             }
         }
         .navigationTitle("Suggestions")

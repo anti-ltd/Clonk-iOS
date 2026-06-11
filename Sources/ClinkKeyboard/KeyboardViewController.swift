@@ -39,6 +39,12 @@ final class KeyboardViewController: UIInputViewController {
     /// A correction the user explicitly rejected (tapped "keep") — suppressed
     /// until they move on to a different word.
     private var rejectedCorrection: String?
+    /// The autocorrection that was *just* applied on the last terminator, so the
+    /// very next backspace can undo it — restoring the word the user actually
+    /// typed (e.g. "Dawg" after it was corrected to "Done"). Mirrors the native
+    /// keyboard's "delete reverts the autocorrect" behaviour. Set the instant a
+    /// correction commits; consumed (or invalidated) by the next action.
+    private var pendingAutocorrectRevert: (original: String, corrected: String)?
 
     // MARK: - Local text mirror
     //
@@ -431,8 +437,9 @@ final class KeyboardViewController: UIInputViewController {
                 // — "space completes" it. Computed synchronously from the mirror
                 // here (not read off the debounced bar), so it fires reliably even
                 // when the user spaces within the debounce window.
+                var applied: (original: String, corrected: String)? = nil
                 if Self.wordTerminators.contains(text) {
-                    self.applyPendingAutocorrect()
+                    applied = self.applyPendingAutocorrect()
                 }
                 // Smart punctuation (curly quotes, em-dash, double-space → ". ")
                 // rides the same auto-punctuation switch as contractions. Runs
@@ -444,9 +451,20 @@ final class KeyboardViewController: UIInputViewController {
                 } else {
                     self.insertMirrored(text)
                 }
+                // Arm "delete reverts the autocorrect" only when a correction just
+                // committed; any other key (a regular letter, a terminator that
+                // didn't correct) clears it so the undo window is exactly one key.
+                self.pendingAutocorrectRevert = applied
             },
             onBackspace: { [weak self] in
                 guard let self else { return }
+                // A backspace immediately after an autocorrect undoes the
+                // correction (restores the typed word) instead of deleting a char.
+                if self.settings.revertAutocorrectOnDelete,
+                   self.revertPendingAutocorrect() {
+                    self.scheduleSuggestionUpdate()
+                    return
+                }
                 self.isApplyingEdit = true
                 self.deleteBackwardMirrored(1)
                 self.isApplyingEdit = false
@@ -477,6 +495,7 @@ final class KeyboardViewController: UIInputViewController {
             // before it — drop trust and re-seed on the next read.
             onCursorMove: { [weak self] delta in
                 guard let self else { return }
+                self.pendingAutocorrectRevert = nil
                 self.textDocumentProxy.adjustTextPosition(byCharacterOffset: delta)
                 self.invalidateMirror()
             },
@@ -790,10 +809,14 @@ final class KeyboardViewController: UIInputViewController {
     ///
     /// Must be called inside an `isApplyingEdit` window, before the terminator is
     /// inserted, so `contextBeforeCursor()` still ends at the finished word.
-    private func applyPendingAutocorrect() {
-        guard settings.autocorrectEnabled || settings.autoPunctuationEnabled else { return }
+    ///
+    /// Returns the (original, corrected) pair when a correction was applied, so the
+    /// caller can arm the delete-to-revert window; nil when nothing changed.
+    @discardableResult
+    private func applyPendingAutocorrect() -> (original: String, corrected: String)? {
+        guard settings.autocorrectEnabled || settings.autoPunctuationEnabled else { return nil }
         let word = currentPartialWord
-        guard !word.isEmpty else { return }
+        guard !word.isEmpty else { return nil }
         // Lean correction-only path: no predictions, no emoji scan, no pool
         // building — just the fix, computed (or cache-hit) cheaply, because this
         // runs synchronously on the space keypress while the user is mid-burst.
@@ -802,14 +825,48 @@ final class KeyboardViewController: UIInputViewController {
             autocorrect: settings.autocorrectEnabled,
             autoPunctuation: settings.autoPunctuationEnabled,
             rejected: rejectedCorrection)
-        guard let c = correction, c.from == word else { return }
+        guard let c = correction, c.from == word else { return nil }
         deleteBackwardMirrored(word.count)
         insertMirrored(c.to)
         live.autocorrection = nil
+        return (original: word, corrected: c.to)
+    }
+
+    /// Undo the autocorrect that just committed, if a backspace lands right after
+    /// it — replacing the corrected word (and the terminator that triggered it)
+    /// with what the user originally typed, leaving the cursor at the word's end.
+    /// Also suppresses re-correcting that word, so the next space leaves it alone,
+    /// exactly like tapping the quoted literal in the bar. Returns false (so the
+    /// caller falls back to a normal delete) when there's nothing armed or the
+    /// document no longer ends with the corrected word.
+    private func revertPendingAutocorrect() -> Bool {
+        guard let revert = pendingAutocorrectRevert else { return false }
+        pendingAutocorrectRevert = nil
+        // Validate against the live tail: the corrected word should sit right
+        // before the cursor, followed only by the terminator(s) that committed it.
+        let ctx = contextBeforeCursor()
+        var trailing = ctx.endIndex
+        while trailing > ctx.startIndex {
+            let prev = ctx.index(before: trailing)
+            guard Self.wordTerminators.contains(String(ctx[prev])) else { break }
+            trailing = prev
+        }
+        let terminatorCount = ctx.distance(from: trailing, to: ctx.endIndex)
+        guard String(ctx[..<trailing]).hasSuffix(revert.corrected) else { return false }
+
+        isApplyingEdit = true
+        deleteBackwardMirrored(revert.corrected.count + terminatorCount)
+        insertMirrored(revert.original)
+        isApplyingEdit = false
+        // Don't immediately re-correct the word the user deliberately restored.
+        rejectedCorrection = revert.original
+        live.autocorrection = nil
+        return true
     }
 
     /// Replace the current partial word with the chosen suggestion + a space.
     private func applySuggestion(_ word: String) {
+        pendingAutocorrectRevert = nil
         isApplyingEdit = true
         let partial = currentPartialWord
         deleteBackwardMirrored(partial.count)
@@ -824,6 +881,7 @@ final class KeyboardViewController: UIInputViewController {
     /// can keep going), and no autocorrect side effects. Mirrors iOS QuickType's
     /// emoji-replaces-word behaviour.
     private func applyEmojiSuggestion(_ emoji: String) {
+        pendingAutocorrectRevert = nil
         isApplyingEdit = true
         let partial = currentPartialWord
         deleteBackwardMirrored(partial.count)

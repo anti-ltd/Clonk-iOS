@@ -288,6 +288,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var suggestionsEnabled: Bool
     /// Auto-correct the just-typed word when a space / punctuation is entered.
     public var autocorrectEnabled: Bool
+    /// Pressing delete right after an auto-correction undoes it, restoring the
+    /// word you actually typed (e.g. "Dawg" after it was corrected to "Done").
+    public var revertAutocorrectOnDelete: Bool
     /// How long (ms) after the last keystroke before the suggestion engine runs.
     /// Higher = fewer UITextChecker invocations during fast bursts (saves CPU/battery);
     /// lower = snappier bar updates. Default 80ms matches the historical hardcoded value.
@@ -534,6 +537,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         extensionOrder: [String] = ["calculator", "clipboard", "emoji", "notepad"],
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
+        revertAutocorrectOnDelete: Bool = true,
         suggestionDebounceDelay: Double = 80.0,
         autoPunctuationEnabled: Bool = true,
         autoReturnToLetters: Bool = true,
@@ -644,6 +648,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.extensionOrder = extensionOrder
         self.suggestionsEnabled = suggestionsEnabled
         self.autocorrectEnabled = autocorrectEnabled
+        self.revertAutocorrectOnDelete = revertAutocorrectOnDelete
         self.suggestionDebounceDelay = suggestionDebounceDelay
         self.autoPunctuationEnabled = autoPunctuationEnabled
         self.autoReturnToLetters = autoReturnToLetters
@@ -763,6 +768,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         extensionOrder = try c.decodeIfPresent([String].self, forKey: .extensionOrder) ?? ["calculator", "clipboard", "emoji", "notepad"]
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
+        revertAutocorrectOnDelete = try c.decodeIfPresent(Bool.self, forKey: .revertAutocorrectOnDelete) ?? true
         suggestionDebounceDelay = try c.decodeIfPresent(Double.self, forKey: .suggestionDebounceDelay) ?? 80.0
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
         autoReturnToLetters = try c.decodeIfPresent(Bool.self, forKey: .autoReturnToLetters) ?? true

@@ -19,6 +19,12 @@ struct AutomationView: View {
                 ToggleRow("Auto punctuation",
                           subtitle: "Add apostrophes to contractions like \u{201C}dont\u{201D} → \u{201C}don\u{2019}t\u{201D}.",
                           isOn: $model.settings.autoPunctuationEnabled)
+                if model.settings.autocorrectEnabled {
+                    Divider()
+                    ToggleRow("Revert auto-correct on delete",
+                              subtitle: "Press delete after a correction to restore the word you typed.",
+                              isOn: $model.settings.revertAutocorrectOnDelete)
+                }
             }
 
             CardSection("Symbols") {
