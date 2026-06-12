@@ -253,6 +253,7 @@ struct ThemedTabPicker<Tag: Hashable>: View {
 struct KeyboardPreview: View {
     @Environment(\.resolvedKeyboardTheme) private var envTheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(AppModel.self) private var appModel
     let settings: KeyboardSettings
     var showHitboxOverlay: Bool = false
     var previewCursorActive: Bool = false
@@ -326,6 +327,11 @@ struct KeyboardPreview: View {
             KeyboardCanvas(
                 settings: settings,
                 live: lockedText != nil ? KeyboardLiveState() : live,
+                clipboard: appModel.clipboard,
+                notepad: appModel.notepad,
+                extensions: appModel.extensions,
+                panels: appModel.panels,
+                hasFullAccess: appModel.hasFullAccess,
                 showHitboxOverlay: showHitboxOverlay,
                 previewCursorActive: previewCursorActive,
                 onInsert: { text in
@@ -341,6 +347,22 @@ struct KeyboardPreview: View {
                     let idx = typed.index(typed.startIndex, offsetBy: pos - 1)
                     typed.remove(at: idx)
                     cursorPos = pos - 1
+                },
+                onDeleteWord: {
+                    guard lockedText == nil, cursorPos > 0, !typed.isEmpty else { return }
+                    let pos = min(cursorPos, typed.count)
+                    let endIdx = typed.index(typed.startIndex, offsetBy: pos)
+                    var idx = endIdx
+                    // Step back over trailing spaces, then over the word.
+                    while idx > typed.startIndex && typed[typed.index(before: idx)] == " " {
+                        idx = typed.index(before: idx)
+                    }
+                    while idx > typed.startIndex && typed[typed.index(before: idx)] != " " {
+                        idx = typed.index(before: idx)
+                    }
+                    let deleteCount = typed.distance(from: idx, to: endIdx)
+                    typed.removeSubrange(idx ..< endIdx)
+                    cursorPos = pos - deleteCount
                 },
                 onAnyTap: {
                     guard settings.hapticsEnabled else { return }
@@ -361,13 +383,51 @@ struct KeyboardPreview: View {
                     typed += text + " "
                     cursorPos = typed.count
                 },
+                onEmojiSuggestion: { emoji in
+                    guard lockedText == nil else { return }
+                    // Replace the word before the cursor with the emoji.
+                    let pos = min(cursorPos, typed.count)
+                    let head = typed[..<typed.index(typed.startIndex, offsetBy: pos)]
+                    let wordStart: String.Index
+                    if let lastSpace = head.lastIndex(of: " ") {
+                        wordStart = head.index(after: lastSpace)
+                    } else {
+                        wordStart = head.startIndex
+                    }
+                    typed.replaceSubrange(wordStart ..< typed.index(typed.startIndex, offsetBy: pos), with: emoji + " ")
+                    cursorPos = typed.distance(from: typed.startIndex, to: wordStart) + emoji.count + 1
+                },
                 onCursorMove: { delta in
                     cursorPos = max(0, min(typed.count, cursorPos + delta))
+                },
+                onClipboardInsert: { text in
+                    guard lockedText == nil else { return }
+                    let idx = typed.index(typed.startIndex, offsetBy: min(cursorPos, typed.count))
+                    typed.insert(contentsOf: text, at: idx)
+                    cursorPos = min(typed.count, cursorPos + text.count)
+                },
+                onNotepadInsert: { text in
+                    guard lockedText == nil else { return }
+                    let idx = typed.index(typed.startIndex, offsetBy: min(cursorPos, typed.count))
+                    typed.insert(contentsOf: text, at: idx)
+                    cursorPos = min(typed.count, cursorPos + text.count)
+                },
+                onCalculatorInsert: { text in
+                    guard lockedText == nil else { return }
+                    let idx = typed.index(typed.startIndex, offsetBy: min(cursorPos, typed.count))
+                    typed.insert(contentsOf: text, at: idx)
+                    cursorPos = min(typed.count, cursorPos + text.count)
+                },
+                onPanelInsert: { text in
+                    guard lockedText == nil else { return }
+                    let idx = typed.index(typed.startIndex, offsetBy: min(cursorPos, typed.count))
+                    typed.insert(contentsOf: text, at: idx)
+                    cursorPos = min(typed.count, cursorPos + text.count)
                 }
             )
             // Pin to the same content height the extension uses, so the preview
             // has no indefinite-height gap below the keys.
-            .frame(height: KeyboardCanvas.preferredHeight(for: settings))
+            .frame(height: KeyboardCanvas.preferredHeight(for: settings, hasFullAccess: appModel.hasFullAccess))
             .background { backdropGradient }
         }
         .onAppear {

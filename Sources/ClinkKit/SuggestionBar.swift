@@ -71,7 +71,9 @@ struct SuggestionBar: View {
             }
         } label: {
             chipLabel(c)
-                .font(.system(size: 17))
+                .font(.system(size: 17,
+                              weight: theme.keyFontWeight.fontWeight,
+                              design: theme.keyFontDesign.fontDesign))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
