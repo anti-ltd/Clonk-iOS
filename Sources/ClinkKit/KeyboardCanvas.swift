@@ -10,19 +10,12 @@
 import SwiftUI
 import UIKit
 
-/// The Clink keyboard, as a pure SwiftUI view. Lives in ClinkKit so that the
-/// keyboard *extension* renders it live (wired to the document proxy + sound)
-/// and the container *app* renders the very same view as a true-to-life
-/// preview — there is no second, drifting "preview" implementation.
-///
-/// The canvas owns transient UI state (shift, which symbol plane is showing)
-/// and reports only two document-affecting actions back to its host —
-/// `onInsert` and `onBackspace` — plus `onAnyTap` (fired on every key-down so
-/// the host can clink + haptic) and an optional `onNextKeyboard` (the globe
-/// key; the app preview passes nil to hide it).
+// MARK: - Key press physics
+
 /// Animation physics for key presses — bloom scale, spring response/damping —
 /// built from `KeyboardSettings` so every tuning value travels in the exported config.
 struct KeyPressPhysics {
+    /// Generic-key press bloom scale (1 = no growth).
     var bloomScale: CGFloat          = 1.12
     var springResponse: Double       = 0.26
     var springDamping: Double        = 0.60
@@ -32,10 +25,14 @@ struct KeyPressPhysics {
     var tapFlashStrength: CGFloat    = 0.34
     /// Space-bar press bloom scale (its own knob, not `bloomScale`).
     var spaceBloomScale: CGFloat     = 1.04
+    /// Space-bar press/cursor-shrink spring response (seconds).
     var spaceSpringResponse: Double  = 0.28
     var spaceSpringDamping: Double   = 0.78
+    /// Horizontal lean per point of space-bar drag (`dragX * multiplier`, clamped).
     var spaceLeanMultiplier: CGFloat = 0.14
+    /// Scale applied once cursor drag engages (trackpad shrink).
     var spaceCursorDragScale: CGFloat = 0.90
+    /// Balloon popup emerge spring tuning.
     var popupSpringResponse: Double  = 0.32
     var popupSpringDamping: Double   = 0.62
     /// True on Liquid Glass themes. The press bloom there scales a key inside a
@@ -109,6 +106,8 @@ extension KeyPressPhysics {
     }
 }
 
+// MARK: - Preference keys & cache
+
 /// Collects each popover-picker row's frame (in global/window coords) so both the
 /// button drag and the 123 slide-up drag can hit-test the finger against options.
 private struct PanelRowFrameKey: PreferenceKey {
@@ -144,6 +143,18 @@ final class KeySpecCache {
     func invalidate() { valid = false }
 }
 
+// MARK: - Keyboard canvas
+
+/// The Clink keyboard, as a pure SwiftUI view. Lives in ClinkKit so that the
+/// keyboard *extension* renders it live (wired to the document proxy + sound)
+/// and the container *app* renders the very same view as a true-to-life
+/// preview — there is no second, drifting "preview" implementation.
+///
+/// The canvas owns transient UI state (shift, which symbol plane is showing)
+/// and reports only two document-affecting actions back to its host —
+/// `onInsert` and `onBackspace` — plus `onAnyTap` (fired on every key-down so
+/// the host can clink + haptic) and an optional `onNextKeyboard` (the globe
+/// key; the app preview passes nil to hide it).
 public struct KeyboardCanvas: View {
     private let settings: KeyboardSettings
     private let onInsert: (String) -> Void
@@ -212,6 +223,8 @@ public struct KeyboardCanvas: View {
     /// User-authored custom panels — observed so the list reflects edits.
     private var panels: PanelManager
 
+    /// Host wiring: document callbacks, optional managers, and preview/debug flags.
+    /// Pass `controller` to share plane/shift state with an external typing simulator.
     public init(
         settings: KeyboardSettings,
         live: KeyboardLiveState = KeyboardLiveState(),
@@ -391,10 +404,14 @@ public struct KeyboardCanvas: View {
         }
     }
 
+    // MARK: - Metrics & height
+
     /// Shared vertical metrics — also used by the extension to size the keyboard
     /// to its content (no dead space above / below the keys).
     public enum Metrics {
+        /// Vertical padding above and below the key block.
         public static let vPadding: CGFloat = 4
+        /// Suggestion bar, panel bar, and overlay header height.
         public static let suggestionBarHeight: CGFloat = 44
         /// The default row height, used when a settings value isn't supplied.
         public static let defaultRowHeight: CGFloat = 46
@@ -923,6 +940,8 @@ public struct KeyboardCanvas: View {
         }
     }
 
+    // MARK: - View body
+
     public var body: some View {
         VStack(spacing: 0) {
             // The bar shows for suggestions, for the icon (when icon activation is
@@ -1156,6 +1175,7 @@ public struct KeyboardCanvas: View {
         .animation(settings.animatePanelBarResize ? Motion.keyboardHeight.animation : nil,
                    value: pickerOpen)
         .animation(Motion.panelTransition.animation, value: notepadBrowsing)
+        // MARK: Overlays (backdrop, glyphs, popups, debug)
         // Backdrop. By default transparent so the keyboard blends with whatever
         // sits behind it — iOS's own keyboard surface in the extension, the
         // preview's backdrop in-app — and only the keys carry colour, reading as
@@ -1407,6 +1427,8 @@ public struct KeyboardCanvas: View {
         .animation(Motion.deleteSwipe.animation, value: g.deleteSwiping)
     }
 
+    // MARK: - Popup rendering
+
     /// Corner radius shared by the popup chrome — tracks the key roundness, a
     /// touch tighter so the larger popup doesn't read as rounder than the keys.
     private var popupCorner: CGFloat { max(CGFloat(settings.keyCornerRadius) - 2, 0) }
@@ -1473,6 +1495,8 @@ public struct KeyboardCanvas: View {
                             springDamping: settings.popupSpringDamping)
             .position(x: keyRect.midX, y: (top + bottom) / 2)
     }
+
+    // MARK: - Key backdrop
 
     /// The Liquid-Glass key-image backdrop: one photo spanning the key area,
     /// masked to the union of the key shapes so only the keys reveal it (each key
@@ -1945,6 +1969,8 @@ public struct KeyboardCanvas: View {
         }
     }
 }
+
+// MARK: - Render isolation wrappers
 
 /// Render-isolation wrapper for the swipe trail: the router's live trail is
 /// read in THIS body, so each finger sample re-renders only the stroke — not

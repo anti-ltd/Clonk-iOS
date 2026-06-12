@@ -3,7 +3,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 extension Theme {
     /// Near-black navy with soft periwinkle keys and a cobalt-blue accent.

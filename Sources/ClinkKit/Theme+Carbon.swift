@@ -3,7 +3,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 extension Theme {
     /// Pure black background with near-invisible keys and a vivid red accent.

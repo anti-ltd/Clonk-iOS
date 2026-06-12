@@ -22,7 +22,7 @@
  
 
  Module: motion · Target: ClinkKit
- Learn: MOTION.md
+ Learn: docs/12-motion.md
  */
 import SwiftUI
 
@@ -109,11 +109,17 @@ struct MotionToken: Equatable, Sendable {
 // MARK: - The vocabulary
 
 /// Every fixed animation in Clink, by name. Values are frozen by `MotionTests`.
+///
+/// Each token pairs a curve with a `MotionToken.Role` (`.essential`, `.feedback`,
+/// `.transition`, `.decorative`) that controls how `MotionProfile` may soften it
+/// under Reduce Motion or Low Power. Read `.animation` at call sites — never build
+/// literals directly.
 enum Motion {
 
     // MARK: Keyboard — panels & pickers
 
     /// Action panel / suggestion-bar area swapping content (clipboard, notepad…).
+    /// Role: `.transition` — may shorten under Reduce Motion.
     static let panelTransition = MotionToken(curve: .spring(response: 0.30, damping: 0.85), role: .transition)
     /// Panel picker (and emoji canvas) opening; also the cards back-navigation.
     static let pickerOpen = MotionToken(curve: .snappy(duration: 0.22), role: .transition)
@@ -131,10 +137,12 @@ enum Motion {
     /// Key glyphs fading while the space-bar cursor drag is active.
     static let spaceCursorFade = MotionToken(curve: .easeOut(duration: 0.15), role: .feedback)
     /// Additive tap flash: snap bright…
+    /// Role: `.feedback` — may flatten to easeOut under Reduce Motion.
     static let tapFlashIn = MotionToken(curve: .linear(duration: 0.05), role: .feedback)
     /// …then ease back out. Both halves shared by keys and the emoji delete tile.
     static let tapFlashOut = MotionToken(curve: .easeOut(duration: 0.20), role: .feedback)
     /// Swipe ripple: a passing glide finger swells each key.
+    /// Role: `.essential` — never degraded (touch would feel broken).
     static let swipeRipple = MotionToken(curve: .interactiveSpring(response: 0.16, damping: 0.72), role: .essential)
     /// Accent picker option highlight following the finger.
     static let accentHighlight = MotionToken(curve: .snappy(duration: 0.14), role: .feedback)
@@ -200,5 +208,6 @@ enum Motion {
     static let previewPopup = MotionToken(curve: .snappy(duration: 0.2), role: .transition)
     /// Cursor demo's idle breathing pulse (repeat-forever — gate the loop on
     /// `MotionProfile.shared.allowsAmbientMotion`).
+    /// Role: `.decorative` — first to go under Reduce Motion; loops need the ambient gate.
     static let cursorPulse = MotionToken(curve: .easeInOut(duration: 1.5), role: .decorative)
 }

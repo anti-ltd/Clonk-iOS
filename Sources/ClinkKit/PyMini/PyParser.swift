@@ -12,6 +12,9 @@
  */
 import Foundation
 
+/// Recursive-descent parser over a `PyLexer` token stream. Produces `[Stmt]` for
+/// modules and standalone `Expr` for f-string fragments. Rejects unsupported
+/// Python constructs (`import`, `class`, `lambda`, …) with explicit errors.
 struct PyParser {
     private let tokens: [Token]
     private var i = 0
@@ -102,6 +105,8 @@ struct PyParser {
     }
 
     // MARK: - Statements
+
+    // MARK: - Unsupported keywords
 
     private static let unsupported: Set<String> = [
         "import", "from", "class", "try", "with", "lambda", "global",

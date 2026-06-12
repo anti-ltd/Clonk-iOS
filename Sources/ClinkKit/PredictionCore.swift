@@ -14,6 +14,8 @@
  */
 import Foundation
 
+/// Off-main worker for lexicon scans that would stall the main actor if run
+/// inline (today: the swipe-decoder vocabulary prebuild).
 public actor PredictionCore {
     public init() {}
 

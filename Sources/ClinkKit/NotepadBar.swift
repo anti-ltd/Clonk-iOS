@@ -4,7 +4,7 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
@@ -44,6 +44,8 @@ struct NotepadBar: View {
             iconButton("xmark", action: onClear)
         }
     }
+
+    // MARK: - Actions
 
     private func iconButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button { action() } label: {

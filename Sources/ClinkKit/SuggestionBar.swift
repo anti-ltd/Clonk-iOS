@@ -28,6 +28,9 @@ struct SuggestionBar: View {
     /// Vertical hit-target multiplier — see `KeyboardSettings.suggestionHitboxScale`.
     var hitboxScale: Double = 1.0
 
+    // MARK: - Candidate layout
+
+    /// Chip role: quoted literal, highlighted correction, plain prediction, or emoji.
     private enum Kind { case keep, primary, normal, emoji }
     private struct Candidate: Identifiable {
         let id = UUID()
@@ -35,6 +38,7 @@ struct SuggestionBar: View {
         let kind: Kind
     }
 
+    /// Up to three word chips plus up to two emoji chips on the right.
     private var candidates: [Candidate] {
         var words: [Candidate] = []
         if let c = autocorrection {
@@ -54,6 +58,8 @@ struct SuggestionBar: View {
         let wordSlots = max(1, 3 - emojiCands.count)
         return Array(words.prefix(wordSlots)) + emojiCands
     }
+
+    // MARK: - View
 
     var body: some View {
         HStack(spacing: 0) {

@@ -4,7 +4,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 import SwiftUI
 #if canImport(UIKit)
@@ -16,6 +16,7 @@ import UIKit
 /// reliably Codable across OS versions, so we store raw sRGB components and
 /// bridge to `Color` on demand.
 public struct RGBA: Codable, Equatable, Sendable, Hashable {
+    /// sRGB components, each 0…1.
     public var r: Double
     public var g: Double
     public var b: Double

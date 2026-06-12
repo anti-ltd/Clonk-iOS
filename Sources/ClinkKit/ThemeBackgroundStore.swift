@@ -26,6 +26,7 @@ public final class ThemeBackgroundStore: @unchecked Sendable {
     public static let shared = ThemeBackgroundStore()
 
     private let appGroupID: String
+    /// Decoded images — keyed by id; invalidated on write/delete for that id.
     private let cache = NSCache<NSString, UIImage>()
 
     public init(appGroupID: String = SharedStore.appGroupID) {

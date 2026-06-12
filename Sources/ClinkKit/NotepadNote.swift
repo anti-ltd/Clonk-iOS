@@ -13,6 +13,7 @@ import Foundation
 public struct NotepadNote: Codable, Equatable, Sendable, Identifiable {
     public var id: UUID
     public var text: String
+    /// When the note was saved — shown in the browse list.
     public var date: Date
 
     public init(id: UUID = UUID(), text: String, date: Date = .now) {

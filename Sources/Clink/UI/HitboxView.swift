@@ -11,6 +11,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Static and adaptive touch-target sizing. Preview always shows hitbox overlay.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct HitboxView: View {
     private enum Tab { case general, adaptive }
 

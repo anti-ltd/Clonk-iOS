@@ -3,7 +3,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 extension Theme {
     /// Off-white with serif lettering and a coral-red accent.

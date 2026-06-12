@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Spring physics and press-timing tuning with a pinned live preview.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct AnimationView: View {
     private enum Tab { case spring, timing }
 

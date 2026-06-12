@@ -3,7 +3,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 extension Theme {
     /// Near-black slate with blue-grey keys and a system-blue accent.

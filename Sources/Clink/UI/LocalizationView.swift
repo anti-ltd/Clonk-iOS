@@ -18,6 +18,8 @@ import SwiftUI
 import UIKit
 import iUXiOS
 
+/// Spell-check language picker and accent-popup toggle.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct LocalizationView: View {
     @Environment(AppModel.self) private var model
     @Environment(SidebarState.self) private var sidebar

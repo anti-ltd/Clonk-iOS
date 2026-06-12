@@ -16,7 +16,7 @@ direct, constraint-aware, no filler.
  `PrimaryType` — one sentence: what this file owns.
 
  Module: <area> · Target: ClinkKit | Clink | ClinkKeyboard
- Learn: docs/<module>.md   (or THEMING.md / MOTION.md / EXTENDING.md / EXTENSIONS-SDK.md)
+ Learn: docs/<module>.md   (e.g. docs/11-theming.md, docs/13-extending-panels.md)
 
  Optional second paragraph only when there's a non-obvious constraint
  (jetsam budget, cfprefsd, @MainActor checker, no TextField in extension, etc.).
@@ -42,11 +42,11 @@ import …
 /**
  Theme preset — Graphite. Near-black slate; default dark solid theme.
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 ```
 
-One line of character description; details live in THEMING.md.
+One line of character description; details live in [11-theming.md](11-theming.md).
 
 ---
 
@@ -63,16 +63,32 @@ Same for lexicon tooling if we add generated Swift later.
 
 ## When to add inline comments
 
-Add inline comments only when:
+**Goal:** someone reading the file cold should understand structure, public API,
+and non-obvious decisions without opening the module doc. The module doc
+(`Learn:` in the header) still carries the full walkthrough — inline docs are
+the signposts.
 
-- The code encodes a lesson (why UIKit not SwiftUI gestures, why file not UserDefaults)
-- A value's unit or range matters (`seconds`, `0…1`, `@MainActor`)
-- A workaround for an iOS quirk (encapsulated layout height, settling mask)
+### Always (when missing)
 
-Do **not** comment every property, obvious getters, or SwiftUI `body` layout.
+- `// MARK: - Section` in files longer than ~150 lines — group by responsibility
+  (load/save, lifecycle, rendering, callbacks, decoding, etc.)
+- `///` on every `public` type, enum, and property whose name alone isn't enough
+- `///` on settings-screen `struct …View` — one paragraph: what it edits, how it
+  binds (`$model.settings` → `AppModel` `didSet` → `SharedStore`)
 
-Use `// MARK: - Section` to split files longer than ~200 lines when sections
-are logically distinct (managers: load/save; view controllers: lifecycle vs proxy).
+### Sometimes
+
+- Inline `//` on logic that encodes a lesson (why UIKit not SwiftUI gestures,
+  why file not UserDefaults, quiet-gated checker, glass per-cell OOM)
+- Values where unit or range matters (`seconds`, `0…1`, `@MainActor`)
+- iOS workarounds (encapsulated layout height, settling mask, cfprefsd)
+
+### Skip
+
+- Obvious SwiftUI `body` layout stacks
+- Trivial getters and one-line forwarding
+- Generated data blobs (`EmojiData.generated.swift`, `Theme+<Name>.swift` color literals)
+- Restating what the next line of code literally does
 
 ---
 

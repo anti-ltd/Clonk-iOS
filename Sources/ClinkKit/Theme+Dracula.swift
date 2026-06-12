@@ -3,7 +3,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 extension Theme {
     /// Charcoal-purple background with lavender function-key text and hot-pink accent.

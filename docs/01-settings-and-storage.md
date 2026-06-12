@@ -66,7 +66,7 @@ One struct, ~100+ fields. Grouped roughly as:
 - **Feel** — springs, hitboxes, cursor mode, swipe typing, haptics
 - **Sound** — pack ID, volume, enabled flags
 
-Adding a field requires three edits (see [EXTENDING.md](../EXTENDING.md) §2):
+Adding a field requires three edits (see [13-extending-panels](13-extending-panels.md) §2):
 
 ```swift
 public var snippetsEnabled: Bool          // property
@@ -147,5 +147,5 @@ Both processes share the same file. Save in the app → keyboard sees it on next
 ## See also
 
 - [00-overview](00-overview.md) — process topology
-- [EXTENDING.md](../EXTENDING.md) §2 — adding settings fields for new panels
-- [THEMING.md](../THEMING.md) — theme fields and photo storage
+- [13-extending-panels](13-extending-panels.md) §2 — adding settings fields for new panels
+- [11-theming](11-theming.md) — theme fields and photo storage

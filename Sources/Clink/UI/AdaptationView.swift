@@ -14,6 +14,9 @@
 import SwiftUI
 import iUXiOS
 
+/// On-device learning toggle and learned-word management.
+/// `$model.settings.learningEnabled` persists via `AppModel.settings` `didSet`.
+/// Learned words live in `UserAdaptation` (App Group file), not settings JSON.
 struct AdaptationView: View {
     @Environment(AppModel.self) private var model
     /// Current learned-word count, read fresh on appear. The keyboard runs in a

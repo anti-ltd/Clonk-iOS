@@ -17,8 +17,10 @@ import UIKit
 @MainActor
 @Observable
 public final class ClipboardManager {
+    /// Newest-first; pinned entries always sort to the front after `normalize()`.
     public private(set) var history: [ClipboardEntry] = []
 
+    /// Cap on unpinned entries — pinned clips are exempt and can push the list longer.
     private let maxItems = 20
 
     public init() { load() }

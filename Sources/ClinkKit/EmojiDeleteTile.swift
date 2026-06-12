@@ -19,6 +19,8 @@ import UIKit
 // (SwiftUI button taps are dropped in the extension); the repeat is a
 // cancellable Task, torn down on release.
 
+/// Emoji-bar backspace: tap once, hold to auto-repeat with the same timing as
+/// the letter keyboard's delete key.
 struct DeleteTile: View {
     let theme: Theme
     let cornerRadius: CGFloat

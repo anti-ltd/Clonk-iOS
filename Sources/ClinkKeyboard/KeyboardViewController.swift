@@ -237,6 +237,8 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    // MARK: - Document proxy callbacks
+
     /// Fired by the system whenever the document text changes (including our
     /// own edits) — keep the suggestion bar in sync.
     override func textDidChange(_ textInput: (any UITextInput)?) {
@@ -432,6 +434,8 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    // MARK: - Height / appearance settling
+
     /// Applies the current keyboard height (base + any inline-picker bump) to both
     /// height constraints and the input view's intrinsic-size target.
     private func applyKeyboardHeight() {
@@ -484,6 +488,8 @@ final class KeyboardViewController: UIInputViewController {
                          letters: letterCanvas(for: settings),
                          emoji: emojiCanvas(for: settings))
     }
+
+    // MARK: - Suggestion bar callbacks (canvas → document)
 
     private func letterCanvas(for settings: KeyboardSettings) -> some View {
         KeyboardCanvas(
@@ -988,6 +994,8 @@ final class KeyboardViewController: UIInputViewController {
         if let last = trimmed.last, ".!?".contains(last) { return true }
         return false
     }
+
+    // MARK: - Autocorrect commit / revert
 
     /// Characters that end a word — typing one applies the pending correction.
     private static let wordTerminators: Set<String> = [" ", "\n", ".", ",", "!", "?", ";", ":"]

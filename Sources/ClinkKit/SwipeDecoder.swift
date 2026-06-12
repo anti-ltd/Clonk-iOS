@@ -26,6 +26,8 @@
  */
 import CoreGraphics
 
+/// Geometry-only glide decoder: scores vocabulary words against a resampled
+/// finger trace. No I/O, no `UITextChecker` — safe to run synchronously on lift.
 public struct SwipeDecoder {
     /// Arc-length samples the gesture is resampled to before scoring. Dense enough
     /// that every candidate letter key has a nearby sample to match against, without

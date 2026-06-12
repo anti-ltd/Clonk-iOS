@@ -13,10 +13,14 @@ import Foundation
 /// One segment of an f-string as seen by the lexer; the embedded expression is
 /// kept as raw source and parsed later by the parser.
 enum FRawPart: Equatable {
+    /// Literal text between `{...}` placeholders (after `{{`/`}}` unescaping).
     case lit(String)
+    /// Raw source inside `{...}`, handed to `PyParser.parseExpression`.
     case expr(String)
 }
 
+/// Token kinds emitted by `PyLexer`. Python-style significant indentation is
+/// expressed as synthetic `.indent` / `.dedent`; statement boundaries use `.newline`.
 enum Tok: Equatable {
     case int(Int)
     case double(Double)
@@ -25,12 +29,16 @@ enum Tok: Equatable {
     case name(String)
     case keyword(String)
     case op(String)
+    /// Ends a logical line (blank lines collapse to one).
     case newline
+    /// Block opened — emitted when indentation increases.
     case indent
+    /// Block closed — emitted when indentation decreases.
     case dedent
     case eof
 }
 
+/// A token plus its 1-based source line (for error messages).
 struct Token {
     let kind: Tok
     let line: Int
@@ -41,6 +49,9 @@ private let pyKeywords: Set<String> = [
     "break", "continue", "pass", "True", "False", "None", "and", "or", "not",
 ]
 
+/// Tokenizes PyMini source into a stream the parser consumes. Handles
+/// significant indentation, implicit line joining inside brackets, comments,
+/// string/f-string literals, and Python-style numeric literals.
 struct PyLexer {
     private let chars: [Character]
     private var pos = 0
@@ -62,6 +73,8 @@ struct PyLexer {
     private static let multiOps = ["**", "//", "==", "!=", "<=", ">=", "+=", "-=", "*=", "/="]
     private static let singleOps = Set("+-*/%<>=(),:.[]{}")
 
+    /// Scan the whole source. Throws `PyError` on bad indentation, unterminated
+    /// strings, or unexpected characters. Always ends with `.eof`.
     mutating func tokenize() throws -> [Token] {
         while pos < chars.count {
             if atLineStart && bracketDepth == 0 {

@@ -8,6 +8,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Sound pack selection and volume. Custom packs need Full Access.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct SoundsView: View {
     private enum Tab { case general, soundPack }
 

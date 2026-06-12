@@ -6,7 +6,7 @@ User-authored keyboard panels defined in a Python-subset scripting language.
 Scripts describe a small UI tree (`view(state)`) that renders as native SwiftUI
 via `CustomPanelView`. State mutations round-trip through `PanelRuntime`.
 
-Distinct from **custom actions** ([EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md)) —
+Distinct from **custom actions** ([14-extensions-sdk](14-extensions-sdk.md)) —
 actions run `transform(text)` and insert a result; panels render interactive UI.
 
 ---
@@ -121,7 +121,7 @@ keyboard reloads panel list without a full settings write.
 
 ## Read order
 
-1. [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) — PyMini language surface (shared)
+1. [14-extensions-sdk](14-extensions-sdk.md) — PyMini language surface (shared)
 2. `PanelRuntime.swift` — MVU bridge and callback wiring
 3. `CustomPanelView.swift` — node → SwiftUI mapping
 4. `PanelEditorView.swift` — how the app previews panels
@@ -131,5 +131,5 @@ keyboard reloads panel list without a full settings write.
 ## See also
 
 - [08-pymini](08-pymini.md) — interpreter internals
-- [EXTENDING.md](../EXTENDING.md) — built-in panels (different system, similar render rules)
-- [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) — custom actions (transform, not UI)
+- [13-extending-panels](13-extending-panels.md) — built-in panels (different system, similar render rules)
+- [14-extensions-sdk](14-extensions-sdk.md) — custom actions (transform, not UI)

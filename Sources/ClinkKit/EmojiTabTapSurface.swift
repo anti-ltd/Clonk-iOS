@@ -73,6 +73,8 @@ final class EmojiTabTapView: UIView {
     }
 }
 
+/// UIKit tap surface for the scrollable category strip. Distinguishes tap from
+/// horizontal drag so the `ScrollView` can pan without swallowing tab selection.
 struct EmojiTabTapSurface: UIViewRepresentable {
     let frames: [Int: CGRect]
     let onPress: (Int) -> Void

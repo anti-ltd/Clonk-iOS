@@ -13,8 +13,11 @@
  */
 import Foundation
 
+/// Memory-mapped word-bigram model paired with a `.clex` lexicon. Word IDs are
+/// indices into that lexicon's sorted table.
 public struct NgramModel: Sendable {
     private let data: Data
+    /// Number of (prev, next) pairs stored in the blob.
     public let pairCount: Int
     private let prevStart: Int   // P × u32, sorted ascending
     private let nextStart: Int   // P × u32, block-aligned with prev
@@ -26,6 +29,7 @@ public struct NgramModel: Sendable {
         Double(q) / 42.0 - 6.0
     }
 
+    /// Parse a `.cngm` payload. Returns nil on header or length mismatch.
     public init?(data: Data) {
         guard data.count >= 12,
               data[0] == UInt8(ascii: "C"), data[1] == UInt8(ascii: "N"),
@@ -44,6 +48,8 @@ public struct NgramModel: Sendable {
         self.qStart = 12 + p * 8
     }
 
+    /// Load `<code>.cngm` from a bundle, memory-mapped. `code` is a base
+    /// language code ("en"), not a checker identifier.
     public static func bundled(_ code: String, in bundle: Bundle = .main) -> NgramModel? {
         let url = bundle.url(forResource: code, withExtension: "cngm")
             ?? bundle.url(forResource: code, withExtension: "cngm", subdirectory: "Lexicons")

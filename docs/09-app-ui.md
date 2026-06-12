@@ -211,4 +211,4 @@ User confirms in a sheet before `AppModel` commits.
 
 - [01-settings-and-storage](01-settings-and-storage.md) — what AppModel persists
 - [02-keyboard-core](02-keyboard-core.md) — what KeyboardPreview renders
-- [THEMING.md](../THEMING.md) — theme editor specifics
+- [11-theming](11-theming.md) — theme editor specifics

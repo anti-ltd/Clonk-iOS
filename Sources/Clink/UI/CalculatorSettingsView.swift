@@ -9,7 +9,8 @@
 import SwiftUI
 import iUXiOS
 
-/// Settings screen for the calculator panel.
+/// Calculator panel enable toggle with live `CalculatorPreview`.
+/// `$model.settings.calculatorEnabled` persists via `AppModel.settings` `didSet`.
 struct CalculatorSettingsView: View {
     @Environment(AppModel.self) private var model
 

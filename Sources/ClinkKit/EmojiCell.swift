@@ -124,6 +124,7 @@ struct EmojiGlassFlashView: View {
 // MARK: - Bloom button style
 
 /// Blooms an emoji while the finger is down, springs back on release.
+/// Finger-down bloom for emoji cells — separate from the one-shot glass flash.
 struct EmojiBloomStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

@@ -145,6 +145,7 @@ public struct EmojiCanvas: View {
         return nil
     }
 
+    /// Layout constants shared with the host for height negotiation.
     public enum Metrics {
         public static let barHeight: CGFloat = 48
         public static let searchBarHeight: CGFloat = 44

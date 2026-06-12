@@ -61,6 +61,9 @@ private struct ThemedSheetModifier<SheetContent: View>: ViewModifier {
 
 // MARK: - Overlay
 
+/// Bottom sheet overlay: natural-height slide-in, drag-to-expand/dismiss.
+/// `panelHeight` is `@State` — updated only via explicit `withAnimation`, never
+/// recomputed from drag offset, so height stays stable mid-gesture.
 struct ThemedSheetOverlay<Content: View>: View {
     let cornerRadius: CGFloat
     var title: String? = nil

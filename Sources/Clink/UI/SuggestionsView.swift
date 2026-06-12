@@ -8,6 +8,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Suggestion bar, autocorrect, and revert-on-delete toggles.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct SuggestionsView: View {
     @Environment(AppModel.self) private var model
 

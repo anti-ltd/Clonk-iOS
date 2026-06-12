@@ -23,7 +23,7 @@
  */
 import Foundation
 
-/// A lexical scope. Functions get a child env whose parent is their closure.
+/// A lexical scope. Functions capture their defining environment as `closure`.
 final class PyEnv {
     var vars: [String: PyValue] = [:]
     let parent: PyEnv?
@@ -33,6 +33,11 @@ final class PyEnv {
     func define(_ name: String, _ value: PyValue) { vars[name] = value }
 }
 
+/// Tree-walking evaluator for a parsed PyMini module. Sandboxed: no imports,
+/// files, or network — only builtins and methods defined here. Every statement,
+/// expression, and loop iteration ticks the step counter; exceeding `maxSteps`
+/// throws. Container and string growth are capped separately so one op can't
+/// allocate unbounded memory inside the keyboard extension.
 final class PyInterpreter {
     let globals = PyEnv()
     private let maxSteps: Int
@@ -50,6 +55,7 @@ final class PyInterpreter {
     // MARK: - Public entry points
 
     /// Execute the whole module (defines functions, runs top-level code).
+    /// Each statement and expression evaluation consumes steps from the budget.
     func run(_ program: [Stmt]) throws {
         try execBlock(program, globals)
     }
@@ -61,6 +67,7 @@ final class PyInterpreter {
     }
 
     /// Call a top-level function by name with already-evaluated arguments.
+    /// Shares the interpreter's step budget with any prior work in this session.
     func call(_ name: String, _ args: [PyValue]) throws -> PyValue {
         guard let v = globals.get(name) else { throw PyError("name '\(name)' is not defined") }
         return try callValue(v, args, [])

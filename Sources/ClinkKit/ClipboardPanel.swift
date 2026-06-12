@@ -4,7 +4,7 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
@@ -32,6 +32,7 @@ struct ClipboardPanel: View {
 
     @State private var openRow: Int? = nil
 
+    /// Named coordinate space for scroll-away row close (see `SwipeRow`).
     private let scrollSpace = "clipScroll"
 
     var body: some View {
@@ -87,6 +88,8 @@ struct ClipboardPanel: View {
         }
     }
 
+    // MARK: - Card list
+
     /// The swipeable cards. The card's glass surface and the action circles share
     /// one per-row `GlassEffectContainer` (see `SwipeRow.glassWrap`) so they morph
     /// into a gooey bridge as the card is dragged; the card text rides above the
@@ -111,6 +114,8 @@ struct ClipboardPanel: View {
             }
         }
     }
+
+    // MARK: - Grid layout
 
     /// Two-column grid of cards. Tap inserts; swipe reveals the same copy / pin /
     /// delete action circles as the list — left-column cards swipe left, right-column
@@ -209,6 +214,8 @@ struct ClipboardPanel: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    // MARK: - Chrome
 
     /// Card surface that tracks the keyboard's material: a theme-tinted liquid
     /// glass lens (so swiped-under action circles refract through it) when the

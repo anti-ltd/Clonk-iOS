@@ -14,6 +14,9 @@
 import SwiftUI
 import iUXiOS
 
+/// Custom key rows and space-bar flank keys. Writes `spaceBarLeadingKeys`,
+/// `spaceBarTrailingKeys`, and `customRows` — each assignment persists via
+/// `AppModel.settings` `didSet`. Editor sheet is hosted by `LayoutView`.
 struct CustomKeysView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

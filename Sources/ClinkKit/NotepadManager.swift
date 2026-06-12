@@ -31,6 +31,7 @@ public final class NotepadManager {
     public private(set) var notes: [NotepadNote] = []
 
     private let maxNotes = 50
+    /// Suppresses `scratch`'s `didSet` save while hydrating from disk.
     private var loading = false
 
     public init() { load() }
@@ -46,12 +47,14 @@ public final class NotepadManager {
         save()
     }
 
+    /// Remove one saved note by index in `notes`.
     public func deleteNote(at index: Int) {
         guard notes.indices.contains(index) else { return }
         notes.remove(at: index)
         save()
     }
 
+    /// Wipe the saved-notes archive (scratch buffer is untouched).
     public func clearNotes() {
         notes.removeAll()
         save()

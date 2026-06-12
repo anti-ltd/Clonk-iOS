@@ -137,6 +137,7 @@ public final class KeyTouchRouter {
     /// The highlighted (and on-release committed) option index.
     public private(set) var accentIndex: Int = 0
 
+    /// Empty router — the canvas pushes frames and callbacks on every layout pass.
     public init() {}
 
     // MARK: - Registry (pushed in from the layout each pass)
@@ -1163,8 +1164,8 @@ final class KeyGridTouchView: UIView {
     }
 }
 
-/// The live swipe trail — a smoothed polyline through the captured finger points,
-/// drawn over the keys while a glide is in progress.
+/// Smoothed polyline through the live swipe samples, drawn over the keys while
+/// a glide is in progress.
 struct SwipeTrailShape: Shape {
     let points: [CGPoint]
 
@@ -1189,7 +1190,8 @@ struct SwipeTrailShape: Shape {
     }
 }
 
-/// Hosts `KeyGridTouchView` and feeds it the resolved key frames each layout.
+/// SwiftUI bridge for `KeyGridTouchView`. Pushes the live frame registry and
+/// touch callbacks into the router on every layout pass.
 struct MultiTouchSurface: UIViewRepresentable {
     let router: KeyTouchRouter
     let frames: [String: CGRect]

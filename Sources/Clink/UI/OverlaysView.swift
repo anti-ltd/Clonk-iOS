@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Debug overlay toggles (hitbox outline on the live keyboard).
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct OverlaysView: View {
     @Environment(AppModel.self) private var model
 

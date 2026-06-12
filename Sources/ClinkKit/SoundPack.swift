@@ -39,6 +39,7 @@ public struct SoundPack: Identifiable, Codable, Equatable, Sendable, Hashable {
 }
 
 public extension SoundPack {
+    /// Shipped presets. Custom sample packs are commented out until audio lands in `Resources/Sounds/`.
     static let presets: [SoundPack] = [
         SoundPack(
             id: "system", name: "System Click",
@@ -72,6 +73,7 @@ public extension SoundPack {
 
     static let `default`: SoundPack = presets[0]
 
+    /// Returns the preset for `id`, falling back to the system click when unknown.
     static func preset(id: String) -> SoundPack {
         presets.first { $0.id == id } ?? .default
     }

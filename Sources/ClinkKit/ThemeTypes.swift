@@ -5,12 +5,13 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 import SwiftUI
 
 // MARK: - Gradient types
 
+/// Shape of a `ThemeGradient` when rendered behind the keys or inside Liquid Glass keys.
 public enum GradientType: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
     case linear, radial, angular
     public var id: String { rawValue }
@@ -49,6 +50,8 @@ extension GradientStop: Codable {
     }
 }
 
+/// A multi-stop gradient used as a keyboard or per-key backdrop. Serialized in
+/// the theme JSON; rendered via `makeView()` in SwiftUI.
 public struct ThemeGradient: Codable, Sendable, Equatable, Hashable {
     public var type: GradientType
     /// Rotation in degrees (0–360). Used by linear and angular; ignored by radial.
@@ -87,6 +90,7 @@ public extension ThemeGradient {
         }
     }
 
+    // rotation 0° = top-to-bottom; offset by −90° to match design-tool convention.
     private var linearStart: UnitPoint {
         let rad = (rotation - 90) * .pi / 180
         return UnitPoint(x: 0.5 - cos(rad) * 0.5, y: 0.5 - sin(rad) * 0.5)
@@ -99,6 +103,7 @@ public extension ThemeGradient {
 
 // MARK: - Font design / weight
 
+/// Font design applied to letter/number key glyphs.
 public enum ThemeFontDesign: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
     case `default`, rounded, serif, monospaced
     public var id: String { rawValue }
@@ -120,6 +125,7 @@ public enum ThemeFontDesign: String, Codable, Sendable, Hashable, CaseIterable, 
     }
 }
 
+/// Font weight applied to letter/number key glyphs.
 public enum ThemeFontWeight: String, Codable, Sendable, Hashable, CaseIterable, Identifiable {
     case thin, ultraLight, light, regular, medium, semibold, bold, heavy, black
     public var id: String { rawValue }

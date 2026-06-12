@@ -11,12 +11,15 @@ import SwiftUI
 /// A single key's appearance + behaviour. Value type so rows can be rebuilt
 /// cheaply on every shift/plane change.
 struct KeySpec: Identifiable {
+    /// Character keys type glyphs; function keys drive mode switches and actions.
     enum Kind { case character, function }
+    /// Literal cap label or an SF Symbol name (function keys, shift, delete).
     enum Label { case text(String); case system(String) }
 
     let id = UUID()
     let kind: Kind
     let label: Label
+    /// Proportional width in the row layout (a standard letter is 1.0).
     let weight: Double
     let highlighted: Bool
     /// Pressed state glows red instead of accent (the backspace key).
@@ -61,8 +64,11 @@ struct KeySpec: Identifiable {
     /// swipe-to-delete-word gesture): once per word as the finger glides left.
     /// When it engages, the key's auto-repeat is stopped. nil disables the gesture.
     let onDeleteWord: (() -> Void)?
+    /// Primary tap action — fired on key release (after touch-down side effects).
     let action: () -> Void
 
+    /// Builds a key spec. Gesture and accent callbacks are nil unless the key
+    /// needs that behaviour (space bar, shift, 123 drag-up, letter accents, etc.).
     init(kind: Kind, label: Label, weight: Double, highlighted: Bool = false,
          isDestructive: Bool = false, isSpace: Bool = false, isRepeatable: Bool = false,
          isShift: Bool = false, isNextKeyboard: Bool = false,

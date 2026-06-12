@@ -37,15 +37,21 @@ public enum PanelPlacement: String, Codable, Sendable, CaseIterable, Identifiabl
     }
 }
 
+/// A user-authored keyboard panel — a custom UI rendered from a PyMini script
+/// (`view(state)` MVU loop) rather than a one-shot text transform. Persisted in
+/// the App Group and shareable as `.clinkpanel` JSON.
 public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
     public var id: String
     public var name: String
+    /// SF Symbol shown in the panel picker and management list.
     public var icon: String
+    /// One-line description shown under the name.
     public var summary: String
     /// PyMini source — must define `view(state)`; may define `initial()`.
     public var source: String
     /// Per-panel override of where it appears in the picker.
     public var placement: PanelPlacement
+    /// Whether the panel appears in the keyboard picker.
     public var enabled: Bool
 
     public init(
@@ -86,6 +92,8 @@ public struct ClinkPanel: Codable, Sendable, Identifiable, Equatable {
         }
     }
 }
+
+// MARK: - Starter & samples
 
 public extension ClinkPanel {
     /// Starter for a new panel: a small counter demonstrating the MVU loop.

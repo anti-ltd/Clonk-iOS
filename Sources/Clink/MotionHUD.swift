@@ -19,6 +19,7 @@ import SwiftUI
 import QuartzCore
 
 /// Half-second-windowed FPS + worst-frame meter driven by a display link.
+/// DEBUG-only — the project's sole `CADisplayLink`; never ships in Release.
 @MainActor @Observable
 final class FPSMonitor: NSObject {
     private(set) var fps: Double = 0
@@ -30,6 +31,7 @@ final class FPSMonitor: NSObject {
     @ObservationIgnored private var lastTimestamp: CFTimeInterval = 0
     @ObservationIgnored private var worst: CFTimeInterval = 0
 
+    /// Attach to the main run loop. Idempotent — safe to call from `MotionHUD.onAppear`.
     func start() {
         guard link == nil else { return }
         let l = CADisplayLink(target: self, selector: #selector(tick))
@@ -37,6 +39,7 @@ final class FPSMonitor: NSObject {
         link = l
     }
 
+    /// Tear down the display link. Called from `MotionHUD.onDisappear`.
     func stop() {
         link?.invalidate()
         link = nil
@@ -62,6 +65,8 @@ final class FPSMonitor: NSObject {
     }
 }
 
+/// Floating FPS / worst-frame pill. Shown when launched with `--motion-hud`
+/// (`FeatureFlags.motionHUD`). Does not intercept touches.
 struct MotionHUD: View {
     @State private var monitor = FPSMonitor()
 

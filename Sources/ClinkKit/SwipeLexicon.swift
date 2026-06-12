@@ -20,7 +20,7 @@ public enum SwipeLexicon {
     /// Words in descending frequency order (index 0 = most common).
     public static let words: [String] = raw.split(separator: " ").map(String.init)
 
-    /// word -> frequency rank (0 = most common). Built once, lazily.
+    /// word → frequency rank (0 = most common). Built once at first use.
     public static let rank: [String: Int] = {
         var m = [String: Int](minimumCapacity: words.count)
         for (i, w) in words.enumerated() where m[w] == nil { m[w] = i }

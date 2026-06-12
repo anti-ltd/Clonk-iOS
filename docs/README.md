@@ -21,14 +21,15 @@ Every module doc follows the same shape:
 | **How it works** | The actual flow — who calls whom, what gets persisted where |
 | **Gotchas** | Things that will bite you if you don't know them upfront |
 | **Read order** | If you're diving in cold, start here → then here |
-| **See also** | Links to related module docs or existing guides |
+| **See also** | Links to related module docs |
 
-Cross-references use relative paths: `[settings](01-settings-and-storage.md)`,
-`[THEMING.md](../THEMING.md)`.
+Cross-references use relative paths within this folder, e.g.
+`[settings](01-settings-and-storage.md)`.
 
 **In-source comments:** every Swift file under `Sources/` has a file header with
-`Module`, `Target`, and `Learn` lines pointing at the docs below. Format spec:
-[CODECOMMENTS.md](CODECOMMENTS.md). Re-apply after adding files:
+`Module`, `Target`, and `Learn` lines. Public types, settings screens, and
+large files also have `///` docs and `// MARK:` sections — see
+[CODECOMMENTS.md](CODECOMMENTS.md). Re-apply headers after adding files:
 `swift Tools/ApplyFileHeaders.swift`.
 
 ---
@@ -40,34 +41,20 @@ you already know.
 
 1. **[00-overview](00-overview.md)** — two targets, one canvas, App Group IPC
 2. **[01-settings-and-storage](01-settings-and-storage.md)** — `KeyboardSettings`, `SharedStore`, managers
-3. **[THEMING.md](../THEMING.md)** — themes, presets, Liquid Glass (existing guide)
+3. **[11-theming](11-theming.md)** — themes, presets, Liquid Glass, `.clink` import
 4. **[02-keyboard-core](02-keyboard-core.md)** — `KeyboardCanvas`, layout, keys, popups
 5. **[03-touch-and-input](03-touch-and-input.md)** — multitouch routing, hitboxes, swipe
 6. **[04-prediction](04-prediction.md)** — suggestions, autocorrect, lexicons
 7. **[05-emoji](05-emoji.md)** — emoji keyboard, skin tones, generated data
-8. **[EXTENDING.md](../EXTENDING.md)** — built-in action panels (existing guide)
+8. **[13-extending-panels](13-extending-panels.md)** — adding a built-in action panel
 9. **[06-sound](06-sound.md)** — clicks, haptics, Full Access gating
-10. **[MOTION.md](../MOTION.md)** — animation tokens (existing guide)
-11. **[EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md)** — custom Python actions (existing guide)
+10. **[12-motion](12-motion.md)** — animation tokens and blessed patterns
+11. **[14-extensions-sdk](14-extensions-sdk.md)** — custom Python actions
 12. **[07-custom-panels](07-custom-panels.md)** — PyMini UI panels
 13. **[08-pymini](08-pymini.md)** — interpreter internals
 14. **[09-app-ui](09-app-ui.md)** — container app shell and settings screens
 15. **[10-extension-host](10-extension-host.md)** — `KeyboardViewController` wiring
 16. **[FILE-INDEX](FILE-INDEX.md)** — every Swift file, alphabetically by path
-
----
-
-## Existing guides (repo root)
-
-These predate the `docs/` folder and go deeper on specific topics. The module
-docs point at them instead of duplicating:
-
-| Doc | Topic |
-|---|---|
-| [THEMING.md](../THEMING.md) | Theme anatomy, adding presets, `.clink` import |
-| [MOTION.md](../MOTION.md) | `Motion` tokens, `MotionProfile`, blessed animation patterns |
-| [EXTENDING.md](../EXTENDING.md) | Adding a new built-in action panel end-to-end |
-| [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) | Custom actions via PyMini `transform(text)` |
 
 ---
 

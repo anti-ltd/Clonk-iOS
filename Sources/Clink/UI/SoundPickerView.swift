@@ -9,7 +9,8 @@
 import SwiftUI
 import iUXiOS
 
-/// Sound and haptics picker.
+/// Combined sound + haptics picker (legacy/alternate entry — prefer `SoundsView`).
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct SoundPickerView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

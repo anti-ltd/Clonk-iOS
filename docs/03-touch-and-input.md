@@ -154,4 +154,4 @@ Activation delay, scroll sensitivity, line stride all in `KeyboardSettings`.
 
 - [02-keyboard-core](02-keyboard-core.md) — canvas composition
 - [04-prediction](04-prediction.md) — swipe candidates in suggestion engine
-- [MOTION.md](../MOTION.md) — press bloom animation patterns
+- [12-motion](12-motion.md) — press bloom animation patterns

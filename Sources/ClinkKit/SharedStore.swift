@@ -29,6 +29,7 @@ public final class SharedStore: @unchecked Sendable {
     /// Darwin notification name posted whenever settings change.
     public static let didChangeNotification = "ltd.anti.clink.settingsDidChange"
 
+    /// Process-wide singleton using `appGroupID`.
     public static let shared = SharedStore()
 
     private let appGroupID: String
@@ -44,6 +45,10 @@ public final class SharedStore: @unchecked Sendable {
             .appendingPathComponent("clink-settings.v1.json")
     }
 
+    // MARK: - Settings load & save
+
+    /// Read settings from the App Group JSON file; fall back to standard
+    /// `UserDefaults` when the container is unavailable, then `.default`.
     public func load() -> KeyboardSettings {
         if let url = settingsFileURL,
            let data = try? Data(contentsOf: url),
@@ -134,6 +139,8 @@ public final class SharedStore: @unchecked Sendable {
         (token as? NotificationToken)?.unregister()
     }
 }
+
+// MARK: - Darwin observer token
 
 /// Retains the Swift closure for the lifetime of a Darwin notification
 /// registration (CFNotificationCenter only stores a raw pointer) and removes

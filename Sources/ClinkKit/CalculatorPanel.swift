@@ -5,7 +5,7 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
@@ -26,6 +26,7 @@ struct CalculatorPanel: View {
     @State private var pendingOp: CalcOp? = nil
     @State private var freshInput = true
 
+    /// Pending binary operator between `storedValue` and the next operand.
     private enum CalcOp { case add, sub, mul, div }
 
     private let layout: [[String]] = [

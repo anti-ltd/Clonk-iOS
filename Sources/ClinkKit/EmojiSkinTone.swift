@@ -73,6 +73,7 @@ public enum EmojiSkinTone {
     public static func applied(_ tone: SkinTone, to base: String) -> String {
         var out = String.UnicodeScalarView()
         let scalars = Array(base.unicodeScalars)
+        // Walk scalar-by-scalar so ZWJ sequences and existing modifiers are handled cleanly.
         var i = 0
         while i < scalars.count {
             let s = scalars[i]

@@ -18,6 +18,8 @@
  */
 import Foundation
 
+/// Launch-argument gates for dev-only behaviour. The keyboard extension process
+/// never receives these args, so every flag is false there by construction.
 enum FeatureFlags {
     /// True when launched with `--experimental` (Xcode scheme → Run → Arguments).
     /// Always false in the keyboard extension process.

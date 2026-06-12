@@ -43,6 +43,7 @@ public enum PanelValue: Sendable, Equatable {
         }
     }
 
+    /// String form for UI fields and error messages.
     public var asString: String {
         switch self {
         case .string(let s): return s
@@ -53,9 +54,10 @@ public enum PanelValue: Sendable, Equatable {
     }
 }
 
-/// A node in a panel's view tree.
+/// A node in a panel's declarative view tree, parsed from PyMini builder dicts.
 public indirect enum PanelNode {
     case text(String, size: Double, weight: String, color: String)
+    /// `insert` types into the document; `set` merges into panel state and re-renders.
     case button(label: String, insert: String?, set: [String: PanelValue]?, style: String)
     case field(key: String, placeholder: String, value: String)
     case vstack([PanelNode], spacing: Double)
@@ -65,13 +67,18 @@ public indirect enum PanelNode {
     case divider
 }
 
-/// The outcome of rendering a panel.
+/// Outcome of one `render()` — a node tree, a user-facing error, or debug log.
 public struct PanelRender {
     public let node: PanelNode?
     public let error: String?
     public let log: [String]
 }
 
+/// Bridges a PyMini panel script to native SwiftUI via `CustomPanelView`.
+///
+/// Scripts define `initial()` (optional state dict) and `view(state)` (node tree).
+/// State is scalar-only Swift-side; buttons carry `insert` and/or `set` keys.
+/// The underlying `PyProgram` stays warm — each render gets a fresh step budget.
 @MainActor
 public final class PanelRuntime {
     private let program: PyProgram
@@ -79,6 +86,8 @@ public final class PanelRuntime {
     /// A load-time error (parse / top-level), nil if the script loaded.
     public let loadError: String?
 
+    /// Parse and load `source`. Runs top-level code once; keeps `def`s for later calls.
+    /// Calls `initial()` when present to seed scalar state.
     public init(source: String) {
         program = PyProgram(source: source)
         loadError = program.loadError
@@ -89,6 +98,7 @@ public final class PanelRuntime {
     }
 
     /// Render the current state into a node tree.
+    /// Re-invokes `view(state)` on the warm interpreter (fresh step budget per call).
     public func render() -> PanelRender {
         if let loadError { return PanelRender(node: nil, error: loadError, log: []) }
         guard program.has("view") else {

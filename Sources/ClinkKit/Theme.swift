@@ -4,13 +4,18 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 import SwiftUI
 
+/// Complete visual description of the keyboard: colour slots, optional photo/
+/// gradient backdrops, Liquid Glass options, and font choices. Travels as JSON in
+/// `KeyboardSettings.customThemes` and as `.clink` exports; photo bytes live in
+/// `ThemeBackgroundStore`, referenced by id.
 public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
     public var id: String
     public var name: String
+    /// Solid keys vs Liquid Glass (translucent, refractive).
     public var material: KeyMaterial
     /// Whole-keyboard backdrop.
     public var background: RGBA
@@ -93,9 +98,10 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
         self.keyFontWeight = keyFontWeight
     }
 
-    // Custom decoder so older payloads (presets and `.clink` files written before
-    // `material` / `backgroundImageID` existed) still decode — the new keys fall
-    // back to their defaults rather than failing the whole settings blob.
+    // MARK: - Decoding
+
+    // Tolerant decode: older presets and `.clink` files missing newer keys fall
+    // back to defaults rather than failing the whole settings blob.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)

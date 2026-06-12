@@ -14,18 +14,25 @@ import Foundation
 /// a layout only needs to describe the three alphabetic rows, which is what
 /// actually differs between QWERTY, AZERTY, Dvorak and friends.
 public struct KeyboardLayout: Identifiable, Codable, Equatable, Sendable, Hashable {
+    /// Stable preset identifier (e.g. `"qwerty"`, `"azerty"`).
     public var id: String
+    /// Human-readable name shown in the layout picker.
     public var name: String
     /// Three rows of lowercase letter keys, top to bottom. The view upcases
     /// them when shift is engaged.
     public var rows: [[String]]
 
+    /// - Parameters:
+    ///   - id: Stable preset identifier.
+    ///   - name: Display name in the layout picker.
+    ///   - rows: Three lowercase letter rows (top to bottom).
     public init(id: String, name: String, rows: [[String]]) {
         self.id = id; self.name = name; self.rows = rows
     }
 }
 
 public extension KeyboardLayout {
+    /// Built-in letter-plane presets shipped with Clink.
     static let presets: [KeyboardLayout] = [
         KeyboardLayout(id: "qwerty", name: "QWERTY", rows: [
             ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
@@ -136,6 +143,7 @@ public extension KeyboardLayout {
 
     static let `default`: KeyboardLayout = presets[0]
 
+    /// Returns the preset for `id`, falling back to QWERTY when unknown.
     static func preset(id: String) -> KeyboardLayout {
         presets.first { $0.id == id } ?? .default
     }

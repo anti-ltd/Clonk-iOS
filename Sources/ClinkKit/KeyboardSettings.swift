@@ -10,6 +10,8 @@
  */
 import Foundation
 
+// MARK: - Settings enums
+
 /// The shape/behaviour of the magnified key popup.
 public enum KeyPopupStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     /// A detached rounded bubble floating above the key.
@@ -69,6 +71,7 @@ public enum NotepadMode: String, Codable, Sendable, CaseIterable, Identifiable {
 public enum PanelPickerStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     case popover
     case inline
+    /// Like `inline` but shows SF Symbol icons instead of text labels.
     case inlineIcons
     case cards
 
@@ -142,12 +145,15 @@ public enum HapticStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - KeyboardSettings
+
 /// The full user-customizable configuration of the Clink keyboard. This is the
 /// single value that crosses the process boundary between the container app
 /// (which edits it) and the keyboard extension (which renders from it), via the
 /// App Group store. Keep it small and `Codable`.
 public struct KeyboardSettings: Codable, Equatable, Sendable {
-    // Appearance
+
+    // MARK: - Appearance
     /// Theme used when NOT matching the system appearance.
     public var themeID: String
     /// When true, the keyboard auto-switches between `lightThemeID` and
@@ -168,7 +174,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// theme. When false, the app uses Liquid Light / Liquid Dark regardless of
     /// which keyboard theme the user has selected.
     public var themeApp: Bool
-    // Mechanics
+
+    // MARK: - Layout & custom keys
+
+    /// Physical key layout preset (QWERTY, AZERTY, etc.) — independent of
+    /// `keyboardLanguages`, which drives prediction/spelling only.
     public var layoutID: String
     /// User-defined keys placed to the left of the space bar in the bottom row
     /// (the Gboard quick-comma layout). Empty by default. Letters plane only.
@@ -179,6 +189,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Whole rows of user-defined keys, placed above or below the letter rows on
     /// the letters plane. Empty by default.
     public var customRows: [CustomRow]
+
+    // MARK: - Prediction & languages
+
     /// The languages the suggestion bar, autocomplete, and auto-correction run in,
     /// as `UITextChecker` identifiers (e.g. "en_US", "fr_FR"). More than one means
     /// simultaneous bilingual typing: completions/predictions are merged and a word
@@ -196,8 +209,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var accentPopupsEnabled: Bool
     /// Show a small corner glyph on keys that have long-press variants, previewing the first alternate.
     public var longPressHintsEnabled: Bool
+
+    // MARK: - Key appearance & geometry
+
+    /// Persistent number row above the letter keys (letters plane only).
     public var showNumberRow: Bool
+    /// Auto-shift to caps at sentence start and after sentence-ending punctuation.
     public var autoCapitalize: Bool
+    /// Magnified popup above the pressed key while held.
     public var keyPopupEnabled: Bool
     /// The shape of the key popup (floating bubble / native balloon / flat tile).
     public var keyPopupStyle: KeyPopupStyle
@@ -258,6 +277,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Extra space below the key block — between the keys and the bottom of the
     /// keyboard, lifting the whole keyboard upward. Points.
     public var keyboardBottomPadding: Double
+
+    // MARK: - Clipboard
+
     /// Show the clipboard history button in the suggestion bar. Requires Full
     /// Access — without it the pasteboard is not readable from the extension.
     public var clipboardEnabled: Bool
@@ -278,6 +300,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Automatically capture the current pasteboard when the clipboard history
     /// panel is opened. Requires Full Access. Off by default.
     public var autoCopyOnClipboardOpen: Bool
+
+    // MARK: - Panels & extensions
+
     /// Show the quick-notepad action panel behind the top-left button. Unlike
     /// clipboard it needs no Full Access (it never reads the pasteboard).
     public var notepadEnabled: Bool
@@ -332,6 +357,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// User-chosen display order for extension panels. Stored as lowercase
     /// destination IDs ("calculator", "clipboard", "emoji", "notepad").
     public var extensionOrder: [String]
+
+    // MARK: - Suggestions & autocorrect
+
     /// Show the autocomplete / suggestion bar above the keys.
     public var suggestionsEnabled: Bool
     /// Auto-correct the just-typed word when a space / punctuation is entered.
@@ -367,6 +395,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// lands you mid-sentence with the gap already there. No effect when
     /// `autoReturnToLetters` is off.
     public var autoSpaceAfterReturn: Bool
+
+    // MARK: - Swipe typing
+
     /// Glide/swipe typing: trace a continuous path across the letter keys and the
     /// gesture is decoded into a word on lift (the first letter is typed instantly
     /// on touch-down as usual, then replaced by the decoded word once the trace is
@@ -389,10 +420,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// size — higher swells more neighbours at once (a wider wave). Only meaningful
     /// with `swipeKeyMorph`.
     public var swipeMorphRadius: Double
-    // Clink sound + feel
+
+    // MARK: - Sound & haptics
+
     public var soundPackID: String
     public var soundEnabled: Bool
-    public var soundVolume: Double      // 0.0 ... 1.0
+    /// Key-press sample volume, 0…1.
+    public var soundVolume: Double
     public var hapticsEnabled: Bool
     /// Tactile character of the key-press haptic (light → rigid). Picks the
     /// `UIImpactFeedbackGenerator` style. Only fires when `hapticsEnabled` and
@@ -401,11 +435,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Strength of each key-press haptic, 0...1. Lower is a faint tick, 1.0 is a
     /// firm thwack. Passed straight to `impactOccurred(intensity:)`.
     public var hapticIntensity: Double
+
+    // MARK: - Hitboxes & adaptive
+
+    /// Debug overlay drawing each key's effective hit region (dev tuning aid).
+    public var showHitboxOverlay: Bool
     /// Multiplier applied to each key's frame before hit-testing. 1.0 = hitbox
     /// matches the visual key exactly. Values above 1 make the hitbox larger
     /// (more forgiving); values below 1 shrink it (more precise, with wider
     /// dead zones between keys that still route to the nearest key).
-    public var showHitboxOverlay: Bool
     public var hitboxScale: Double
     /// Multiplier applied to the suggestion-bar chips' tap height before
     /// hit-testing — mirrors `hitboxScale` for the keys. Only takes effect while
@@ -437,6 +475,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// typed), biasing toward common opening letters. Off = keys stay neutral
     /// until there's a previous letter to predict from.
     public var adaptivePredictAtWordStart: Bool
+
+    // MARK: - Cursor movement
+
     /// How far (in points) a finger must slide across the space bar to move the
     /// text cursor by one character — also the threshold before a press flips
     /// from "tap to type a space" into cursor-trackpad mode. Smaller = more
@@ -456,7 +497,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// estimate — raise it for long lines, lower it for short ones. Applies to
     /// both the space-bar slide and the trackpad. Default 30.
     public var cursorLineStride: Double
-    // Key press physics
+
+    // MARK: - Key press physics
     /// Scale applied to each key when it blooms on press (1.0 = no bloom).
     public var keyBloomScale: Double
     /// Spring response (seconds) for the key press/release bloom — lower = snappier.
@@ -472,7 +514,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// (0 = off). The crisp visual snap that confirms a keystroke landed; gated on
     /// `keyPressWarp` like the bloom.
     public var tapFlashStrength: Double
-    // Space bar physics
+
+    // MARK: - Space bar physics
     /// Scale the space bar blooms to on press (its own knob — letters use
     /// `keyBloomScale`). 1.0 = no bloom; the space bar historically used a dead
     /// 1.04 so it felt flatter than the letter keys.
@@ -487,12 +530,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Scale the space bar shrinks to once cursor-trackpad mode engages.
     /// 1.0 = no shrink; 0.9 = default subtle squeeze.
     public var spaceCursorDragScale: Double
-    // Popup physics
+
+    // MARK: - Popup physics
     /// Spring response for the key popup emerge animation.
     public var popupSpringResponse: Double
     /// Spring damping for the key popup emerge animation.
     public var popupSpringDamping: Double
-    // Liquid Glass press
+
+    // MARK: - Liquid Glass press
     /// On Liquid Glass themes, how much of the tuned key bloom growth is applied
     /// (0 = no bloom, 1 = the full `keyBloomScale`). A pressed key scales inside
     /// a shared `GlassEffectContainer` and liquid-merges with its neighbours — a
@@ -504,7 +549,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// merge = less chance of an on-release hitch. The press *rise* still uses
     /// `keySpringResponse`. Glass themes only.
     public var glassReleaseResponse: Double
-    // Backspace auto-repeat timing
+
+    // MARK: - Backspace auto-repeat
     /// How long (ms) to hold backspace before auto-repeat begins.
     public var repeatHoldDelay: Double
     /// Starting interval (ms) between auto-repeat deletions.
@@ -523,7 +569,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Lower deletes words faster as you keep dragging. Only meaningful when
     /// `swipeToDeleteWord`.
     public var deleteWordSwipeStride: Double
-    // Gesture response thresholds
+
+    // MARK: - Gesture thresholds
     /// How long (ms) a letter key must be held still before its accent/diacritic
     /// bar appears. Lower = accents pop sooner; higher = fewer accidental popups
     /// while typing fast. Only applies when `accentPopupsEnabled` is on.
@@ -539,7 +586,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// picker (the slide-up gesture). Lower = the panel opens with a short flick;
     /// higher = a longer, deliberate drag. Only applies when `activateWithSlideUp`.
     public var dragUpThreshold: Double
-    // Emoji
+
+    // MARK: - Emoji
     /// The skin tone applied to any tone-capable emoji that has no per-emoji
     /// choice in `emojiSkinTones`. `.none` = neutral (yellow).
     public var defaultSkinTone: SkinTone
@@ -829,7 +877,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
 
     public static let `default` = KeyboardSettings()
 
-    // MARK: - Decoding (tolerate older payloads missing the new keys)
+    // MARK: - Decoding
 
     /// Keys that no longer map to a stored property but must still be readable from
     /// older saved payloads for migration. `keyboardLanguage` (singular) became the
@@ -1006,6 +1054,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
 
     public var theme: Theme { theme(withID: themeID) }
     public var layout: KeyboardLayout { KeyboardLayout.preset(id: layoutID) }
+    /// Resolved sound pack for `soundPackID`.
     public var soundPack: SoundPack { SoundPack.preset(id: soundPackID) }
 
     // MARK: - Emoji skin tones

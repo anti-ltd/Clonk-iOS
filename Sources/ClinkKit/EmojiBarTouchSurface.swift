@@ -46,6 +46,8 @@ final class EmojiBarTouchView: UIView {
         var bestDist = CGFloat.greatestFiniteMagnitude
         for (id, f) in frames {
             if f.contains(p) { onHit(id); return }
+            // Nearest-centre fallback — the fixed tiles are wide enough that a
+            // slightly off-centre tap still lands on the intended control.
             let dx = p.x - f.midX, dy = p.y - f.midY
             let d = dx * dx + dy * dy
             if d < bestDist { bestDist = d; best = id }
@@ -54,6 +56,9 @@ final class EmojiBarTouchView: UIView {
     }
 }
 
+/// Full-bleed UIKit tap catcher for a fixed bar control (globe, ABC, search).
+/// Fires on touch-down — reliable where SwiftUI `Button` taps are dropped in
+/// the keyboard extension.
 struct EmojiBarTouchSurface: UIViewRepresentable {
     let frames: [Int: CGRect]
     let onHit: (Int) -> Void

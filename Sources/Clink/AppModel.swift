@@ -36,11 +36,13 @@ final class AppModel {
     let notepad = NotepadManager()
     let extensions = ExtensionManager()
     let panels = PanelManager()
-
+    /// App Group store — every `settings` mutation goes through `save`.
     private let store = SharedStore.shared
     private let keyboardBundleID = "ltd.anti.clink.keyboard"
 
     init() {
+        // Load persisted settings once. Subsequent UI edits assign through
+        // `settings` and auto-save via `didSet`; init assignment does NOT fire `didSet`.
         settings = store.load()
         #if DEBUG
         // AppStage capture: seed a curated theme so the preview looks its best.
@@ -217,6 +219,8 @@ final class AppModel {
         pendingConfigImport = nil
     }
 
+    /// Reads enable / Full Access from UserDefaults + the App Group snapshot
+    /// the extension last reported. Called on launch and when returning active.
     func refreshStatus() {
         let enabled = (UserDefaults.standard.array(forKey: "AppleKeyboards") as? [String]) ?? []
         isKeyboardEnabled = enabled.contains(keyboardBundleID)

@@ -21,10 +21,13 @@ import Foundation
 /// `KeyboardCanvas.customKeySpec` for why.
 public enum CustomKeyAction: Codable, Equatable, Sendable, Hashable {
     case insert(String)
+    /// Move cursor one character left (host `onCursorMove`).
     case cursorLeft
     case cursorRight
     case tab
+    /// Switch to the numbers symbol plane.
     case numbersPlane
+    /// Open the emoji keyboard (`EmojiCanvas`).
     case emoji
     case backspace
 }
@@ -77,6 +80,7 @@ public enum CustomRowPosition: String, Codable, Sendable, CaseIterable, Identifi
 /// A whole row of custom keys placed on the letters plane.
 public struct CustomRow: Codable, Equatable, Sendable, Hashable, Identifiable {
     public var id: UUID
+    /// Keys left-to-right within the row.
     public var keys: [CustomKey]
     public var position: CustomRowPosition
 

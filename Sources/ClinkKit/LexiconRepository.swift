@@ -21,6 +21,7 @@ public final class LexiconRepository: @unchecked Sendable {
     private var ngramCache: [String: NgramModel?] = [:]
     private let bundle: Bundle
 
+    /// `bundle` is `.main` in the app/extension; tests may inject a fixture bundle.
     public init(bundle: Bundle = .main) {
         self.bundle = bundle
     }
@@ -81,6 +82,7 @@ public struct MergedLexicon: Sendable {
     /// Bigram models index-aligned with `lexicons` (nil where not bundled).
     public let ngrams: [NgramModel?]
 
+    /// `ngrams` must align with `lexicons`; shorter input is padded with nils.
     public init(lexicons: [Lexicon], ngrams: [NgramModel?] = []) {
         self.lexicons = lexicons
         self.ngrams = ngrams.count == lexicons.count

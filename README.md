@@ -45,7 +45,7 @@
 
 </div>
 
-Regenerate with the [AppStage](../appstage) pipeline:
+Regenerate with the [AppStage](https://github.com/anti-ltd/AppStage-MacOS) pipeline:
 
 ```bash
 appstage capture clink && appstage build clink && appstage sync clink
@@ -108,13 +108,9 @@ The routing is `#if DEBUG` — none of it ships in Release.
 
 ## Documentation
 
-**[docs/](docs/README.md)** — codebase learning guide. Module-by-module walkthroughs
-(settings, keyboard core, touch, prediction, emoji, sound, app UI, extension host,
-PyMini), plus a [complete file index](docs/FILE-INDEX.md) for all 153 Swift sources.
-
-Topic-specific guides at repo root: [THEMING.md](THEMING.md), [MOTION.md](MOTION.md),
-[EXTENDING.md](EXTENDING.md) (action panels), [EXTENSIONS-SDK.md](EXTENSIONS-SDK.md)
-(custom Python actions).
+**[docs/](docs/README.md)** — full codebase learning guide: module walkthroughs,
+how-to guides (themes, motion, panels, extensions SDK), and a
+[file index](docs/FILE-INDEX.md) for all 153 Swift sources.
 
 ---
 

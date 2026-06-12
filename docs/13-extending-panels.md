@@ -10,12 +10,12 @@ This document walks through adding a new panel end to end, using a worked
 example: a **Snippets** panel (saved canned phrases you tap to insert).
 
 > TL;DR checklist
-> 1. Add a case to [`ActionPanel`](Sources/ClinkKit/KeyboardLiveState.swift).
-> 2. Add `…Enabled` (and any style) fields to [`KeyboardSettings`](Sources/ClinkKit/KeyboardSettings.swift) — property, init param, decode.
-> 3. (If it owns data) add a `@MainActor @Observable` manager persisted to the App Group, mirroring [`ClipboardManager`](Sources/ClinkKit/ClipboardManager.swift) / [`NotepadManager`](Sources/ClinkKit/NotepadManager.swift).
-> 4. Wire the manager + an `on…Insert` callback into [`KeyboardCanvas`](Sources/ClinkKit/KeyboardCanvas.swift) and [`KeyboardViewController`](Sources/ClinkKeyboard/KeyboardViewController.swift).
+> 1. Add a case to [`ActionPanel`](../Sources/ClinkKit/KeyboardLiveState.swift).
+> 2. Add `…Enabled` (and any style) fields to [`KeyboardSettings`](../Sources/ClinkKit/KeyboardSettings.swift) — property, init param, decode.
+> 3. (If it owns data) add a `@MainActor @Observable` manager persisted to the App Group, mirroring [`ClipboardManager`](../Sources/ClinkKit/ClipboardManager.swift) / [`NotepadManager`](../Sources/ClinkKit/NotepadManager.swift).
+> 4. Wire the manager + an `on…Insert` callback into [`KeyboardCanvas`](../Sources/ClinkKit/KeyboardCanvas.swift) and [`KeyboardViewController`](../Sources/ClinkKeyboard/KeyboardViewController.swift).
 > 5. Render it: a bar strip (`barContent`) and/or a full overlay (`overlayPanel`).
-> 6. Add the in-app settings screen + a NavRow in [`RootView`](Sources/Clink/UI/RootView.swift).
+> 6. Add the in-app settings screen + a NavRow in [`RootView`](../Sources/Clink/UI/RootView.swift).
 > 7. `make project && make build`.
 
 ---
@@ -189,7 +189,7 @@ Notes:
   manual `objectWillChange`.
 - Pick a **versioned filename** (`…v1.json`). If you change the schema later,
   bump to `v2` and migrate on load, like `ClipboardManager` does for v1→v2.
-- The App Group id is `group.ltd.anti.clink` ([`SharedStore.appGroupID`](Sources/ClinkKit/SharedStore.swift)).
+- The App Group id is `group.ltd.anti.clink` ([`SharedStore.appGroupID`](../Sources/ClinkKit/SharedStore.swift)).
   Both processes read the same file, so a save in the app shows up in the
   keyboard and vice-versa.
 

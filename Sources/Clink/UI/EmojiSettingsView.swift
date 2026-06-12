@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Emoji panel settings: layout, recents, skin tones. Pinned `EmojiPreview` at top.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct EmojiSettingsView: View {
     private enum Tab { case general, layout, skinTones }
 

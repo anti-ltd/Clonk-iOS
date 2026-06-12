@@ -23,6 +23,8 @@
 import SwiftUI
 import iUXiOS
 
+/// SHOWCASE-build typing simulator for demo footage. Not shipped to App Store.
+/// Keyboard callbacks drive `ShowcaseTyper` — no real text field / document proxy.
 struct ShowcaseView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

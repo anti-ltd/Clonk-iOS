@@ -5,7 +5,7 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
@@ -57,6 +57,8 @@ struct PanelSwitcherPanel: View {
         }
     }
 
+    // MARK: - Card list
+
     private func cardRow(_ panel: ActionPanel) -> some View {
         HStack(spacing: 12) {
             Image(systemName: panel.icon(active: false))
@@ -82,6 +84,8 @@ struct PanelSwitcherPanel: View {
         .background { cardSurface }
         .contentShape(Rectangle())
     }
+
+    // MARK: - Chrome
 
     @ViewBuilder private var cardSurface: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

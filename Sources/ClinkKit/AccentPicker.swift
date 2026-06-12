@@ -18,6 +18,8 @@ struct AccentPicker: View {
     let theme: Theme
     let cornerRadius: CGFloat
 
+    // MARK: - Layout constants
+
     static let swatch: CGFloat = 42
     static let hPadding: CGFloat = 8
     static let height: CGFloat = 54
@@ -41,6 +43,8 @@ struct AccentPicker: View {
         let maxLeft = max(edgeInset, containerWidth - w - edgeInset)
         return min(max(desired, edgeInset), maxLeft)
     }
+
+    // MARK: - View
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

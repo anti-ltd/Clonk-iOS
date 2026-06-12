@@ -15,6 +15,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Apple Intelligence master switch and availability readout.
+/// `$model.settings.aiEnabled` persists via `AppModel.settings` `didSet`.
 struct ArtificialIntelligenceView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase

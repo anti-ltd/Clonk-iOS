@@ -55,6 +55,7 @@ public final class UserAdaptation: @unchecked Sendable {
     private let fileURL: URL?
     private let defaultsKey = "clink-learned-v1"
 
+    /// Loads and time-decays any persisted payload from the App Group JSON file.
     public init(appGroupID: String = SharedStore.appGroupID) {
         fileURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?

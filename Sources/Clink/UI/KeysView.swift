@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Key geometry, padding, and long-press hint toggles.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct KeysView: View {
     private enum Tab { case geometry, padding, faces }
 

@@ -32,6 +32,8 @@ private func aeq(_ a: Double, _ b: Double) -> Bool { abs(a - b) < 0.001 }
 
 // MARK: - Catalogs
 
+/// Named preset catalogs for tuning screens. Each `Preset.apply` writes a bundle
+/// of `KeyboardSettings` fields; `PresetChips` / `TunedSection` surface them in UI.
 enum TuningPresets {
     /// Hitbox forgiveness (touch target size vs precision).
     static let hitbox: [Preset] = [

@@ -9,6 +9,7 @@ import SwiftUI
 import iUXiOS
 
 /// Row layout settings: number row and home-row inset.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct LayoutPickerView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

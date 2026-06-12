@@ -172,6 +172,8 @@ public final class SuggestionEngine {
     private var lexiconExact: [String: String] = [:]
     private var lexiconEntries: [(prefix: String, text: String)] = []
 
+    /// Checker, heuristics, and lexicon start at English; adaptation and layout
+    /// are unset until the host calls `setAdaptation` / `setLayout`.
     public init() {}
 
     /// Feed in the user's supplementary lexicon (call after
@@ -190,8 +192,12 @@ public final class SuggestionEngine {
         correctionCache = nil
     }
 
+    /// One bar refresh: ranked predictions, an optional space-applied fix, and
+    /// emoji chips for the word being typed.
     public struct Result: Sendable {
+        /// Bar chips, literal first when no correction is pending.
         public var predictions: [String]
+        /// Silent fix applied on space, or nil.
         public var correction: Autocorrection?
         /// Emoji matching the word being typed, shown as non-primary bar chips
         /// (never applied by space — only a deliberate tap inserts them).

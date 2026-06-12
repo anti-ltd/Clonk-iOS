@@ -5,7 +5,7 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
@@ -44,6 +44,8 @@ struct ClipboardBar: View {
             iconButton("trash", action: onClear)
         }
     }
+
+    // MARK: - Chips & actions
 
     private func clipChip(_ text: String) -> some View {
         Button { onTap(text) } label: {

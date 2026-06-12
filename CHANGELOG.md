@@ -133,7 +133,7 @@ keyboard — two targets (container app + `ClinkKeyboard` extension) sharing one
   across a four-tab root (Style / Typing / Feel / Setup), a live interactive
   keyboard preview, and whole-config export / import as `.clinkconfig`.
 - Device install pipeline (`make device`) and a DEBUG-only marketing-capture
-  routing layer (`AppStage`, the [AppStage](../appstage) pipeline) that never
+  routing layer (`AppStage`, the [AppStage](https://github.com/anti-ltd/AppStage-MacOS) pipeline) that never
   ships in Release.
 
 ### Security & privacy

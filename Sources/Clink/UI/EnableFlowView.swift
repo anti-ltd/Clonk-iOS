@@ -9,8 +9,8 @@
 import SwiftUI
 import iUXiOS
 
-/// Setup guide: how to add Clink in the Settings app, and the honest pitch for
-/// Full Access (off by default — it's only needed for custom sounds/haptics).
+/// Setup guide: how to add Clink in Settings and the honest pitch for Full Access.
+/// Status rows refresh when the app returns to foreground (`ClinkApp.onChange`).
 struct EnableFlowView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

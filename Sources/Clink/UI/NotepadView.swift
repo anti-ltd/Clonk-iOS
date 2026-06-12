@@ -10,6 +10,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Notepad panel toggle, mode picker, and saved-notes archive.
+/// Settings persist via `AppModel.settings` `didSet`; notes via `NotepadManager`.
 struct NotepadView: View {
     private enum Tab { case general, notes }
 

@@ -120,6 +120,7 @@ public struct Lexicon: Sendable {
         Self.logProbability(fromQuantized: quantizedFrequency(at: index))
     }
 
+    /// Grapheme-cluster count of the word at `index` (from the generator).
     public func characterCount(at index: Int) -> Int { Int(data[charCountStart + index]) }
 
     /// UTF-8 byte length of the word at `index` — a free length filter for scans.

@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Swipe typing and backspace repeat tuning.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct GesturesView: View {
     private enum Tab { case swipe, backspace }
 

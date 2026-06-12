@@ -254,6 +254,10 @@ struct ThemedTabPicker<Tag: Hashable>: View {
 /// A live, interactive preview of the real keyboard — the exact `KeyboardCanvas`
 /// the extension renders, wired to a local string so the user can try their
 /// theme/layout right inside the app without leaving to another app.
+///
+/// Callbacks are preview stubs: they mutate local `@State` (`typed`, `cursorPos`)
+/// instead of a document proxy. `lockedText` disables insert/backspace so cursor
+/// tuning pages can drag in isolation.
 struct KeyboardPreview: View {
     @Environment(\.resolvedKeyboardTheme) private var envTheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius
@@ -328,6 +332,9 @@ struct KeyboardPreview: View {
             // Glass themes have something to refract — mirroring how the real
             // keyboard floats over app content. Solid themes have an opaque
             // background and simply cover it.
+            // Preview stub callbacks: mutate local `typed` / `cursorPos` only.
+            // In locked mode (`lockedText != nil`) insert/backspace/suggestion
+            // handlers no-op so cursor drags can be tuned in isolation.
             KeyboardCanvas(
                 settings: settings,
                 live: lockedText != nil ? KeyboardLiveState() : live,
@@ -513,10 +520,7 @@ struct EmojiPreview: View {
     }
 }
 
-/// A live preview of the clipboard panel — a `ClipboardPanel` loaded with sample
-/// entries, pinned above the controls in `ClipboardHistoryView`. Relevant for the
-/// full-keyboard styles (`.overlay` list and `.grid`); bar style lives in the
-/// suggestion row.
+/// A live preview of the clipboard panel — sample entries, stub tap/save handlers.
 struct ClipboardPreview: View {
     @Environment(\.resolvedKeyboardTheme) private var envTheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius
@@ -564,8 +568,7 @@ struct ClipboardPreview: View {
     }
 }
 
-/// A live preview of the notepad browse panel — a `NotepadBrowsePanel` loaded with
-/// sample notes, pinned above the controls in `NotepadView`.
+/// A live preview of the notepad browse panel — sample notes, stub tap/load handlers.
 struct NotepadPreview: View {
     @Environment(\.resolvedKeyboardTheme) private var envTheme
     @Environment(\.cardCornerRadius) private var cardCornerRadius

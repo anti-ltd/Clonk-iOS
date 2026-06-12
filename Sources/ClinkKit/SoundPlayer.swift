@@ -24,6 +24,7 @@ import UIKit
 /// If a custom pack is selected but its samples aren't bundled yet (v0.1 ships
 /// the pipeline ahead of the curated audio), playback falls back to the system
 /// click — so the keyboard always feels responsive.
+/// Key-click audio + haptic feedback for the keyboard extension.
 @MainActor
 final class SoundPlayer {
     /// Pre-loaded players keyed by sample filename, so playback never touches

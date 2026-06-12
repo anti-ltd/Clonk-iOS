@@ -33,13 +33,13 @@ indirect enum PyValue {
     case builtin(String)
 }
 
-/// Reference-typed list box, so `.append` and friends mutate in place like Python.
+/// Reference-typed list box — mutations (`append`, subscript assign) alias like Python.
 final class PyList {
     var items: [PyValue]
     init(_ items: [PyValue] = []) { self.items = items }
 }
 
-/// Reference-typed, insertion-ordered dict box.
+/// Reference-typed, insertion-ordered dict box. Keys must be hashable scalars.
 final class PyDict {
     private(set) var keys: [PyHashable] = []
     private var map: [PyHashable: PyValue] = [:]
@@ -65,7 +65,7 @@ final class PyDict {
     var orderedPairs: [(PyHashable, PyValue)] { keys.map { ($0, map[$0]!) } }
 }
 
-/// The hashable subset of values usable as dict keys (Python forbids list/dict keys).
+/// The hashable subset of values usable as dict keys (list/dict/function are rejected).
 enum PyHashable: Hashable {
     case none
     case bool(Bool)
@@ -102,7 +102,11 @@ final class PyFunction {
     let body: [Stmt]
     let closure: PyEnv
 
-    struct Param { let name: String; let defaultValue: Expr? }
+    struct Param {
+        let name: String
+        /// AST default expression, evaluated in the closure at call time when omitted.
+        let defaultValue: Expr?
+    }
 
     init(name: String, params: [Param], body: [Stmt], closure: PyEnv) {
         self.name = name

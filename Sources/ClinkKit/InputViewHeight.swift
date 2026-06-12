@@ -15,6 +15,7 @@ import os
 /// delete the calls) once the cause is pinned. Read it in Console.app with the
 /// device tethered, filter: subsystem `ltd.anti.clink`, category `height`.
 public enum HeightTrace {
+    /// Master switch — set `false` to silence height diagnostics in production.
     public static let enabled = false
     static let log = Logger(subsystem: "ltd.anti.clink", category: "height")
 }

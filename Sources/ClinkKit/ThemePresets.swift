@@ -5,7 +5,7 @@
  
 
  Module: theme · Target: ClinkKit
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 public extension Theme {
     /// The built-in themes, in display order. The first is the default.
@@ -23,9 +23,12 @@ public extension Theme {
     static var defaultDark: Theme { .liquidDark }
     static var defaultLight: Theme { .liquidLight }
 
+    /// Built-in themes for light system appearance.
     static var lightPresets: [Theme] { presets.filter { !$0.isDark } }
+    /// Built-in themes for dark system appearance.
     static var darkPresets: [Theme] { presets.filter(\.isDark) }
 
+    /// Resolve a preset id; unknown ids fall back to `.default`.
     static func preset(id: String) -> Theme {
         presets.first { $0.id == id } ?? .default
     }

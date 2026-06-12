@@ -15,6 +15,8 @@
 #if DEBUG
 import SwiftUI
 
+/// DEBUG marketing hero: frozen mid-type keyboard for `--appstage glass`.
+/// Canvas callbacks are no-ops; shift/key state is set once in `freezeMidType`.
 struct StagedHeroView: View {
     @Environment(AppModel.self) private var model
     // On iPad (regular width) the bubble must grow with the canvas, otherwise the

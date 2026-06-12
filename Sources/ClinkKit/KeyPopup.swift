@@ -16,11 +16,13 @@ import SwiftUI
 // each pressed character key publishes its glyph + bounds up via an anchor
 // preference, and the canvas draws a single popup on top of everything.
 
+/// Anchor + glyph for the pressed-key magnifier bubble.
 struct KeyPopup {
     let glyph: String
     let anchor: Anchor<CGRect>
 }
 
+/// Preference key carrying the currently pressed key's popup anchor (at most one).
 struct KeyPopupKey: PreferenceKey {
     static let defaultValue: KeyPopup? = nil
     static func reduce(value: inout KeyPopup?, nextValue: () -> KeyPopup?) {
@@ -140,9 +142,11 @@ struct BalloonPopup: View {
     /// Signed offset of the glyph from the frame centre, up into the bulb.
     let glyphOffset: CGFloat
     let shape: BalloonPopupShape
+    /// Pressed-key tint — the balloon covers the key footprint, so it reads as one shape.
     let tint: Color
     let theme: Theme
     let glass: Bool
+    /// User-tuned emerge spring (resolved through `MotionProfile` on appear).
     var springResponse: Double = 0.32
     var springDamping: Double  = 0.62
 

@@ -14,6 +14,7 @@ public struct EmojiCategory: Identifiable, Sendable {
     public let id: String
     /// SF Symbol shown in the category tab bar.
     public let icon: String
+    /// Neutral base glyphs for this section (skin tones applied at render time).
     public let emoji: [String]
 }
 

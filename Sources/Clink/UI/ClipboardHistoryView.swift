@@ -10,6 +10,8 @@ import SwiftUI
 import UIKit
 import iUXiOS
 
+/// Clipboard panel settings, behavior, and in-app history browser.
+/// Settings persist via `AppModel.settings` `didSet`; history via `ClipboardManager`.
 struct ClipboardHistoryView: View {
     private enum Tab { case general, behaviour, history }
 

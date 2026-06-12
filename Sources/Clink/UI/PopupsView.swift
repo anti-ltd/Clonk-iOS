@@ -8,6 +8,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Key popup style and spring tuning.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct PopupsView: View {
     @Environment(AppModel.self) private var model
 

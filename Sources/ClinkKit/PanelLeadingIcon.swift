@@ -6,15 +6,21 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
+/// Leading header control for panel overlays. With `onBack`, renders a tappable
+/// chevron (return to picker or main keyboard); without it, shows the panel's
+/// decorative SF Symbol at fixed suggestion-bar width.
 struct PanelLeadingIcon: View {
     private let symbol: String
     private let theme: Theme
     private let onBack: (() -> Void)?
 
+    /// - Parameters:
+    ///   - symbol: Panel glyph when `onBack` is nil.
+    ///   - onBack: When set, replaces `symbol` with a back chevron and makes it tappable.
     init(_ symbol: String, theme: Theme, onBack: (() -> Void)?) {
         self.symbol = symbol
         self.theme = theme

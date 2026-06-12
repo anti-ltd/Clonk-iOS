@@ -12,6 +12,9 @@
  */
 import SwiftUI
 
+/// Renders a `PanelRuntime` node tree in SwiftUI and drives the MVU loop:
+/// buttons `insert` text and/or `set` state (triggering re-render); fields write
+/// state on edit.
 public struct CustomPanelView: View {
     private let theme: Theme
     private let cornerRadius: CGFloat
@@ -20,12 +23,16 @@ public struct CustomPanelView: View {
     /// Bumped after each state change to force a re-render (re-running `view`).
     @State private var tick = 0
 
+    /// - Parameter source: PyMini panel script (`initial` + `view` functions).
+    /// - Parameter onInsert: Called with a button's `insert` string before state merges.
     public init(source: String, theme: Theme, cornerRadius: CGFloat, onInsert: @escaping (String) -> Void) {
         self.theme = theme
         self.cornerRadius = cornerRadius
         self.onInsert = onInsert
         _runtime = State(initialValue: PanelRuntime(source: source))
     }
+
+    // MARK: - Body
 
     public var body: some View {
         let result = renderUsing(tick)
@@ -44,6 +51,8 @@ public struct CustomPanelView: View {
         _ = tick
         return runtime.render()
     }
+
+    // MARK: - Node rendering
 
     // Returns `AnyView` because the node tree is recursive (a vstack renders its
     // children via `render`), and a recursive `some View` would define the opaque
@@ -108,6 +117,8 @@ public struct CustomPanelView: View {
         Array(nodes.enumerated())
     }
 
+    // MARK: - Style helpers
+
     private func errorView(_ message: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -166,6 +177,8 @@ public struct CustomPanelView: View {
                      blue: Double(v & 0xFF) / 255)
     }
 }
+
+// MARK: - Container chrome
 
 /// Keyboard chrome: lists the user's enabled panels; tapping one opens its UI.
 /// When `standalone` is set, it skips the list and shows just that panel (used

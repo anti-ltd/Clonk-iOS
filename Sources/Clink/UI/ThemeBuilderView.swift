@@ -4,7 +4,7 @@
  
 
  Module: app-ui · Target: Clink
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 import SwiftUI
 import UIKit
@@ -12,8 +12,9 @@ import iUXiOS
 import PhotosUI
 
 /// Create or edit a custom theme. Presented as a sheet from the theme picker.
-/// Every change updates the live `KeyboardPreview` at the top, and Save upserts
-/// the theme into `settings.customThemes` (which travels to the extension).
+/// Every change updates the live `KeyboardPreview` at the top; Save calls
+/// `AppModel.saveCustomTheme` which upserts into `settings.customThemes` and
+/// persists via `AppModel.settings` `didSet`.
 struct ThemeBuilderView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss

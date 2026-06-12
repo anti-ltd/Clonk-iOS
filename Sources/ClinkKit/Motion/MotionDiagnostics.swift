@@ -17,11 +17,13 @@
  
 
  Module: motion · Target: ClinkKit
- Learn: MOTION.md
+ Learn: docs/12-motion.md
  */
 import Foundation
 import OSLog
 
+/// DEBUG-only signposts for lining up animation triggers with frame drops in
+/// Instruments. Compiles to nothing in Release.
 enum MotionDiagnostics {
     #if DEBUG
     private static let signposter = OSSignposter(subsystem: "ltd.anti.clink",

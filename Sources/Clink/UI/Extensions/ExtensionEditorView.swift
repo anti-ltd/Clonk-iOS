@@ -7,7 +7,7 @@
  
 
  Module: app-ui · Target: Clink
- Learn: EXTENSIONS-SDK.md
+ Learn: docs/14-extensions-sdk.md
  */
 import SwiftUI
 import iUXiOS
@@ -18,6 +18,8 @@ extension UTType {
     static var clinkExt: UTType { UTType("ltd.anti.clink.ext") ?? .json }
 }
 
+/// In-app editor for one `ClinkExtension`: metadata, input source, PyMini script,
+/// and a run console that executes `transform` locally before save.
 struct ExtensionEditorView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss

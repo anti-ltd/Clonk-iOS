@@ -24,7 +24,7 @@
  
 
  Module: motion · Target: ClinkKit
- Learn: MOTION.md
+ Learn: docs/12-motion.md
  */
 import SwiftUI
 
@@ -45,8 +45,11 @@ struct MotionStep {
 }
 
 /// Run the steps in order on the main actor, returning the task so the caller
-/// can cancel it on re-trigger (always keep and cancel it — see header).
-/// Cancellation is checked after every sleep; steps already applied stay.
+/// can cancel it on re-trigger (always keep and cancel it — see file header).
+///
+/// Each step sleeps `delay` from the previous step, then applies its closure
+/// inside `withAnimation` when an animation is set. Cancellation is checked after
+/// every sleep; steps already applied stay applied.
 @MainActor @discardableResult
 func runMotionSequence(_ steps: [MotionStep]) -> Task<Void, Never> {
     Task { @MainActor in

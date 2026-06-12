@@ -92,7 +92,7 @@ Synchronous, main-thread safe — bounded step count prevents hangs.
 sorted reversed list dict enumerate zip ord chr any all type`
 
 **str methods:** `upper lower title strip split replace join startswith endswith
-find count …` (see [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) for full list)
+find count …` (see [14-extensions-sdk](14-extensions-sdk.md) for full list)
 
 **Explicitly rejected:** `import`, `class`, `try`, `with`, `lambda`,
 comprehensions, decorators, generators, sets
@@ -130,7 +130,7 @@ Panel scripts re-render frequently. `PyProgram` holds parsed function defs so
 
 ## Read order
 
-1. [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) — language reference (user-facing)
+1. [14-extensions-sdk](14-extensions-sdk.md) — language reference (user-facing)
 2. `PyEngine.swift` — entry point, 80 lines
 3. `PyLexer.swift` → `PyParser.swift` → `PyAST.swift` — front end
 4. `PyInterpreter.swift` — evaluator (largest file)
@@ -140,6 +140,6 @@ Panel scripts re-render frequently. `PyProgram` holds parsed function defs so
 
 ## See also
 
-- [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) — script author guide
+- [14-extensions-sdk](14-extensions-sdk.md) — script author guide
 - [07-custom-panels](07-custom-panels.md) — panel MVU on top of PyMini
 - [10-extension-host](10-extension-host.md) — where scripts run in the extension

@@ -109,7 +109,7 @@ Updated on insert; persisted with `notify: false`.
 - **Don't edit `EmojiData.generated.swift`.** Run `make emoji` instead.
 
 - **Glass droplet flash is gated on `MotionProfile.allowsExpensiveEffects`.**
-  The additive flash layer dropped frames on older GPUs — see [MOTION.md](../MOTION.md).
+  The additive flash layer dropped frames on older GPUs — see [12-motion](12-motion.md).
 
 - **Emoji suggestions in the letter keyboard** (bar strip while typing `:fire:`-style
   names) use `EmojiData` search in `SuggestionEngine`, separate from `EmojiCanvas`.

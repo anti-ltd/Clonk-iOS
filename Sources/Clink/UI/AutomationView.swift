@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Auto-capitalize, smart punctuation, and symbol-page return behavior.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct AutomationView: View {
     @Environment(AppModel.self) private var model
 

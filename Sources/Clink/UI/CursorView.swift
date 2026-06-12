@@ -8,6 +8,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Space-bar cursor mode and feel. Preview runs in locked mode so only cursor
+/// drags work (`lockedPreviewText`). Settings persist via `AppModel.settings` `didSet`.
 struct CursorView: View {
     private enum Tab { case style, feel }
 

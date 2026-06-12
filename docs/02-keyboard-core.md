@@ -94,7 +94,7 @@ at render time. On Liquid Glass themes, bloom is softened and return is
 critically damped — a full tuned bloom inside `GlassEffectContainer` drops
 frames on A-series GPUs. See the comment block in `KeyboardCanvas.swift` lines 37–45.
 
-Resolved through `MotionProfile` like fixed `Motion` tokens — see [MOTION.md](../MOTION.md).
+Resolved through `MotionProfile` like fixed `Motion` tokens — see [12-motion](12-motion.md).
 
 ### Height contract
 
@@ -111,7 +111,7 @@ height actually sticks.
 
 Built-in panels hang off `ActionPanel` in `KeyboardLiveState`. Activation,
 picker styles, and render branches live in `KeyboardCanvas`. Full walkthrough:
-[EXTENDING.md](../EXTENDING.md).
+[13-extending-panels](13-extending-panels.md).
 
 ---
 
@@ -147,5 +147,5 @@ picker styles, and render branches live in `KeyboardCanvas`. Full walkthrough:
 - [03-touch-and-input](03-touch-and-input.md) — multitouch routing
 - [04-prediction](04-prediction.md) — suggestion bar content
 - [05-emoji](05-emoji.md) — sibling canvas
-- [EXTENDING.md](../EXTENDING.md) — adding panels
-- [MOTION.md](../MOTION.md) — key press animation
+- [13-extending-panels](13-extending-panels.md) — adding panels
+- [12-motion](12-motion.md) — key press animation

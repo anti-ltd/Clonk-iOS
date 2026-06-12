@@ -5,12 +5,14 @@
  
 
  Module: app-ui · Target: Clink
- Learn: EXTENSIONS-SDK.md
+ Learn: docs/14-extensions-sdk.md
  */
 import SwiftUI
 import iUXiOS
 import UniformTypeIdentifiers
 
+/// Manage user-authored custom actions (PyMini `transform` scripts).
+/// Action list persists via `ExtensionManager`; master toggle via `AppModel.settings` `didSet`.
 struct ExtensionsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

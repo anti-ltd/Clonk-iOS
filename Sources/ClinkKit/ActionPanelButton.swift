@@ -5,11 +5,12 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
-// Shared thin vertical rule used between the clipboard icon and bar content.
+// Shared thin vertical rule between the suggestion-bar icon and its content.
+/// Thin vertical divider between the panel icon and bar content.
 func barDivider(theme: Theme) -> some View {
     Rectangle()
         .fill(theme.keyText.color.opacity(0.15))

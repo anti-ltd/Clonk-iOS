@@ -15,6 +15,7 @@ import SwiftUI
 struct TrackpadPanel: View {
     let theme: Theme
 
+    /// Passthrough overlay — `MultiTouchSurface` beneath handles the drag.
     var body: some View {
         Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
             .font(.system(size: 22, weight: .regular))

@@ -129,10 +129,9 @@ public struct Autocorrection: Equatable, Sendable {
 }
 
 /// Live, per-session state the keyboard extension feeds into `KeyboardCanvas`
-/// while typing — the autocomplete suggestions and the pending auto-correction.
-/// Separate from the persisted `KeyboardSettings` because it changes on every
-/// keystroke and never needs saving. Observed by SwiftUI so the suggestion bar
-/// updates without rebuilding the whole keyboard.
+/// while typing — suggestions, autocorrect, panel chrome, and layout hints.
+/// Separate from persisted `KeyboardSettings`; observed by SwiftUI so the
+/// suggestion bar updates without rebuilding the whole keyboard.
 @MainActor
 @Observable
 public final class KeyboardLiveState {
@@ -161,9 +160,8 @@ public final class KeyboardLiveState {
     /// does for action keys like Go / Search / Send / Done.
     public var returnKeyProminent: Bool = false
 
-    /// The action panel currently open (clipboard / notepad), or nil while the
-    /// user is just typing. Replaces the old `clipboardMode` flag now that more
-    /// than one panel can live behind the top-left button.
+    /// The action panel currently open (clipboard, notepad, emoji, …), or nil
+    /// while the user is just typing.
     public var activePanel: ActionPanel? = nil
 
     /// Incremented each time the keyboard finishes settling into view. Observed

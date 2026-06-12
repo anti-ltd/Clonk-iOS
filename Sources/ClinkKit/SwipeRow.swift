@@ -10,6 +10,8 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Preference keys
+
 private struct VisibleKey: PreferenceKey {
     static let defaultValue: CGFloat = 1
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
@@ -19,6 +21,8 @@ private struct RowWidthKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
+
+// MARK: - Swipe action model
 
 /// A trailing action revealed by swiping a `SwipeRow` left.
 public struct SwipeAction: Identifiable {
@@ -35,6 +39,8 @@ public struct SwipeAction: Identifiable {
         self.action = action
     }
 }
+
+// MARK: - Swipe row
 
 /// Swipe-to-reveal row. Dragging shrinks the card from the right (its text stays
 /// left-aligned and visible) and pops in circular `actions`.
@@ -234,6 +240,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
         .simultaneousGesture(swipeGesture)
     }
 
+    // MARK: - Scroll visibility
+
     /// Fraction of the row inside the scroll viewport (1 fully in … 0 fully out).
     private func visibleFraction(_ geo: GeometryProxy) -> CGFloat {
         guard viewportHeight > 0, let scrollSpace else { return 1 }
@@ -243,6 +251,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
         let bottom = min(r.maxY, viewportHeight)
         return max(0, min(1, (bottom - top) / r.height))
     }
+
+    // MARK: - Gesture
 
     private var swipeGesture: some Gesture {
         DragGesture(minimumDistance: 14)
@@ -287,6 +297,8 @@ public struct SwipeRow<Content: View, Background: View>: View {
                 else if openID == id { openID = nil }
             }
     }
+
+    // MARK: - Glass & reveal math
 
     /// Wrap the glass layer (card surface + circles) in one `GlassEffectContainer`
     /// when the theme is glass, so card and nearest circle stretch into a gooey

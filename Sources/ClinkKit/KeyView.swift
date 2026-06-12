@@ -66,17 +66,9 @@ struct TapPulse: ViewModifier {
 
 // MARK: - Key view
 
-/// Renders one key and detects key-*down* (via a zero-distance drag) so the
-/// host clinks the instant the finger lands, then fires the action on release.
-/// A one-shot, additive "tap registered" flash, replayed on every press.
-///
-/// Keyed to `KeyTouchRouter`'s per-key tap tick (which bumps on every
-/// touch-down), so it fires even when the same key is re-pressed while it's
-/// still in the pressed/linger state — the case where the bloom, sprung on
-/// `isPressed`, can't re-animate. It briefly brightens the key over its own
-/// shape and fades out; it changes no geometry, so it layers on top of the
-/// bloom/popup without overriding either. Gated on the same `keyPressWarp`
-/// switch as the bloom, so turning press visuals off silences it too.
+/// Renders one key surface (glass or solid) and publishes glyph, popup, accent,
+/// and hit-frame preferences for the canvas overlay layers. Press/warp state is
+/// read from `KeyTouchRouter`; touches are handled by `MultiTouchSurface`, not here.
 struct KeyView: View {
     let spec: KeySpec
     let theme: Theme
@@ -311,6 +303,8 @@ struct KeyView: View {
             }())
     }
 
+    // MARK: - Surface rendering
+
     /// The key's drawn surface: shift carries its own glyph (so its interactive
     /// glass morphs the glyph too); every other key is just the bare surface, its
     /// glyph painted by the canvas glyph layer.
@@ -379,6 +373,8 @@ struct KeyView: View {
                 .animation(Motion.glyphSwap.animation, value: name)
         }
     }
+
+    // MARK: - Glass tint & material
 
     /// Tint applied to a glass key: character keys take the key fill, function keys
     /// the function-key fill, pressed / latched keys glow with the accent. The

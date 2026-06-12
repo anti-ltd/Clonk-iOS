@@ -24,7 +24,7 @@ func spec(for url: URL) -> HeaderSpec {
         return .init(module: "emoji", target: "ClinkKit", learn: "docs/05-emoji.md")
     }
     if name.hasPrefix("Theme+"), name.hasSuffix(".swift") {
-        return .init(module: "theme", target: "ClinkKit", learn: "THEMING.md")
+        return .init(module: "theme", target: "ClinkKit", learn: "docs/11-theming.md")
     }
 
     switch rel {
@@ -42,8 +42,8 @@ func spec(for url: URL) -> HeaderSpec {
     if rel.hasPrefix("Clink/UI/") {
         var learn = "docs/09-app-ui.md"
         if rel.contains("/Panels/") { learn = "docs/07-custom-panels.md" }
-        else if rel.contains("/Extensions/") { learn = "EXTENSIONS-SDK.md" }
-        else if ["ThemeEditorView.swift", "ThemeBuilderView.swift"].contains(name) { learn = "THEMING.md" }
+        else if rel.contains("/Extensions/") { learn = "docs/14-extensions-sdk.md" }
+        else if ["ThemeEditorView.swift", "ThemeBuilderView.swift"].contains(name) { learn = "docs/11-theming.md" }
         else if ["KeyboardPreview.swift"].contains(name) { learn = "docs/02-keyboard-core.md" }
         else if ["TypingView.swift", "SuggestionsView.swift", "AdaptationView.swift",
                  "LocalizationView.swift", "ArtificialIntelligenceView.swift", "PerformanceView.swift",
@@ -53,7 +53,7 @@ func spec(for url: URL) -> HeaderSpec {
     }
 
     if rel.hasPrefix("ClinkKit/Motion/") {
-        return .init(module: "motion", target: "ClinkKit", learn: "MOTION.md")
+        return .init(module: "motion", target: "ClinkKit", learn: "docs/12-motion.md")
     }
     if rel.hasPrefix("ClinkKit/PyMini/") {
         return .init(module: "pymini", target: "ClinkKit", learn: "docs/08-pymini.md")
@@ -62,7 +62,7 @@ func spec(for url: URL) -> HeaderSpec {
         return .init(module: "custom-panels", target: "ClinkKit", learn: "docs/07-custom-panels.md")
     }
     if rel.hasPrefix("ClinkKit/Extensions/") {
-        return .init(module: "extensions", target: "ClinkKit", learn: "EXTENSIONS-SDK.md")
+        return .init(module: "extensions", target: "ClinkKit", learn: "docs/14-extensions-sdk.md")
     }
 
     let settings: Set = ["KeyboardSettings.swift", "SharedStore.swift", "FeatureFlags.swift",
@@ -74,7 +74,7 @@ func spec(for url: URL) -> HeaderSpec {
 
     let theme: Set = ["Theme.swift", "ThemeTypes.swift", "ThemePresets.swift", "RGBA.swift"]
     if theme.contains(name) {
-        return .init(module: "theme", target: "ClinkKit", learn: "THEMING.md")
+        return .init(module: "theme", target: "ClinkKit", learn: "docs/11-theming.md")
     }
 
     let keyboardCore: Set = ["KeyboardCanvas.swift", "KeyboardController.swift", "KeyboardLayout.swift",
@@ -109,7 +109,7 @@ func spec(for url: URL) -> HeaderSpec {
         "NotepadBrowsePanel.swift", "NotepadBar.swift", "CalculatorPanel.swift",
         "PanelSwitcherPanel.swift", "PanelLeadingIcon.swift"]
     if panels.contains(name) {
-        return .init(module: "panels", target: "ClinkKit", learn: "EXTENDING.md")
+        return .init(module: "panels", target: "ClinkKit", learn: "docs/13-extending-panels.md")
     }
 
     return .init(module: "keyboard-core", target: "ClinkKit", learn: "docs/02-keyboard-core.md")

@@ -17,6 +17,8 @@ extension UTType {
     static var clinkPanel: UTType { UTType("ltd.anti.clink.panel") ?? .json }
 }
 
+/// In-app editor for one `ClinkPanel`: metadata, icon, placement, PyMini source,
+/// and a live preview whose tap/insert callbacks log locally (stub — no document proxy).
 struct PanelEditorView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss

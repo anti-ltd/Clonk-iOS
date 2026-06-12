@@ -54,6 +54,7 @@ struct LanguageHeuristics {
     /// "en_US", "fr_FR", "ru_RU"). Matches on the language code before the region
     /// separator; falls back to `.empty` for anything we don't ship.
     static func forLanguage(_ identifier: String) -> LanguageHeuristics {
+        // Strip the region ("en" from "en_US") — tables are per base language.
         let code = identifier.prefix { $0 != "_" && $0 != "-" }.lowercased()
         return table[String(code)] ?? .empty
     }

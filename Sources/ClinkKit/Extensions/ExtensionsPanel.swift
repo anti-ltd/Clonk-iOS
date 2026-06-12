@@ -9,16 +9,20 @@
  
 
  Module: extensions · Target: ClinkKit
- Learn: EXTENSIONS-SDK.md
+ Learn: docs/14-extensions-sdk.md
  */
 import SwiftUI
 
+/// Full-keyboard overlay listing enabled custom actions. Tapping a row fires
+/// `onRun`; the host gathers input, runs PyMini, and inserts the result.
 struct ExtensionsPanel: View {
+    /// Actions to show, in user order.
     let extensions: [ClinkExtension]
     let theme: Theme
     let cornerRadius: CGFloat
     /// Fired when a row is tapped — the host runs the action and inserts output.
     let onRun: (ClinkExtension) -> Void
+    /// Dismisses the panel (typically closes the action overlay).
     let onDismiss: () -> Void
     /// Top-left "back" action; nil leaves the leading icon decorative.
     var onBack: (() -> Void)? = nil

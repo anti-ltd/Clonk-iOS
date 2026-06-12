@@ -8,6 +8,8 @@
  */
 import SwiftUI
 
+/// App entry point. Holds one `AppModel` in the environment; production boots
+/// `RootView`, DEBUG may route to `StagedRoot` or `ShowcaseView`.
 @main
 struct ClinkApp: App {
     @State private var model = AppModel()

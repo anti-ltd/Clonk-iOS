@@ -9,6 +9,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Backspace repeat and suggestion debounce budget.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct PerformanceView: View {
     private enum Tab { case responsiveness, suggestions }
 

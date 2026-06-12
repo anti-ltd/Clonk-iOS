@@ -22,7 +22,9 @@ import SwiftUI
 @MainActor
 @Observable
 public final class KeyboardController {
+    /// Letter, number, or symbol key plane currently shown.
     public enum Plane: Equatable, Sendable { case letters, numbers, symbols }
+    /// Shift state — `.locked` is caps lock.
     public enum Shift: Equatable, Sendable { case off, on, locked }
 
     public var plane: Plane = .letters
@@ -40,6 +42,7 @@ public final class KeyboardController {
     /// emoji is next in the script.
     public var showEmoji = false
     /// The selected emoji category tab.
+    /// The selected emoji category tab (index into `EmojiData.categories`).
     public var emojiCategory = 0
     /// The emoji the simulator is currently pressing (so the cell blooms).
     public var pressedEmoji: String?

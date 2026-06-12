@@ -100,7 +100,7 @@ The app preview uses the same canvas but passes stub callbacks — no document p
 
 - **Document edits stay in the extension.** ClinkKit views call `onInsert` / `onBackspace` callbacks. Only `KeyboardViewController` touches `textDocumentProxy`. The app preview passes no-ops or local buffer logic.
 
-- **No `TextField` inside the extension for panel compose.** The keyboard *is* the keyboard — embedded fields get no input. Route keys into a buffer instead (notepad pattern). See [EXTENDING.md](../EXTENDING.md).
+- **No `TextField` inside the extension for panel compose.** The keyboard *is* the keyboard — embedded fields get no input. Route keys into a buffer instead (notepad pattern). See [13-extending-panels](13-extending-panels.md).
 
 - **Keyboard extension memory budget is tight.** ~50 MB before jetsam. That's why PyMini exists instead of CPython, and why glass effects can't go on every list cell.
 
@@ -121,5 +121,5 @@ The app preview uses the same canvas but passes stub callbacks — no document p
 ## See also
 
 - [README.md](../README.md) — product features, build commands
-- [THEMING.md](../THEMING.md) — visual layer
-- [MOTION.md](../MOTION.md) — animation layer
+- [11-theming](11-theming.md) — visual layer
+- [12-motion](12-motion.md) — animation layer

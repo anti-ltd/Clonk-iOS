@@ -18,6 +18,8 @@ import SwiftUI
 // All `#if DEBUG`: it never compiles into a Release / App Store build, matching
 // the screenshot-backend-never-ships posture of our other apps.
 #if DEBUG
+/// Launch-argument wiring for the AppStage marketing screenshot pipeline.
+/// Parse `--appstage <slug>` and seed curated settings per screen.
 enum AppStage {
     static let slug: String? = {
         let args = ProcessInfo.processInfo.arguments

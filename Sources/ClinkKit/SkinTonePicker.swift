@@ -128,6 +128,8 @@ struct EmojiGridFrameKey: PreferenceKey {
 // fires a plain insert. Touch points are read in window space to match SwiftUI's
 // `.global` cell frames.
 
+/// Bridges a `UILongPressGestureRecognizer` onto the emoji grid's scroll
+/// container so hold-slide-release skin-tone picking coexists with cell taps.
 struct EmojiHoldGesture: UIViewRepresentable {
     var onBegan: (CGPoint) -> Void
     var onChanged: (CGPoint) -> Void

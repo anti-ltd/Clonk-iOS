@@ -8,6 +8,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Layout settings: arrangement picker, row options, and custom keys tab.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct LayoutView: View {
     private enum Tab { case layout, rows, custom }
 

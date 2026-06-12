@@ -12,6 +12,8 @@ import iUXiOS
 /// characters you type: predictions, corrections, and the little automatic
 /// niceties. Pulled out of "Layout & Keys" into its own screen so autocorrect
 /// and friends live somewhere a user would actually look for them.
+///
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct TypingView: View {
     @Environment(AppModel.self) private var model
 

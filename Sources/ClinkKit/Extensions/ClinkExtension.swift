@@ -9,7 +9,7 @@
  
 
  Module: extensions · Target: ClinkKit
- Learn: EXTENSIONS-SDK.md
+ Learn: docs/14-extensions-sdk.md
  */
 import Foundation
 
@@ -45,7 +45,9 @@ public enum ExtInputSource: String, Codable, Sendable, CaseIterable, Identifiabl
     }
 }
 
-/// A single user-authored action.
+/// A single user-authored keyboard action. Persisted in the App Group and
+/// shareable as `.clinkext` JSON. The keyboard runs `source` through `PyEngine`
+/// and inserts (or replaces with) the `transform(text)` return value.
 public struct ClinkExtension: Codable, Sendable, Identifiable, Equatable {
     public var id: String
     public var name: String
@@ -99,6 +101,8 @@ public struct ClinkExtension: Codable, Sendable, Identifiable, Equatable {
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
     }
 }
+
+// MARK: - Starter & samples
 
 public extension ClinkExtension {
     /// A blank starter script for the editor's "new" action.

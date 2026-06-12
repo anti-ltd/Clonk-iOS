@@ -19,6 +19,8 @@ enum FStringPart {
     case expr(Expr)
 }
 
+/// Expression nodes — everything that can appear on the right of `=` or inside
+/// another expression.
 indirect enum Expr {
     case noneLit
     case boolLit(Bool)
@@ -38,13 +40,15 @@ indirect enum Expr {
     case call(callee: Expr, args: [Expr], kwargs: [(String, Expr)])
     case index(Expr, Expr)
     case slice(Expr, lower: Expr?, upper: Expr?, step: Expr?)
+    /// Attribute access — only valid as the callee of a method call (`obj.m(...)`).
     case attribute(Expr, String)
-    /// A bare comma list on the LHS of `=` (tuple unpacking target) or in a
-    /// `for a, b in …` target.
+    /// Comma-separated target list for unpacking or `for a, b in …`.
     case tuple([Expr])
 }
 
+/// Statement nodes — top-level and block bodies.
 indirect enum Stmt {
+    /// Bare expression statement (side effects only, e.g. a call).
     case expr(Expr, line: Int)
     /// `a = b = value` → targets = [a, b].
     case assign(targets: [Expr], value: Expr, line: Int)
@@ -60,6 +64,7 @@ indirect enum Stmt {
 }
 
 extension Stmt {
+    /// 1-based source line attached at parse time for runtime errors.
     var line: Int {
         switch self {
         case .expr(_, let l), .assign(_, _, let l), .augAssign(_, _, _, let l),

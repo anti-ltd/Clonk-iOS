@@ -14,6 +14,7 @@ import iUXiOS
 // MARK: - Theme page background
 
 private struct ResolvedThemeKey: EnvironmentKey {
+    /// Default when no theme is injected — matches keyboard factory default.
     static let defaultValue = Theme.default
 }
 
@@ -41,11 +42,12 @@ private struct ThemePageBackgroundModifier: ViewModifier {
 }
 
 extension View {
+    /// Paint the page background from `resolvedKeyboardTheme` (gradient or solid).
     func themePageBackground() -> some View { modifier(ThemePageBackgroundModifier()) }
 }
 
-// Shared sidebar open/close state, injected via @Environment so DetailHost can
-// open the sidebar without threading a binding through every content view.
+/// Shared sidebar open/close state, injected via `@Environment` so `DetailHost` can
+/// open the sidebar without threading a binding through every content view.
 @Observable @MainActor
 final class SidebarState {
     var isOpen = false
@@ -74,11 +76,23 @@ private struct NavDepthModifier: ViewModifier {
 }
 
 extension View {
+    /// Increment/decrement `SidebarState.navigationDepth` for overlay nav-button hiding.
     func tracksNavigationDepth() -> some View { modifier(NavDepthModifier()) }
 }
 
 // MARK: - Root
 
+/// Root shell: slide-in sidebar over a single detail pane.
+///
+/// Navigation pattern:
+/// - Sidebar row / home card sets `destination`; `DetailHost` swaps the screen
+///   inside one `NavigationStack` (push/pop stays per-destination).
+/// - Overlay nav buttons (sidebar / home / trailing) sit above content; they
+///   hide when `sidebar.navigationDepth > 0` (a pushed screen owns the back chevron).
+/// - `sidebar.navigate` lets onboarding step buttons jump destinations without
+///   opening the sidebar.
+/// - Theme-aware sheets attach inside the ZStack via `SidebarSheetHost` so they
+///   inherit `resolvedKeyboardTheme` — outermost modifiers would read WindowGroup defaults.
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
@@ -99,6 +113,7 @@ struct RootView: View {
         }
     }
 
+    /// Every screen the sidebar and home card grid can route to.
     enum SidebarDestination: Hashable {
         case clink, permissions, localization, layout, theme, artificialIntelligence
         // Customization placeholders (pages to be built out).
@@ -269,6 +284,9 @@ struct RootView: View {
         .allowsHitTesting(false)
     }
 
+    /// Overlay nav strip: sidebar toggle on home, house icon elsewhere, plus any
+    /// destination-specific trailing button from `NavBarState`. Hidden while the
+    /// sidebar is open or while a pushed screen owns the back chevron.
     private var navButtonLayer: some View {
         HStack(spacing: 0) {
             Group {
@@ -309,6 +327,9 @@ struct RootView: View {
 
 // MARK: - Detail host
 
+/// Wraps the active sidebar destination in a `NavigationStack` and injects the
+/// resolved keyboard theme into the environment. When `themeApp` is off the app
+/// chrome falls back to Liquid Light/Dark defaults instead of the selected theme.
 private struct DetailHost: View {
     @Environment(AppModel.self) private var model
     @Environment(SidebarState.self) private var sidebar
@@ -447,6 +468,8 @@ private struct PlaceholderView: View {
 
 // MARK: - Sidebar panel
 
+/// Left drawer: brand header, grouped nav rows, and dynamic extension section.
+/// Row tap sets `destination` and closes the sidebar with `Motion.sidebar`.
 private struct SidebarPanel: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
@@ -996,8 +1019,6 @@ private struct ExtensionReorderList: View {
     }
 }
 
-// MARK: - Clink (setup)
-
 // MARK: - Permissions (onboarding step 2)
 
 /// The keyboard-enable / Full Access guide as a standalone onboarding page,
@@ -1011,6 +1032,11 @@ private struct PermissionsView: View {
     }
 }
 
+// MARK: - Clink (setup)
+
+/// Home grid: destination cards, live keyboard preview, and onboarding entry.
+/// Card taps set `destination` (same routing as the sidebar). Scroll position is
+/// restored via `sidebar.homeScrollAnchor` when returning from a detail screen.
 private struct ClinkContent: View {
     @Environment(AppModel.self) private var model
     @Environment(SidebarState.self) private var sidebar

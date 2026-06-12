@@ -11,6 +11,8 @@ import SwiftUI
 import iUXiOS
 import UniformTypeIdentifiers
 
+/// Manage user-authored custom panels (PyMini full-keyboard UIs).
+/// Panel list persists via `PanelManager`; toggles via `AppModel.settings` `didSet`.
 struct PanelsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

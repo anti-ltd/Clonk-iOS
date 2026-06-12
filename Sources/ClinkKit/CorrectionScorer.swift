@@ -119,7 +119,10 @@ public struct CorrectionScorer: Sendable {
 /// Letter adjacency derived from a `KeyboardLayout`'s rows — same row
 /// neighbors plus the staggered overlaps on the rows above/below. Works for
 /// any preset (QWERTY, AZERTY, ЙЦУКЕН, …) without per-layout tables.
+/// Letter adjacency derived from a layout's row geometry.
 public enum KeyAdjacency {
+    /// Neighbour map for `layout`: same-row neighbours plus staggered overlaps
+    /// on the rows above and below.
     public static func forLayout(_ layout: KeyboardLayout) -> [Character: Set<Character>] {
         var adj: [Character: Set<Character>] = [:]
         let rows: [[Character]] = layout.rows.map { row in row.compactMap(\.first) }

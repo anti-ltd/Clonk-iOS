@@ -17,6 +17,8 @@ import Foundation
 import MetricKit
 import OSLog
 
+/// DEBUG MetricKit subscriber. Logs daily OS animation-hitch and hang histograms
+/// to the console — zero in-process measurement cost. App target only.
 final class MotionMetrics: NSObject, MXMetricManagerSubscriber, @unchecked Sendable {
     static let shared = MotionMetrics()
 

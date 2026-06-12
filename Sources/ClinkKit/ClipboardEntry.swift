@@ -8,9 +8,14 @@
  */
 import Foundation
 
+/// One item in the clipboard history FIFO. Pinned entries float to the top and
+/// survive trimming and "clear" — they are preference markers, not permanent locks
+/// unless `clipboardIgnorePinsOnDelete` is off.
 public struct ClipboardEntry: Codable, Equatable, Sendable {
     public var text: String
+    /// When the clip was captured — drives the relative-time label in overlay/grid UI.
     public var date: Date
+    /// Pinned clips sort first and are exempt from FIFO trimming.
     public var pinned: Bool
 
     public init(text: String, date: Date = .now, pinned: Bool = false) {
@@ -29,6 +34,7 @@ public struct ClipboardEntry: Codable, Equatable, Sendable {
 }
 
 extension Date {
+    /// Compact relative label for clipboard cards ("Just now", "5m ago", "2d ago").
     public var clipboardRelative: String {
         let seconds = Int(Date.now.timeIntervalSince(self))
         if seconds < 60 { return "Just now" }

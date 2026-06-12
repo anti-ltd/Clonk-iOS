@@ -15,11 +15,14 @@
  
 
  Module: motion · Target: ClinkKit
- Learn: MOTION.md
+ Learn: docs/12-motion.md
  */
 import SwiftUI
 import UIKit
 
+/// Adaptive resolver every `MotionToken.animation` passes through. In the `.full`
+/// tier (default), resolved curves are byte-identical to the raw token; under
+/// Reduce Motion, tokens degrade by role — essential touch response is untouched.
 @MainActor @Observable
 final class MotionProfile {
     static let shared = MotionProfile()

@@ -37,6 +37,8 @@ public enum SmartPunctuation {
     /// What to substitute when `inserted` is typed, given the text before the
     /// cursor. `deleteBackward` chars are removed first, then `insert` is inserted
     /// in place of the original character. Returns nil to insert `inserted` as-is.
+    /// A single smart-punctuation substitution: delete N chars behind the cursor,
+    /// then insert the replacement string.
     public struct Edit: Equatable {
         public var deleteBackward: Int
         public var insert: String
@@ -46,6 +48,7 @@ public enum SmartPunctuation {
         }
     }
 
+    /// Returns a substitution edit for `inserted`, or nil to insert as-is.
     public static func edit(for inserted: String, before: String) -> Edit? {
         switch inserted {
         case " ":

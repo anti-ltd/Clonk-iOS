@@ -4,7 +4,7 @@
  
 
  Module: app-ui · Target: Clink
- Learn: THEMING.md
+ Learn: docs/11-theming.md
  */
 import SwiftUI
 import iUXiOS
@@ -17,6 +17,8 @@ extension UTType {
     static var clinkTheme: UTType { UTType(exportedAs: "ltd.anti.clink.theme") }
 }
 
+/// Theme picker with live preview. Preset grid, custom theme CRUD, export/import.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct ThemeEditorView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

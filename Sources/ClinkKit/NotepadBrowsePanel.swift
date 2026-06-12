@@ -4,7 +4,7 @@
  
 
  Module: panels · Target: ClinkKit
- Learn: EXTENDING.md
+ Learn: docs/13-extending-panels.md
  */
 import SwiftUI
 
@@ -25,6 +25,7 @@ struct NotepadBrowsePanel: View {
     var onBack: (() -> Void)? = nil
 
     @State private var openRow: Int? = nil
+    /// Named coordinate space for scroll-away row close (see `SwipeRow`).
     private let scrollSpace = "noteScroll"
 
     var body: some View {
@@ -66,6 +67,8 @@ struct NotepadBrowsePanel: View {
         }
     }
 
+    // MARK: - Card list
+
     @ViewBuilder private func cardList(viewportHeight: CGFloat) -> some View {
         VStack(spacing: 6) {
             ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
@@ -100,6 +103,8 @@ struct NotepadBrowsePanel: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    // MARK: - Chrome
 
     @ViewBuilder private var cardSurface: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

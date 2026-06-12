@@ -8,6 +8,8 @@
 import SwiftUI
 import iUXiOS
 
+/// Haptic style and intensity. Requires Full Access to fire in the extension.
+/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct HapticsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme

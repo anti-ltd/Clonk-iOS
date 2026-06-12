@@ -33,7 +33,7 @@ for the full story on a module, see the linked doc.
 | `TuningPresets.swift` | Preset chips and tuned section helpers |
 | `EnableFlowView.swift` | Keyboard enable + Full Access onboarding |
 | `KeyboardPreview.swift` | Live preview widget + layout helpers |
-| `ThemeEditorView.swift` | Theme grid, export/import → [THEMING.md](../THEMING.md) |
+| `ThemeEditorView.swift` | Theme grid, export/import → [11-theming](11-theming.md) |
 | `ThemeBuilderView.swift` | Custom theme editor + gradient editor |
 | `AnimationView.swift` | Key/space/popup spring tuning |
 | `PopupsView.swift` | Key popup settings |
@@ -76,7 +76,7 @@ for the full story on a module, see the linked doc.
 
 | File | Purpose |
 |---|---|
-| `ExtensionsView.swift` | Custom action list → [EXTENSIONS-SDK.md](../EXTENSIONS-SDK.md) |
+| `ExtensionsView.swift` | Custom action list → [14-extensions-sdk](14-extensions-sdk.md) |
 | `ExtensionEditorView.swift` | Action script editor + run console |
 
 ---
@@ -95,7 +95,7 @@ for the full story on a module, see the linked doc.
 
 | File | Purpose |
 |---|---|
-| `Theme.swift` | Core Theme struct → [THEMING.md](../THEMING.md) |
+| `Theme.swift` | Core Theme struct → [11-theming](11-theming.md) |
 | `ThemeTypes.swift` | Gradient, material, glass, font enums |
 | `RGBA.swift` | Codable color bridging SwiftUI/UIKit |
 | `ThemeBackgroundStore.swift` | App Group photo JPEG storage |
@@ -191,7 +191,7 @@ for the full story on a module, see the linked doc.
 
 | File | Purpose |
 |---|---|
-| `ActionPanelButton.swift` | Suggestion-bar panel icon → [EXTENDING.md](../EXTENDING.md) |
+| `ActionPanelButton.swift` | Suggestion-bar panel icon → [13-extending-panels](13-extending-panels.md) |
 | `ClipboardPanel.swift` | Full clipboard overlay |
 | `ClipboardBar.swift` | Inline clipboard strip |
 | `ClipboardManager.swift` | FIFO history persistence |
@@ -208,7 +208,7 @@ for the full story on a module, see the linked doc.
 
 | File | Purpose |
 |---|---|
-| `Motion/Motion.swift` | Named animation tokens → [MOTION.md](../MOTION.md) |
+| `Motion/Motion.swift` | Named animation tokens → [12-motion](12-motion.md) |
 | `Motion/MotionProfile.swift` | Reduce Motion / Low Power resolver |
 | `Motion/MotionSequence.swift` | Multi-phase animation helper |
 | `Motion/MotionDiagnostics.swift` | Instruments signposts |

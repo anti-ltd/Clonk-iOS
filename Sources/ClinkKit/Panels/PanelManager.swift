@@ -9,23 +9,31 @@
  */
 import SwiftUI
 
+/// Observable App Group store for user-authored `ClinkPanel` custom UIs. Mirrors
+/// `ExtensionManager`: the app edits, the keyboard renders via `PanelRuntime`.
+/// Darwin notification on save for live reload.
 @MainActor
 @Observable
 public final class PanelManager {
+    /// All custom panels, in display / picker order.
     public private(set) var items: [ClinkPanel] = []
 
+    /// Darwin notification posted when the panel list changes.
     public static let didChangeNotification = "ltd.anti.clink.panelsDidChange"
 
+    /// Suppresses `save()` while hydrating from disk.
     private var loading = false
 
     public init() { load() }
 
+    /// Panels that should appear in the keyboard picker.
     public var enabledItems: [ClinkPanel] { items.filter { $0.enabled } }
 
     // MARK: - CRUD
 
     public func add(_ panel: ClinkPanel) { items.insert(panel, at: 0); save() }
 
+    /// Insert or replace by id.
     public func upsert(_ panel: ClinkPanel) {
         if let i = items.firstIndex(where: { $0.id == panel.id }) { items[i] = panel }
         else { items.append(panel) }
@@ -34,6 +42,7 @@ public final class PanelManager {
 
     public func delete(id: String) { items.removeAll { $0.id == id }; save() }
 
+    /// Toggle visibility in the picker without deleting.
     public func setEnabled(_ enabled: Bool, id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].enabled = enabled
@@ -45,16 +54,20 @@ public final class PanelManager {
         save()
     }
 
+    /// Restore built-in sample panels (destructive).
     public func reset() { items = ClinkPanel.samples; save() }
 
     // MARK: - Sharing (.clinkpanel = JSON)
 
+    /// Encode a single panel for export / share.
     public func exportData(_ panel: ClinkPanel) -> Data? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try? encoder.encode(panel)
     }
 
+    /// Import from `.clinkpanel` bytes (single object or array). Fresh ids avoid
+    /// collisions with existing panels. Returns imported items, or [] on failure.
     @discardableResult
     public func importData(_ data: Data) -> [ClinkPanel] {
         let decoder = JSONDecoder()
@@ -80,6 +93,7 @@ public final class PanelManager {
             .appendingPathComponent("clink-panels.v1.json")
     }
 
+    /// Reload from disk — used by the keyboard to pick up app-side edits.
     public func reload() { load() }
 
     private func load() {

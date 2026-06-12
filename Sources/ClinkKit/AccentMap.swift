@@ -12,6 +12,8 @@
 import Foundation
 
 enum AccentMap {
+    // MARK: - Variant table
+
     /// Accent variants for a lowercase base letter, in the order the system
     /// keyboard offers them. Empty for letters with no common accents.
     static let variants: [String: [String]] = [
@@ -29,6 +31,8 @@ enum AccentMap {
         "y": ["ÿ", "ý"],
         "z": ["ž", "ź", "ż"],
     ]
+
+    // MARK: - Resolution
 
     /// The full ordered option list for an already-cased base glyph: the base
     /// itself first (so releasing without sliding keeps what was typed), then its

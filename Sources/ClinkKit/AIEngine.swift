@@ -89,7 +89,9 @@ public actor AIEngine {
         /// System-style instructions. The session is rebuilt when these change,
         /// so features with a stable persona pay the setup cost once.
         public var instructions: String?
+        /// Sampling temperature passed to `GenerationOptions`.
         public var temperature: Double
+        /// Hard cap on generated tokens — kept low for keyboard-shaped output.
         public var maximumResponseTokens: Int
 
         public init(

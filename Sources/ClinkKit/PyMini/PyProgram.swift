@@ -10,13 +10,20 @@
  */
 import Foundation
 
-/// The result of calling a function in a `PyProgram`.
+/// Outcome of calling a function on a warm `PyProgram` interpreter.
 struct PyCallResult {
+    /// Return value, or nil on error / implicit `None`.
     let value: PyValue?
+    /// User-facing runtime error, or nil on success.
     let error: String?
+    /// Lines from `print(...)` during this call only.
     let log: [String]
 }
 
+/// A parsed module kept hot in memory. Top-level `def`s persist so `view(state)`
+/// (custom panels) can be called on every tap without re-parsing. Each `call`
+/// resets the step budget and `print` buffer so one render can't inherit another's
+/// spent budget or log noise.
 final class PyProgram {
     private let interp = PyInterpreter()
     /// A load-time (parse / top-level) error, or nil if the module loaded.
@@ -38,8 +45,10 @@ final class PyProgram {
         loadError = err
     }
 
+    /// Whether a top-level function with this name was defined at load time.
     func has(_ name: String) -> Bool { interp.hasFunction(name) }
 
+    /// Invoke `name` with arguments. Resets step budget and print buffer first.
     func call(_ name: String, _ args: [PyValue]) -> PyCallResult {
         interp.resetBudget()
         interp.clearPrinted()

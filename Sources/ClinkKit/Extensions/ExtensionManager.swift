@@ -9,10 +9,13 @@
  
 
  Module: extensions · Target: ClinkKit
- Learn: EXTENSIONS-SDK.md
+ Learn: docs/14-extensions-sdk.md
  */
 import SwiftUI
 
+/// Observable App Group store for user-authored `ClinkExtension` actions. The
+/// container app edits the list; the keyboard extension reads it and runs scripts
+/// via `PyEngine`. Posts a Darwin notification on save so a live keyboard reloads.
 @MainActor
 @Observable
 public final class ExtensionManager {
@@ -22,6 +25,7 @@ public final class ExtensionManager {
     /// Darwin notification posted when the extension list changes.
     public static let didChangeNotification = "ltd.anti.clink.extensionsDidChange"
 
+    /// Suppresses `save()` while hydrating from disk (avoids a spurious notify).
     private var loading = false
 
     public init() { load() }
@@ -31,6 +35,7 @@ public final class ExtensionManager {
 
     // MARK: - CRUD
 
+    /// Prepend a new action (most-recent editing position).
     public func add(_ ext: ClinkExtension) {
         items.insert(ext, at: 0)
         save()
@@ -51,17 +56,20 @@ public final class ExtensionManager {
         save()
     }
 
+    /// Toggle visibility in the keyboard extensions panel without deleting.
     public func setEnabled(_ enabled: Bool, id: String) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].enabled = enabled
         save()
     }
 
+    /// Reorder the management list — display order is also the keyboard panel order.
     public func move(from source: IndexSet, to destination: Int) {
         items.move(fromOffsets: source, toOffset: destination)
         save()
     }
 
+    /// Restore the built-in sample actions (destructive).
     public func reset() {
         items = ClinkExtension.samples
         save()
