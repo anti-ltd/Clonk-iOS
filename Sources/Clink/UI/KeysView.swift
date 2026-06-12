@@ -86,6 +86,15 @@ struct KeysView: View {
     private func paddingTab(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Values") {
+            if model.settings.suggestionsEnabled {
+                SliderRow("Suggestion bar padding",
+                          tooltip: "Extra space above the suggestion bar.",
+                          value: $model.settings.suggestionTopPadding,
+                          in: 0...20, step: 1) {
+                    $0 == 0 ? "None" : "\(Int($0)) pt"
+                }
+                Divider()
+            }
             SliderRow("Top padding",
                       tooltip: "Space between the suggestion bar and the top row of keys.",
                       value: $model.settings.keyboardTopPadding,

@@ -288,7 +288,7 @@ final class KeyboardViewController: UIInputViewController {
         let title: String
         switch type {
         case .go:                     title = "Go"
-        case .search, .google, .yahoo: title = "Search"
+        case .search, .google, .yahoo: title = "Search";  symbol = "magnifyingglass"
         case .join:                   title = "Join"
         case .next:                   title = "Next"
         case .route:                  title = "Route"

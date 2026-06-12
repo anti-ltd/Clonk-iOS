@@ -14,6 +14,15 @@ struct SuggestionsView: View {
                 ToggleRow("Suggestion bar",
                           subtitle: "Offline autocomplete above the keys.",
                           isOn: $model.settings.suggestionsEnabled)
+                if model.settings.suggestionsEnabled {
+                    Divider()
+                    SliderRow("Top padding",
+                              tooltip: "Extra space above the suggestion bar.",
+                              value: $model.settings.suggestionTopPadding,
+                              in: 0...20, step: 1) {
+                        $0 == 0 ? "None" : "\(Int($0)) pt"
+                    }
+                }
                 Divider()
                 ToggleRow("Auto-correction",
                           subtitle: "Fix the word when you type a space or punctuation.",

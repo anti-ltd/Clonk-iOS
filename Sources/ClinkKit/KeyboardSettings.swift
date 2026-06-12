@@ -386,6 +386,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// the suggestion bar is shown (`suggestionsEnabled`). 1.0 = matches the bar
     /// exactly; >1 makes the chips taller to hit; <1 shrinks them.
     public var suggestionHitboxScale: Double
+    /// Extra space above the suggestion bar — between the bar's top edge and the
+    /// keyboard's top. Points. Default 0.
+    public var suggestionTopPadding: Double
     /// Multiplier applied to the top-left panel button's tap height before
     /// hit-testing. Only takes effect while icon activation is on
     /// (`activateWithIcon` with at least one panel enabled).
@@ -618,6 +621,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         showHitboxOverlay: Bool = false,
         hitboxScale: Double = 0.90,
         suggestionHitboxScale: Double = 1.0,
+        suggestionTopPadding: Double = 0,
         panelButtonHitboxScale: Double = 1.0,
         adaptiveHitboxes: Bool = false,
         adaptiveGrow: Double = AdaptiveHitbox.defaultGrow,
@@ -740,6 +744,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.showHitboxOverlay = showHitboxOverlay
         self.hitboxScale = hitboxScale
         self.suggestionHitboxScale = suggestionHitboxScale
+        self.suggestionTopPadding = suggestionTopPadding
         self.panelButtonHitboxScale = panelButtonHitboxScale
         self.adaptiveHitboxes = adaptiveHitboxes
         self.adaptiveGrow = adaptiveGrow
@@ -888,6 +893,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         showHitboxOverlay = try c.decodeIfPresent(Bool.self, forKey: .showHitboxOverlay) ?? false
         hitboxScale = try c.decodeIfPresent(Double.self, forKey: .hitboxScale) ?? 0.90
         suggestionHitboxScale = try c.decodeIfPresent(Double.self, forKey: .suggestionHitboxScale) ?? 1.0
+        suggestionTopPadding = try c.decodeIfPresent(Double.self, forKey: .suggestionTopPadding) ?? 0
         panelButtonHitboxScale = try c.decodeIfPresent(Double.self, forKey: .panelButtonHitboxScale) ?? 1.0
         adaptiveHitboxes = try c.decodeIfPresent(Bool.self, forKey: .adaptiveHitboxes) ?? false
         adaptiveGrow = try c.decodeIfPresent(Double.self, forKey: .adaptiveGrow) ?? AdaptiveHitbox.defaultGrow

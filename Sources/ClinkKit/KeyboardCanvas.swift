@@ -416,7 +416,7 @@ public struct KeyboardCanvas: View {
             || settings.notepadEnabled || settings.emojiEnabled
             || settings.calculatorEnabled
         if settings.suggestionsEnabled || (settings.activateWithIcon && anyPanel) {
-            h += Metrics.suggestionBarHeight
+            h += Metrics.suggestionBarHeight + CGFloat(settings.suggestionTopPadding)
         }
         // User-chosen top/bottom breathing room around the key block.
         h += CGFloat(settings.keyboardTopPadding) + CGFloat(settings.keyboardBottomPadding)
@@ -953,6 +953,7 @@ public struct KeyboardCanvas: View {
                         }
                     }
                     .frame(height: Metrics.suggestionBarHeight)
+                    .padding(.top, CGFloat(settings.suggestionTopPadding))
                 }
                 keys
                     .backgroundPreferenceValue(KeyFrameKey.self) { anchors in
@@ -1055,6 +1056,7 @@ public struct KeyboardCanvas: View {
             GeometryReader { proxy in
                 ForEach(glyphs) { g in
                     glyphLabel(g)
+                        .frame(width: g.multiChar ? max(proxy[g.anchor].width - 6, 0) : nil)
                         .scaleEffect(x: g.scaleX, y: g.scaleY, anchor: .center)
                         // Offset rides BEFORE the spring: while dragging, only
                         // `g.offsetX` changes (scale is constant) so it tracks the
@@ -1256,6 +1258,8 @@ public struct KeyboardCanvas: View {
                     .font(.system(size: g.fontSize ?? (g.multiChar ? 16 : 22),
                                   weight: theme.keyFontWeight.fontWeight,
                                   design: theme.keyFontDesign.fontDesign))
+                    .minimumScaleFactor(g.multiChar ? 0.5 : 1)
+                    .lineLimit(1)
             }
         }
         .foregroundStyle(g.color)
