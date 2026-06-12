@@ -1076,6 +1076,19 @@ public struct KeyboardCanvas: View {
                         // delete key never disappears during a plane switch.
                         .transition(.identity)
                 }
+                // Long-press hint glyphs: small corner indicators on keys that have
+                // long-press alternates, when the user has enabled the feature.
+                ForEach(glyphs) { g in
+                    if let hint = g.hint {
+                        let rect = proxy[g.anchor]
+                        Text(hint)
+                            .font(.system(size: 9, weight: .medium,
+                                          design: theme.keyFontDesign.fontDesign))
+                            .foregroundStyle(g.color.opacity(0.45))
+                            .position(x: rect.maxX - 7, y: rect.minY + 8)
+                            .transition(.identity)
+                    }
+                }
             }
             .allowsHitTesting(false)
             // Blank the key letters while the trackpad covers them, and always in
@@ -1772,7 +1785,8 @@ public struct KeyboardCanvas: View {
                             keyID: "\(rowID)-\(i)",
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
                             router: touch,
-                            physics: physics)
+                            physics: physics,
+                            longPressHintsEnabled: settings.longPressHintsEnabled)
                         .frame(width: unit * CGFloat(spec.weight))
                         // Plane switches (ABC ⇄ 123 ⇄ #+=) change a row's key count,
                         // so the tail keys insert/remove. Inside GlassEffectContainer

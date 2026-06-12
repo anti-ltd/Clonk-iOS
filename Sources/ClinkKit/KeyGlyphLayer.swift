@@ -28,6 +28,9 @@ struct KeyGlyphInfo: Identifiable, Equatable {
     let multiChar: Bool
     /// Override glyph point size (number row); nil = default sizing.
     var fontSize: CGFloat? = nil
+    /// First long-press alternate for this key, shown as a small corner glyph when
+    /// long-press hints are enabled. nil when the key has no alternates or hints are off.
+    var hint: String? = nil
 }
 
 struct KeyGlyphKey: PreferenceKey {

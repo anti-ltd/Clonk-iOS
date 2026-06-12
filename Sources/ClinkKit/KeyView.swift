@@ -97,6 +97,7 @@ struct KeyView: View {
     /// written by the single UIKit touch surface (see `KeyTouchRouter`).
     let router: KeyTouchRouter
     let physics: KeyPressPhysics
+    let longPressHintsEnabled: Bool
 
     /// This key's own observable press state — reading it (rather than a shared
     /// set on the router) means a press invalidates only this key's view, not
@@ -298,7 +299,12 @@ struct KeyView: View {
             hidden: false, deleteTick: spec.isRepeatable ? deleteTick : 0,
             deleteSwiping: spec.onDeleteWord != nil ? deleteSwiping : false,
             multiChar: multiChar,
-            fontSize: spec.fontSize)
+            fontSize: spec.fontSize,
+            hint: {
+                guard longPressHintsEnabled, isCharacter, spec.accents.count >= 2 else { return nil }
+                let v = spec.accents[1]
+                return v.count == 1 ? v : nil
+            }())
     }
 
     /// The key's drawn surface: shift carries its own glyph (so its interactive

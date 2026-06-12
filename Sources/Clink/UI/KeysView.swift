@@ -6,7 +6,7 @@ import SwiftUI
 import iUXiOS
 
 struct KeysView: View {
-    private enum Tab { case geometry, padding }
+    private enum Tab { case geometry, padding, faces }
 
     @Environment(AppModel.self) private var model
     @State private var selectedTab: Tab = .geometry
@@ -17,7 +17,8 @@ struct KeysView: View {
                             bottomBar: AnyView(
                                 ThemedTabPicker(
                                     options: [("Geometry", Tab.geometry),
-                                              ("Padding", Tab.padding)],
+                                              ("Padding", Tab.padding),
+                                              ("Faces", Tab.faces)],
                                     selection: $selectedTab)
                             )) {
             switch selectedTab {
@@ -25,6 +26,8 @@ struct KeysView: View {
                 geometryTab(model: model)
             case .padding:
                 paddingTab(model: model)
+            case .faces:
+                facesTab(model: model)
             }
         }
         .navigationTitle("Keys")
@@ -92,6 +95,16 @@ struct KeysView: View {
                       tooltip: "Lifts the entire keyboard up from the bottom edge of the keyboard extension.",
                       value: $model.settings.keyboardBottomPadding,
                       in: 0...64, step: 1) { "\(Int($0))pt" }
+        }
+    }
+
+    @ViewBuilder
+    private func facesTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        CardSection("Long press") {
+            ToggleRow("Long press previews",
+                      subtitle: "Show a small glyph on each key previewing its first long-press alternate.",
+                      isOn: $model.settings.longPressHintsEnabled)
         }
     }
 }

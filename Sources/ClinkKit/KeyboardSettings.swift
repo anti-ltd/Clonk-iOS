@@ -188,6 +188,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// → è é ê ë …), slide-to-pick like the system keyboard. Optional; off leaves
     /// letter keys with no long-press behaviour.
     public var accentPopupsEnabled: Bool
+    /// Show a small corner glyph on keys that have long-press variants, previewing the first alternate.
+    public var longPressHintsEnabled: Bool
     public var showNumberRow: Bool
     public var autoCapitalize: Bool
     public var keyPopupEnabled: Bool
@@ -552,6 +554,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         customRows: [CustomRow] = [],
         keyboardLanguages: [String] = ["en_US"],
         accentPopupsEnabled: Bool = true,
+        longPressHintsEnabled: Bool = false,
         showNumberRow: Bool = false,
         autoCapitalize: Bool = true,
         keyPopupEnabled: Bool = false,
@@ -673,6 +676,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.customRows = customRows
         self.keyboardLanguages = keyboardLanguages.isEmpty ? ["en_US"] : keyboardLanguages
         self.accentPopupsEnabled = accentPopupsEnabled
+        self.longPressHintsEnabled = longPressHintsEnabled
         self.showNumberRow = showNumberRow
         self.autoCapitalize = autoCapitalize
         self.keyPopupEnabled = keyPopupEnabled
@@ -818,6 +822,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
             keyboardLanguages = ["en_US"]
         }
         accentPopupsEnabled = try c.decodeIfPresent(Bool.self, forKey: .accentPopupsEnabled) ?? true
+        longPressHintsEnabled = try c.decodeIfPresent(Bool.self, forKey: .longPressHintsEnabled) ?? false
         showNumberRow = try c.decodeIfPresent(Bool.self, forKey: .showNumberRow) ?? false
         autoCapitalize = try c.decodeIfPresent(Bool.self, forKey: .autoCapitalize) ?? true
         keyPopupEnabled = try c.decodeIfPresent(Bool.self, forKey: .keyPopupEnabled) ?? true
