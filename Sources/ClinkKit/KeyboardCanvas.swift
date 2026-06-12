@@ -1305,6 +1305,18 @@ public struct KeyboardCanvas: View {
                 pickerOpen = true
             }
         }
+        .onChange(of: pickerOpen) { _, open in
+            // When bar space wasn't pre-allocated in preferredHeight (no suggestions,
+            // no icon access), an inline picker opening would squash the keys.
+            // Signal the ViewController to grow/shrink the keyboard dynamically.
+            let barPreAllocated = settings.suggestionsEnabled
+                || (settings.activateWithIcon && !enabledPanels.isEmpty)
+            guard !barPreAllocated else { return }
+            let inlineStyle = activePickerStyle == .inline || activePickerStyle == .inlineIcons
+            live.extraBarHeight = (open && inlineStyle)
+                ? Metrics.suggestionBarHeight + CGFloat(settings.suggestionTopPadding)
+                : 0
+        }
     }
 
     /// A cheap Equatable fingerprint of the non-plane/shift inputs to the keyspecs

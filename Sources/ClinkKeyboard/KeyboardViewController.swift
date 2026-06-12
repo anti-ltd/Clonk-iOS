@@ -136,6 +136,7 @@ final class KeyboardViewController: UIInputViewController {
         // setup screen can reflect reality.
         store.reportFullAccess(hasFullAccess)
         reloadSettings()
+        observeExtraBarHeight()
         loadLexicon()
         updateSuggestions()
         updateReturnKey()
@@ -354,10 +355,7 @@ final class KeyboardViewController: UIInputViewController {
             h.isActive = true
             heightConstraint = h
         }
-        let target = KeyboardCanvas.preferredHeight(for: new, hasFullAccess: hasFullAccess)
-        heightConstraint?.constant = target
-        hostContentHeight?.constant = target
-        (view as? ClinkInputView)?.targetHeight = target
+        applyKeyboardHeight()
 
         // When matching the system, let the host's appearance flow through so
         // `KeyboardCanvas` flips its light/dark theme live. With a fixed theme,
@@ -427,6 +425,30 @@ final class KeyboardViewController: UIInputViewController {
             }
         } else {
             hosting?.view.isHidden = true
+        }
+    }
+
+    /// Applies the current keyboard height (base + any inline-picker bump) to both
+    /// height constraints and the input view's intrinsic-size target.
+    private func applyKeyboardHeight() {
+        let target = KeyboardCanvas.preferredHeight(for: settings, hasFullAccess: hasFullAccess)
+            + live.extraBarHeight
+        heightConstraint?.constant = target
+        hostContentHeight?.constant = target
+        (view as? ClinkInputView)?.targetHeight = target
+    }
+
+    /// Re-arms the `withObservationTracking` loop that watches `live.extraBarHeight`.
+    /// Fires `applyKeyboardHeight()` each time the canvas signals a picker-driven
+    /// height change (inline picker open/close with no pre-allocated bar).
+    private func observeExtraBarHeight() {
+        withObservationTracking {
+            _ = live.extraBarHeight
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.applyKeyboardHeight()
+                self?.observeExtraBarHeight()
+            }
         }
     }
 

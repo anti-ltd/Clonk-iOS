@@ -166,6 +166,10 @@ public final class KeyboardLiveState {
     /// by the canvas to trigger auto-expand behaviours on each appearance.
     public var appearanceCount: Int = 0
 
+    /// Extra height the canvas needs beyond `preferredHeight` — set when an
+    /// inline picker opens and no bar was pre-allocated in the static height.
+    public var extraBarHeight: CGFloat = 0
+
     /// Next-letter probability distribution for the word being typed, pushed by
     /// the host after each edit (derived from the lexicon's completion set).
     /// `KeyTouchRouter` prefers this over its built-in English letter tables
