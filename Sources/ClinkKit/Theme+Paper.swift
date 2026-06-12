@@ -1,5 +1,9 @@
 /**
  Warm off-white background with cream keys and a terracotta accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Warm parchment tones with a burnt-orange accent.

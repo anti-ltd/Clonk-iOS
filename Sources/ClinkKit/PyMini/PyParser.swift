@@ -5,6 +5,10 @@
  assignment / augmented assignment / tuple unpacking. Unsupported Python
  features (import, class, try, lambda, comprehensions, decorators) fail with a
  clear message rather than a cryptic syntax error.
+ 
+
+ Module: pymini · Target: ClinkKit
+ Learn: docs/08-pymini.md
  */
 import Foundation
 

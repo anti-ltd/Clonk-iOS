@@ -1,5 +1,9 @@
 /**
  `NotepadNote`: a single saved entry in the notepad archive.
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import Foundation
 

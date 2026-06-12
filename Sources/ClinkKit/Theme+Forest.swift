@@ -1,5 +1,9 @@
 /**
  Deep green canopy with a vivid spring-green accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Deep forest green with pale foliage text and a bright spring-green accent.

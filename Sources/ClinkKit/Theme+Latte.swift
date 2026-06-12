@@ -1,5 +1,9 @@
 /**
  Warm tawny cream with tan function keys and a brown leather accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Warm tawny cream with pale-cream keys and a warm brown accent.

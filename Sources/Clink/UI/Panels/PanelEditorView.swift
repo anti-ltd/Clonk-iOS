@@ -4,6 +4,10 @@
  keyboard panel — taps insert into a log (instead of a text field) and `set`
  transitions re-render exactly as they will in the keyboard. Mirrors
  `ExtensionEditorView`.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/07-custom-panels.md
  */
 import SwiftUI
 import iUXiOS

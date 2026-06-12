@@ -1,5 +1,9 @@
 /**
  Canonical light Liquid Glass preset. Frosted white keys refract any background.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Light glass preset: frosted near-white keys with a system-blue accent.

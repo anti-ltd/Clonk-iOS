@@ -15,6 +15,10 @@
  needs a full input-method engine well beyond `UITextChecker`) gets `.empty` and
  leans entirely on the checker — the bar still completes/corrects, it just has no
  next-word guess or contraction expansion.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 

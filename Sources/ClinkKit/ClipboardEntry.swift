@@ -1,6 +1,10 @@
 /**
  `ClipboardEntry`: one saved item in the clipboard history. Also defines
  `Date.clipboardRelative` — the relative-time label shown in the UI.
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import Foundation
 

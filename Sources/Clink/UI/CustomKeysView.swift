@@ -6,6 +6,10 @@
 
  Writes straight into `model.settings.spaceBarLeadingKeys` /
  `spaceBarTrailingKeys` / `customRows`; the pinned preview reflects edits live.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

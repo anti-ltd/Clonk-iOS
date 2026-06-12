@@ -6,6 +6,10 @@
  An extension declares where its input comes from (`input`), runs its `transform`
  script over that input, and the script's return value is inserted into the host
  document. See `PyEngine` for the script contract.
+ 
+
+ Module: extensions · Target: ClinkKit
+ Learn: EXTENSIONS-SDK.md
  */
 import Foundation
 

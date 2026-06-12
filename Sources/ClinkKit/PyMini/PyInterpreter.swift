@@ -16,6 +16,10 @@
    break/continue/pass.
  - f-strings, indexing, slicing, a useful set of str/list/dict methods and global
    builtins (len, range, str, int, sorted, enumerate, …).
+ 
+
+ Module: pymini · Target: ClinkKit
+ Learn: docs/08-pymini.md
  */
 import Foundation
 

@@ -4,6 +4,10 @@
  test it live in the run console — input goes in, the inserted output (plus any
  `print(...)` log and errors) comes out — before saving. Mirrors the app's
  CardSection / themed-page conventions.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: EXTENSIONS-SDK.md
  */
 import SwiftUI
 import iUXiOS

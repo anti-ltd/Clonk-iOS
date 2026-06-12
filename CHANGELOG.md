@@ -4,7 +4,7 @@ All notable changes to Clink are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0]
+## [1.2.0] — 2026-06-12
 
 ### Added
 - **Swipe / glide typing** — trace a continuous path across the letter keys and
@@ -82,6 +82,13 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Security
 - Stopped tracking `.wrangler/cache/wrangler-account.json` (contained a Cloudflare
   account id and email) and added `.wrangler/` to `.gitignore`.
+- **New subsystems stay on-device.** The prediction lexicons, swipe decoder, and
+  the `UserAdaptation` learning store run entirely locally — bundled data and a
+  JSON file in the App Group, no network. The Apple Intelligence backend
+  (`AIEngine`) runs inference in an Apple system process on-device; it is off by
+  default (`aiEnabled`) and learning is gated by `learningEnabled`. The
+  no-network-on-the-typing-path guarantee from 1.0.0 still holds; nothing typed,
+  completed, corrected, or learned leaves the device.
 
 ## [1.0.0] — 2026-06-04
 

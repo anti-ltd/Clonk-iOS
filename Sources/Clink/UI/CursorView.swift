@@ -1,5 +1,9 @@
 /**
  Cursor settings screen — Style tab (movement type) and Feel tab (presets + sliders).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

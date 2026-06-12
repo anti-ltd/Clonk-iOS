@@ -11,6 +11,10 @@
 
  Generated, not hand-maintained — regenerate from the upstream list rather than
  editing by hand. Lowercased, alphabetic, length >= 2, de-duplicated, order kept.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 public enum SwipeLexicon {
     /// Words in descending frequency order (index 0 = most common).

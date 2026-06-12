@@ -6,6 +6,10 @@
 
  No keyboard preview: learning has no visible on-screen effect to show, so this
  is a plain scrolled page (like `BackupView`) rather than `PinnedPreviewLayout`.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import iUXiOS

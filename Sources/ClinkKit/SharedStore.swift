@@ -3,6 +3,10 @@
  the keyboard extension reads them. Uses file-based persistence in the App Group
  container — avoids `cfprefsd` staleness that `UserDefaults(suiteName:)` suffers
  across process boundaries.
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import Foundation
 

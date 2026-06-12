@@ -2,6 +2,7 @@ import Foundation
 
 // GENERATED — do not edit by hand. Run `make emoji` (Tools/GenerateEmojiData.swift)
 // to regenerate from Tools/emoji-test.txt (Unicode 16.0).
+// Module: emoji · Target: ClinkKit · Learn: docs/05-emoji.md
 //
 // The complete RGI emoji set, neutral (no skin tone) bases only, in CLDR order.
 // Skin tones are applied at render time from the user's preferences.

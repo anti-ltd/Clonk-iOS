@@ -1,6 +1,10 @@
 /**
  Step-by-step keyboard setup guide: how to add Clink and the honest pitch for
  Full Access. Also shows live enable / Full Access status.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

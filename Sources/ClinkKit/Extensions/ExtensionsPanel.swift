@@ -6,6 +6,10 @@
 
  Deliberately solid-filled (no per-cell `glassEffect`): a glass layer per row
  OOM-crashes / janks the keyboard extension, same class of bug as the grid cells.
+ 
+
+ Module: extensions · Target: ClinkKit
+ Learn: EXTENSIONS-SDK.md
  */
 import SwiftUI
 

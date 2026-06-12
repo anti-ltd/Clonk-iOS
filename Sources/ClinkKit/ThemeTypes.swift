@@ -2,6 +2,10 @@
  Supporting types for `Theme`: gradient model (`ThemeGradient`, `GradientStop`,
  `GradientType`), font options (`ThemeFontDesign`, `ThemeFontWeight`), key
  material (`KeyMaterial`), and glass variant (`GlassVariant`).
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 import SwiftUI
 

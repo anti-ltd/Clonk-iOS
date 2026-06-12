@@ -12,6 +12,10 @@
  are wired in Phase 3); the other tiers only activate under system states that
  currently have zero handling, so they can only improve those cases, never
  alter the tuned feel.
+ 
+
+ Module: motion · Target: ClinkKit
+ Learn: MOTION.md
  */
 import SwiftUI
 import UIKit

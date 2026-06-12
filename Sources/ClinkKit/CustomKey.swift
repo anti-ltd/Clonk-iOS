@@ -6,6 +6,10 @@
 
  Codable + shared between the container app (writes) and the keyboard extension
  (reads) via the App Group, exactly like `KeyboardSettings`.
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import Foundation
 

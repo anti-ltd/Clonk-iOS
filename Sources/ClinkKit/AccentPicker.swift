@@ -5,6 +5,10 @@
  and release-to-commit (the same interaction model as the emoji skin-tone
  picker), and the canvas positions this bar above the held key. Styled like the
  key popups (glass on glass themes, solid otherwise).
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import SwiftUI
 

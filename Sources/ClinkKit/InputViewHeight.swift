@@ -3,6 +3,10 @@
  height-jump bug; `UIView.tameEncapsulatedHeightConstraint` drops the priority
  of the system's `UIView-Encapsulated-Layout-Height` constraint so the extension
  can set its own height without fighting the system layout engine.
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import UIKit
 import os

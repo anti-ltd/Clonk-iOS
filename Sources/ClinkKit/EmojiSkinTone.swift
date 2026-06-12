@@ -1,6 +1,10 @@
 /**
  `SkinTone` enum (Fitzpatrick scale) and `EmojiSkinTone` utility for applying a
  tone modifier to a base emoji string.
+ 
+
+ Module: emoji · Target: ClinkKit
+ Learn: docs/05-emoji.md
  */
 import Foundation
 

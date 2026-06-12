@@ -1,5 +1,9 @@
 /**
  Deep ocean teal with aquamarine keys and a vivid cyan accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Dark teal background with aquamarine keys and a bright cyan accent.

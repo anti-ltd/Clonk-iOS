@@ -19,6 +19,10 @@
  Pure geometry + the supplied vocabulary — no `UITextChecker`, no I/O — so it's
  cheap enough to run synchronously on lift. `SuggestionEngine.swipeCandidates`
  feeds it the language's common-word set as the vocabulary.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import CoreGraphics
 

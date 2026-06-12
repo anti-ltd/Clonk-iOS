@@ -1,6 +1,10 @@
 /**
  `SoundPack`: a named set of key-click audio samples bundled in the keyboard
  extension. Ships with built-in presets; custom packs require Full Access.
+ 
+
+ Module: sound · Target: ClinkKit
+ Learn: docs/06-sound.md
  */
 import Foundation
 

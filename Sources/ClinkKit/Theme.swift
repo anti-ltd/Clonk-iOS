@@ -1,6 +1,10 @@
 /**
  Core `Theme` value type: every color slot, material, font options, and optional
  background/gradient IDs that fully describe how the keyboard looks.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 import SwiftUI
 

@@ -7,6 +7,10 @@
 
  No keyboard preview: enabling AI has no visible on-screen effect yet, so this
  is a plain scrolled page (like `AdaptationView`) rather than `PinnedPreviewLayout`.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import iUXiOS

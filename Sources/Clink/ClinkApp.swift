@@ -1,6 +1,10 @@
 /**
  App entry point. Boots into `RootView` in production, with debug hooks for the
  `appstage` marketing pipeline and the `SHOWCASE` typing simulator.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 

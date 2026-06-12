@@ -2,6 +2,10 @@
  `ActionPanelButton`: the top-left icon in the suggestion bar that opens the
  active action panel (clipboard, notepad, or the panel picker). Also defines
  `barDivider`, the thin vertical rule between the icon and the bar content.
+ 
+
+ Module: panels · Target: ClinkKit
+ Learn: EXTENDING.md
  */
 import SwiftUI
 

@@ -2,6 +2,10 @@
  Smart-punctuation rules applied after each insertion: curly-quote substitution,
  double-space to period, and contraction apostrophes. Mirrors the native
  keyboard's typographic niceties that iOS won't expose to third-party keyboards.
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import Foundation
 

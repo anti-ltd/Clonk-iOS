@@ -1,6 +1,10 @@
 /**
  `KeySpec`: a single key's identity, label, and action — the value type rebuilt
  cheaply on every shift/plane change.
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import SwiftUI
 

@@ -1,5 +1,9 @@
 /**
  Dark warm black with parchment text and a gold accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Near-black warm base with parchment text and a gold accent.

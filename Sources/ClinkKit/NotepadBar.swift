@@ -1,6 +1,10 @@
 /**
  `NotepadBar`: the inline notepad strip shown above the keys when the notepad
  panel is open. Keys type into the buffer; actions insert or save the text.
+ 
+
+ Module: panels · Target: ClinkKit
+ Learn: EXTENDING.md
  */
 import SwiftUI
 

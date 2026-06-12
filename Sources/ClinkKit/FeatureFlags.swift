@@ -11,6 +11,10 @@
 
  Usage:
      if FeatureFlags.experimental { ... }
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import Foundation
 

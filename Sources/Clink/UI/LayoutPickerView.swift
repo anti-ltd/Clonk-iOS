@@ -1,5 +1,9 @@
 /**
  Layout editor — row toggles with a live keyboard preview pinned above.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

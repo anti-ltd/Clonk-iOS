@@ -2,6 +2,10 @@
  Notepad settings and note browser. Three tabs — General (toggle + mode),
  Scratch (live editor), Notes (saved archive). Scratch and Notes are disabled
  when the notepad panel is off.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

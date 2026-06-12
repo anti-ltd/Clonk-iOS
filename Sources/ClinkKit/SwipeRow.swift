@@ -2,6 +2,10 @@
  `SwipeRow<Content, Background>`: a swipe-to-reveal list row for the clipboard
  and notepad history screens. Reveal pans left to show tappable action buttons;
  the content is any SwiftUI view over any background shape.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import SwiftUI
 import UIKit

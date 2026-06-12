@@ -2,6 +2,10 @@
  `ExtensionsView`: manage the user's custom actions (the Python extension SDK).
  Create, edit, reorder, enable/disable, import, and share `ClinkExtension`s, plus
  the master toggle that surfaces them as a keyboard action panel.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: EXTENSIONS-SDK.md
  */
 import SwiftUI
 import iUXiOS

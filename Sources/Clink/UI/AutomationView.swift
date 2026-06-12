@@ -1,6 +1,10 @@
 /**
  Automation settings — auto-behaviors that fire without explicit input:
  capitalization, punctuation, and symbol-page returns.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import iUXiOS

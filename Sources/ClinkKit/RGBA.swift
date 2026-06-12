@@ -1,6 +1,10 @@
 /**
  `RGBA`: a `Codable`, `Sendable` color value used throughout `Theme`. Bridges to
  SwiftUI `Color` and UIKit `UIColor` without importing either in the model layer.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 import SwiftUI
 #if canImport(UIKit)

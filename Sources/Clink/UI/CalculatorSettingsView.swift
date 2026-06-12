@@ -1,6 +1,10 @@
 /**
  Calculator settings — on/off toggle for the calculator action panel,
  with a live pinned preview matching the emoji and layout pages.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

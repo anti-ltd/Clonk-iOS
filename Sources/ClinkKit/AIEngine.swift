@@ -9,6 +9,10 @@
  the keyboard extension without counting against its memory cap. 100% optional:
  callers gate on `KeyboardSettings.aiEnabled` (off by default); the engine
  itself never reads settings so it stays pure and testable.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 #if canImport(FoundationModels)

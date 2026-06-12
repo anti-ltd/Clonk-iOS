@@ -1,6 +1,10 @@
 /**
  `ClipboardPanel`: full-keyboard overlay for clipboard history when
  `clipboardStyle == .overlay`. Swipeable entry cards with copy / pin / delete.
+ 
+
+ Module: panels · Target: ClinkKit
+ Learn: EXTENDING.md
  */
 import SwiftUI
 

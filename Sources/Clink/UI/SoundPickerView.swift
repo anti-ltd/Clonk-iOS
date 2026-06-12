@@ -1,6 +1,10 @@
 /**
  Sound and haptics settings. Toggle, volume slider, haptics switch, and the
  sound-pack list — with a Full Access nudge when a pack requires it.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/06-sound.md
  */
 import SwiftUI
 import iUXiOS

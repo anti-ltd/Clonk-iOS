@@ -1,6 +1,10 @@
 /**
  `KeyView`: a single key rendered with its fill, text, bloom animation, and
  optional glass effect. Also defines `TapPulse` (the additive press-flash animation).
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import SwiftUI
 

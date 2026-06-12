@@ -2,6 +2,10 @@
  UIKit tap surface for the emoji suggestion bar. `EmojiBarTouchSurface` /
  `EmojiBarTouchView` handle raw touches on the horizontal emoji-bar strip,
  bypassing SwiftUI's gesture recogniser stack. Also defines `EmojiBarFrameKey`.
+ 
+
+ Module: emoji · Target: ClinkKit
+ Learn: docs/05-emoji.md
  */
 import SwiftUI
 import UIKit

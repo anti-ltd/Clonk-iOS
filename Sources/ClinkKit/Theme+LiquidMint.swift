@@ -1,5 +1,9 @@
 /**
  Liquid Glass over a mint-tinted backdrop with a teal accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Glass preset tinted mint-green with a teal accent.

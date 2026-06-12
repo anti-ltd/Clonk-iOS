@@ -1,6 +1,10 @@
 /**
  Touch and feel tuning screen. Two tabs — Spring, Timing — each with a
  preset chip row above the raw sliders in a `TunedSection` disclosure group.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

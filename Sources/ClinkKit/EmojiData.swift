@@ -2,6 +2,10 @@
  Emoji data model and offline search. `EmojiCategory` groups emoji by Unicode
  section; `EmojiData` adds name-based search and emoji-suggestion logic on top of
  the generated category list in `EmojiData.generated.swift`.
+ 
+
+ Module: emoji · Target: ClinkKit
+ Learn: docs/05-emoji.md
  */
 import Foundation
 

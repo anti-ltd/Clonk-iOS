@@ -2,6 +2,10 @@
  Multitouch routing for the key grid. `KeyTouchRouter` / `KeyGridTouchView` maps
  raw `UITouch` events onto key IDs and callbacks. Also defines `MultiTouchSurface`
  (UIViewRepresentable bridge) and the `KeyFrameKey` / `BarHitboxKey` preference keys.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import SwiftUI
 import UIKit

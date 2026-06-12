@@ -3,6 +3,10 @@
  predictions, the pending auto-correction, and emoji suggestions — flowing from
  the extension into the `SuggestionBar` and vice-versa. Also defines `ActionPanel`
  and `Autocorrection`.
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import SwiftUI
 

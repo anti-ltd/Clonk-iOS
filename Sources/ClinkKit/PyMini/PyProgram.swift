@@ -3,6 +3,10 @@
  so its functions can be called many times on a warm interpreter — used by custom
  panels, which call `view(state)` again on every interaction. Each call resets the
  step budget and `print` buffer so one render can't be starved by an earlier one.
+ 
+
+ Module: pymini · Target: ClinkKit
+ Learn: docs/08-pymini.md
  */
 import Foundation
 

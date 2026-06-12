@@ -1,5 +1,9 @@
 /**
  Clean off-white with serif key labels and a coral-red accent. Light twin to Cinder.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Off-white with serif lettering and a coral-red accent.

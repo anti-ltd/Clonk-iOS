@@ -1,5 +1,9 @@
 /**
  Cool light grey background with crisp white keys. The default light preset.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Silver-grey background with crisp white keys and a system-blue accent.

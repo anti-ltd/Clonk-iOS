@@ -3,6 +3,10 @@
  the container app (writes) and the keyboard extension (reads) via the App Group.
  Also defines the settings enums: `KeyPopupStyle`, `ClipboardStyle`,
  `NotepadMode`, `PanelPickerStyle`, `EmojiScrollDirection`, `CursorMovementType`.
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import Foundation
 

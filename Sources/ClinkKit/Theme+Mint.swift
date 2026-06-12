@@ -1,5 +1,9 @@
 /**
  Soft minty green with a teal accent. The solid counterpart to Liquid Mint.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Minty green background with near-white keys and a teal accent.

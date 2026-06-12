@@ -13,6 +13,10 @@
  Height stability: panelHeight is @State updated only via explicit withAnimation calls,
  never via computed properties. This prevents re-renders from dragOffset changes
  from accidentally triggering height recalculations.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

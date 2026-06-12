@@ -1,5 +1,9 @@
 /**
  Solarized Dark: deep teal base with warm grey text, following the Solarized palette.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Deep teal background with the canonical Solarized warm-grey text and cyan accent.

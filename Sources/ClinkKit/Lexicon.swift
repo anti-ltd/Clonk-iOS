@@ -7,6 +7,10 @@
  memory until pages are touched, and every query here is a point lookup or a
  short contiguous walk — cheap enough to call synchronously on the main actor
  from the hot typing paths (space-press correction, per-touch hitboxes).
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 

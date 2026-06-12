@@ -1,5 +1,9 @@
 /**
  Near-black background with phosphor green text. Terminal console aesthetic.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Pure black with phosphor-green key labels and a bright green accent.

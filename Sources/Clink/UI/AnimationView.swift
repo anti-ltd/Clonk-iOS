@@ -1,6 +1,10 @@
 /**
  Animation tuning screen. Two tabs — Spring, Timing. Spring tab shows three
  cards (Keys, Space bar, Popup); the Popup card is hidden when popups are off.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

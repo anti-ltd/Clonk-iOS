@@ -1,6 +1,10 @@
 /**
  `AppStage`: launch-argument wiring for the `appstage` marketing screenshot
  pipeline. DEBUG-only — not compiled into Release builds.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 

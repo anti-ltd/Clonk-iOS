@@ -1,6 +1,10 @@
 /**
  Emoji settings split across three tabs: General (enable/key), Layout (scroll,
  grid, recent, size), and Skin Tones (default tone + per-emoji reset).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

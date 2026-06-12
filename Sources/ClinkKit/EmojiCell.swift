@@ -1,6 +1,10 @@
 /**
  `EmojiCell`: one tappable emoji in the grid. Handles the insert tap, the
  long-press for skin-tone picking, and the glass bloom flash on press.
+ 
+
+ Module: emoji · Target: ClinkKit
+ Learn: docs/05-emoji.md
  */
 import SwiftUI
 

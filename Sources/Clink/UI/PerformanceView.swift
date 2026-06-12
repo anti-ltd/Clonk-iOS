@@ -1,6 +1,10 @@
 /**
  Performance settings — two tabs: Responsiveness (snappiness preset + backspace
  repeat) and Suggestions (compute budget).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import iUXiOS

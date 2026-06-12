@@ -2,6 +2,10 @@
  Root view with a collapsible slide-in sidebar. The sidebar overlays the content
  from the left edge; a scrim tap or row selection closes it. Detail navigation
  (Theme editor, Sound picker, etc.) lives inside the per-destination NavigationStack.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import UIKit

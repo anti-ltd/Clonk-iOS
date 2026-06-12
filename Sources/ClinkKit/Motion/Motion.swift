@@ -19,6 +19,10 @@
  `KeyPressPhysics` (built from `KeyboardSettings`, tuned live in the app's
  Animation screen) and join the system via `MotionToken.userSpring`, so they
  resolve through the same profile without losing their knobs.
+ 
+
+ Module: motion · Target: ClinkKit
+ Learn: MOTION.md
  */
 import SwiftUI
 

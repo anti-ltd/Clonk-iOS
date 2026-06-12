@@ -13,6 +13,10 @@
 
  As a convenience for quick experiments, a script with no `transform` may instead
  assign a top-level `result` variable; its value is used as the output.
+ 
+
+ Module: pymini · Target: ClinkKit
+ Learn: docs/08-pymini.md
  */
 import Foundation
 

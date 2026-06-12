@@ -1,6 +1,10 @@
 /**
  `TrackpadPanel`: the trackpad-mode overlay shown while the space bar is held in
  trackpad cursor mode. Purely visual — a centered move glyph tinted the theme accent.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import SwiftUI
 

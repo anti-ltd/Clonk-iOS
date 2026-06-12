@@ -20,6 +20,10 @@
  and/or `set` (merged into state → re-render) — an Elm/MVU loop. The interpreter
  stays warm across renders (`PyProgram`), so re-rendering on each tap is cheap and
  step-budget bounded — safe inside the keyboard's tight memory budget.
+ 
+
+ Module: custom-panels · Target: ClinkKit
+ Learn: docs/07-custom-panels.md
  */
 import Foundation
 

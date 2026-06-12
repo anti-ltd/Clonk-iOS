@@ -1,3 +1,10 @@
+/**
+ `LogoMark`
+
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
+ */
 import SwiftUI
 
 /// Vector Clink mark — a squircle tile with the lowercase "c" knocked out.

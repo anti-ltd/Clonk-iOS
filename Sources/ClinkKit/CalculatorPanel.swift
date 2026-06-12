@@ -2,6 +2,10 @@
  `CalculatorPanel`: full-keyboard overlay calculator. Evaluates arithmetic
  expressions and lets the user insert the result into the host document.
  No manager needed — purely stateless computation.
+ 
+
+ Module: panels · Target: ClinkKit
+ Learn: EXTENDING.md
  */
 import SwiftUI
 

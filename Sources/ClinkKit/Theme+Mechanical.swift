@@ -1,5 +1,9 @@
 /**
  Dark warm brown with ivory text and a golden accent — vintage keycap feel.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Warm dark brown with ivory lettering and an amber-gold accent.

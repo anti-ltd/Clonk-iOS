@@ -9,6 +9,10 @@
  device can actually spell-check are listed, so a pick is never a dead one. The
  physical key arrangement (QWERTY/AZERTY/…) is a separate setting under
  Style → Layout & Keys.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import UIKit

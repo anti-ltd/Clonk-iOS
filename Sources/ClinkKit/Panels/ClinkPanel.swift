@@ -4,6 +4,10 @@
  action). The script defines `view(state)` (and optionally `initial()`); buttons
  drive an MVU loop (`set` updates state, `insert` types into the document). See
  `PanelRuntime`. Codable for App Group persistence and `.clinkpanel` sharing.
+ 
+
+ Module: custom-panels · Target: ClinkKit
+ Learn: docs/07-custom-panels.md
  */
 import Foundation
 

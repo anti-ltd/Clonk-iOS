@@ -10,6 +10,10 @@
  turns those scores into a per-letter frame multiplier centred on 1.0 (the most
  likely next letter swells toward `maxFactor`, the least likely toward
  `minFactor`, an average letter stays put). Cheap enough to run on every touch.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import SwiftUI
 

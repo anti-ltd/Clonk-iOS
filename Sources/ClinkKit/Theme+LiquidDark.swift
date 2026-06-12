@@ -1,5 +1,9 @@
 /**
  Canonical dark Liquid Glass preset. Translucent tinted keys refract any background.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     // Colors act as tints; translucent backdrop so the keys refract the system keyboard background.

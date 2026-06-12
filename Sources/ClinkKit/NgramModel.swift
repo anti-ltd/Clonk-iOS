@@ -6,6 +6,10 @@
 
  Memory-mapped like `Lexicon`; a follower lookup is one binary search plus a
  short walk of a contiguous, already-best-first block.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 

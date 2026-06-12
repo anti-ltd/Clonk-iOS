@@ -1,5 +1,9 @@
 /**
  Liquid Glass over a deep charred-red backdrop with an orange accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Glass preset tinted deep red with a vivid orange accent.

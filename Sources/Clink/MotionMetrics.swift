@@ -7,6 +7,10 @@
  unreliable inside extension processes and the keyboard's memory budget is
  precious, so the extension is profiled via `MotionDiagnostics` signposts in
  Instruments instead.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 #if DEBUG
 import Foundation

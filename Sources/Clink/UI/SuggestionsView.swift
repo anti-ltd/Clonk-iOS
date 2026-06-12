@@ -1,5 +1,9 @@
 /**
  Suggestions settings — suggestion bar and auto-correction toggles.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import iUXiOS

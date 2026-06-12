@@ -1,6 +1,10 @@
 /**
  Clipboard settings split across three tabs: General (toggle, style),
  Behaviour (paste/clear/auto-copy), and History (entry list + clear).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import UIKit

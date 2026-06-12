@@ -3,6 +3,10 @@
  significant indentation (synthetic INDENT / DEDENT / NEWLINE tokens) and
  f-string segmentation. Newlines inside (), [], {} are ignored (implicit line
  joining); `#` starts a comment to end of line.
+ 
+
+ Module: pymini · Target: ClinkKit
+ Learn: docs/08-pymini.md
  */
 import Foundation
 

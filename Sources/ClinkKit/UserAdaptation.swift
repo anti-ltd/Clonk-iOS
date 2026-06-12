@@ -9,6 +9,10 @@
  unavailable — fine, since the keyboard extension is the only real consumer).
  Nothing ever leaves the device. All reads/writes are gated by the
  `learningEnabled` setting at the call sites; this store is mechanism only.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 

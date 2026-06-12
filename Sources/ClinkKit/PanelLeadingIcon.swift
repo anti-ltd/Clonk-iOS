@@ -3,6 +3,10 @@
  `onBack` handler it renders a tappable back chevron (return to the panel picker,
  or the main keyboard when there's no picker to fall back to); with no handler it
  stays the panel's decorative glyph. Shared so every panel header behaves alike.
+ 
+
+ Module: panels · Target: ClinkKit
+ Learn: EXTENDING.md
  */
 import SwiftUI
 

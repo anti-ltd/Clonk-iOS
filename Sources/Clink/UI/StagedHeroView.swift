@@ -7,6 +7,10 @@
  a glass bubble, the next key held down so its popup balloons, and a live
  suggestion bar. Every capture is byte-for-byte identical. Reuses the real
  `KeyboardCanvas`, so what you see is what ships. Never compiled into Release.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 #if DEBUG
 import SwiftUI

@@ -1,5 +1,9 @@
 /**
  Smart-text settings screen: autocorrect, suggestions, capitalization, and auto-punctuation.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/04-prediction.md
  */
 import SwiftUI
 import iUXiOS

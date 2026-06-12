@@ -5,6 +5,10 @@
  list of the user's panels that pushes into the selected panel's UI.
 
  Solid-filled, no per-cell `glassEffect` (that OOM-crashes the keyboard).
+ 
+
+ Module: custom-panels · Target: ClinkKit
+ Learn: docs/07-custom-panels.md
  */
 import SwiftUI
 

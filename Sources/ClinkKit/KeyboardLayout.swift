@@ -2,6 +2,10 @@
  `KeyboardLayout`: the letter-plane key arrangement for one locale. Ships with
  four built-in presets (QWERTY, AZERTY, QWERTZ, Dvorak) plus the shared
  number-row and symbol-row definitions used by every layout.
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import Foundation
 

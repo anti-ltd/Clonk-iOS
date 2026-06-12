@@ -1,5 +1,9 @@
 /**
  Layout page: two tabs — Layout (key arrangement picker) and Rows (number row / home row inset).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

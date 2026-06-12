@@ -1,5 +1,9 @@
 /**
  Navy-black background with periwinkle keys and a cobalt-blue accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Near-black navy with soft periwinkle keys and a cobalt-blue accent.

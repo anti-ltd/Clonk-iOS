@@ -1,5 +1,9 @@
 /**
  Haptics settings — key press haptic feedback toggle.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/06-sound.md
  */
 import SwiftUI
 import iUXiOS

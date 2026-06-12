@@ -14,6 +14,10 @@
  A screen recording cropped below the controls shows the bubble filling above a
  keyboard that visibly types — no human hands, no fat-fingering, same phrase
  every take.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 #if SHOWCASE
 import SwiftUI

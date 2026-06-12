@@ -6,6 +6,10 @@
 
  A Darwin notification is posted on save so a running keyboard can reload live;
  otherwise the keyboard reads fresh on appear.
+ 
+
+ Module: extensions · Target: ClinkKit
+ Learn: EXTENSIONS-SDK.md
  */
 import SwiftUI
 

@@ -2,6 +2,10 @@
  `ThemeBackgroundStore`: manages per-theme background and key-background photos
  in the App Group container. Down-scales picked photos to keyboard-sized JPEGs
  before storing, so the extension never loads a full-resolution image.
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import UIKit
 import ImageIO

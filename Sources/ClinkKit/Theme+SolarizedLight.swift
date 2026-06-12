@@ -1,5 +1,9 @@
 /**
  Solarized Light: warm cream background with slate text, following the Solarized palette.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Warm cream background with the canonical Solarized slate text and an orange-red accent.

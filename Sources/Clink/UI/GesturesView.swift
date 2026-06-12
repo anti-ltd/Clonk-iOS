@@ -1,6 +1,10 @@
 /**
  Gestures settings — Swipe tab (glide typing and its trail) and Backspace tab
  (rapid-delete repeat timing).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

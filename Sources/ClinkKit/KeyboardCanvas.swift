@@ -2,6 +2,10 @@
  `KeyboardCanvas`: the full keyboard view rendered by both the keyboard extension
  and the in-app live preview. Composes `KeyView` rows, the `SuggestionBar`, and
  all action-panel overlays. Also defines `KeyPressPhysics` (spring tuning struct).
+ 
+
+ Module: keyboard-core · Target: ClinkKit
+ Learn: docs/02-keyboard-core.md
  */
 import SwiftUI
 import UIKit

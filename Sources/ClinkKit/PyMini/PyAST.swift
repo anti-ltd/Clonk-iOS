@@ -1,6 +1,10 @@
 /**
  PyMini abstract syntax tree: `Expr` (expressions) and `Stmt` (statements),
  plus the operator enums the parser produces and the interpreter walks.
+ 
+
+ Module: pymini · Target: ClinkKit
+ Learn: docs/08-pymini.md
  */
 import Foundation
 

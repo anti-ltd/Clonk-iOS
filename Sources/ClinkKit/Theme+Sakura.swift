@@ -1,5 +1,9 @@
 /**
  Cherry-blossom pink background with rose function keys and a vivid pink accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Blossom pink background with near-white keys and a vivid rose accent.

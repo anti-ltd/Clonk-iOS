@@ -1,5 +1,9 @@
 /**
  Deep indigo base with neon cyan and hot-pink accents. Retro 80s palette.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Deep indigo with neon cyan accent and hot-pink function-key text.

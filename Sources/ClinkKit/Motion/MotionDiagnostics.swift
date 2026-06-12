@@ -14,6 +14,10 @@
 
  Profile the keyboard extension by attaching Instruments (os_signpost / Points
  of Interest) to the ClinkKeyboard process while typing in any host app.
+ 
+
+ Module: motion · Target: ClinkKit
+ Learn: MOTION.md
  */
 import Foundation
 import OSLog

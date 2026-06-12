@@ -1,5 +1,9 @@
 /**
  Classic Dracula palette: charcoal background, lavender function keys, pink accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Charcoal-purple background with lavender function-key text and hot-pink accent.

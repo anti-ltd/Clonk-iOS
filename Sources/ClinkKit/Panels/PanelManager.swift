@@ -2,6 +2,10 @@
  `PanelManager`: observable App Group store for user-authored `ClinkPanel`s,
  mirroring `ExtensionManager`. Seeds the sample panels on first launch and posts a
  Darwin notification on save so a running keyboard can reload.
+ 
+
+ Module: custom-panels · Target: ClinkKit
+ Learn: docs/07-custom-panels.md
  */
 import SwiftUI
 

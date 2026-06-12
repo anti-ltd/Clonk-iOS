@@ -2,6 +2,10 @@
  `ClipboardBar`: the inline clipboard strip shown in the suggestion bar area
  when the clipboard panel is in bar mode. Horizontally scrollable saved clips
  plus save and clear actions.
+ 
+
+ Module: panels · Target: ClinkKit
+ Learn: EXTENDING.md
  */
 import SwiftUI
 

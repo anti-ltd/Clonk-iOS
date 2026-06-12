@@ -1,5 +1,9 @@
 /**
  Soft lilac background with near-white keys and a violet accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Lilac background with near-white keys and a vivid violet accent.

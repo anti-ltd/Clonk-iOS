@@ -2,6 +2,10 @@
  Emoji keyboard delete tile with hold-to-repeat. `HoldRepeatSurface` /
  `HoldRepeatView` handle the UIKit touch loop that fires the delete callback at
  an accelerating rate while the user holds the key.
+ 
+
+ Module: emoji · Target: ClinkKit
+ Learn: docs/05-emoji.md
  */
 import SwiftUI
 import UIKit

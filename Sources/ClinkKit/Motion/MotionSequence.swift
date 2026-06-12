@@ -21,6 +21,10 @@
          MotionStep(delay: .seconds(0.09),
                     animation: Motion.emojiFlashSettle.animation) { scale = 0.97 },
      ])
+ 
+
+ Module: motion · Target: ClinkKit
+ Learn: MOTION.md
  */
 import SwiftUI
 

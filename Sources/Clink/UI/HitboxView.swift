@@ -3,6 +3,10 @@
  Adaptive tab (next-letter-prediction sizing that flexes each key as you type, a
  replication of iOS's native adaptive hitboxes). Live preview with the hitbox
  overlay always on, so every change is visible.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

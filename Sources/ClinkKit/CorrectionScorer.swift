@@ -9,6 +9,10 @@
          + contextWeight · (log10 P(word|prev) + 6) // 0…6 when a bigram is known
 
  Pure and Sendable — fully unit-testable without UIKit.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 

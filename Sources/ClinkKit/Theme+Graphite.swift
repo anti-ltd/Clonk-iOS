@@ -1,5 +1,9 @@
 /**
  Near-black slate with blue-grey keys. The default dark preset.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Near-black slate with blue-grey keys and a system-blue accent.

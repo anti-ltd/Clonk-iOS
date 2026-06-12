@@ -1,5 +1,9 @@
 /**
  Bright pink-white background with rose function keys and a magenta accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Pink-white background with rose function keys and a vivid magenta accent.

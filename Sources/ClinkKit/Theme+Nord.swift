@@ -1,5 +1,9 @@
 /**
  Arctic blue-grey palette based on the Nord color scheme.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Arctic blue-grey with a muted teal accent, following the Nord palette.

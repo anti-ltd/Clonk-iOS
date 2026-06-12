@@ -1,5 +1,9 @@
 /**
  Dark warm near-black with serif key labels and a coral-red accent. Dark twin to Coral.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Warm near-black with serif lettering and a coral-red accent.

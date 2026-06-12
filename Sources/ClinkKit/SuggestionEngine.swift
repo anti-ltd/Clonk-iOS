@@ -3,6 +3,10 @@
  suggestions. Uses `UITextChecker` for spell/correction data and a custom
  Damerau-Levenshtein + bigram ranker for predictions. Shared between the keyboard
  extension and the in-app showcase typer.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 import UIKit

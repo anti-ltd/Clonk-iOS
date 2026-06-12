@@ -9,6 +9,10 @@
 
  Reads: current FPS over a half-second window, plus the worst single frame in
  that window (a 60Hz frame is 16.7ms; anything beyond ~34ms is a visible hitch).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 #if DEBUG
 import SwiftUI

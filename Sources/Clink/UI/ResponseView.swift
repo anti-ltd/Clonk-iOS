@@ -2,6 +2,10 @@
  Response settings — gesture timing & thresholds. How long a hold takes to fire
  a long-press (accent bar, emoji skin tones) and how far a slide must travel to
  trigger the 123 slide-up. Presets up top, raw sliders below.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

@@ -1,5 +1,9 @@
 /**
  Popups settings — key popup toggle, style, and Liquid Glass option.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

@@ -3,6 +3,10 @@
  `KeyboardCanvas` and `EmojiCanvas` inside `UIInputViewController`, wires the
  document proxy, suggestion engine, clipboard, sound, and cross-process change
  notifications.
+ 
+
+ Module: extension-host · Target: ClinkKeyboard
+ Learn: docs/10-extension-host.md
  */
 import SwiftUI
 import UIKit

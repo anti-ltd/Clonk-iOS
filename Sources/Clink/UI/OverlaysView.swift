@@ -1,6 +1,10 @@
 /**
  Overlays settings screen — toggles for visual overlays rendered on the live
  keyboard (e.g. the hitbox debug outline).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

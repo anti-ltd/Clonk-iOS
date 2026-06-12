@@ -1,5 +1,9 @@
 /**
  Deep charred red with warm ivory text and a bright orange accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Charred dark red with warm ivory text and a vivid orange accent.

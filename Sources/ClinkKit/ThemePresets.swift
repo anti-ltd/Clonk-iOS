@@ -2,6 +2,10 @@
  Built-in preset catalog and convenience accessors. Each preset is defined in
  its own `Theme+<Name>.swift` file; this extension aggregates them into the
  ordered `presets` array and adds default-resolution helpers.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 public extension Theme {
     /// The built-in themes, in display order. The first is the default.

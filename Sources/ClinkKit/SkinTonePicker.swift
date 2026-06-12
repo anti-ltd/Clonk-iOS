@@ -3,6 +3,10 @@
  a row of six tone variants. Defined here alongside the `EmojiHoldGesture`
  UIViewRepresentable that detects the long-press and `EmojiCellFramesKey` /
  `EmojiGridFrameKey` preference keys used to position the picker.
+ 
+
+ Module: emoji · Target: ClinkKit
+ Learn: docs/05-emoji.md
  */
 import SwiftUI
 import UIKit

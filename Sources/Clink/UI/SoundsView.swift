@@ -1,5 +1,9 @@
 /**
  Sounds settings — two tabs: General (toggle + volume) and Sound pack (pack list).
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/06-sound.md
  */
 import SwiftUI
 import iUXiOS

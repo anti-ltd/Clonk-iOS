@@ -4,6 +4,10 @@
  only — Cyrillic/Greek layouts have no entries here and simply show no accent
  popup. Keys are lowercase base letters; the keyboard applies the current shift
  case to each variant before display.
+ 
+
+ Module: touch · Target: ClinkKit
+ Learn: docs/03-touch-and-input.md
  */
 import Foundation
 

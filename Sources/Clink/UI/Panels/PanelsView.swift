@@ -2,6 +2,10 @@
  `PanelsView`: manage user-authored custom panels (full custom keyboard UIs).
  Create, edit, reorder, enable/disable, import, and share `ClinkPanel`s. Mirrors
  `ExtensionsView`.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/07-custom-panels.md
  */
 import SwiftUI
 import iUXiOS

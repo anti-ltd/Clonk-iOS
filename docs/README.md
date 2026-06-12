@@ -26,6 +26,11 @@ Every module doc follows the same shape:
 Cross-references use relative paths: `[settings](01-settings-and-storage.md)`,
 `[THEMING.md](../THEMING.md)`.
 
+**In-source comments:** every Swift file under `Sources/` has a file header with
+`Module`, `Target`, and `Learn` lines pointing at the docs below. Format spec:
+[CODECOMMENTS.md](CODECOMMENTS.md). Re-apply after adding files:
+`swift Tools/ApplyFileHeaders.swift`.
+
 ---
 
 ## Suggested reading order

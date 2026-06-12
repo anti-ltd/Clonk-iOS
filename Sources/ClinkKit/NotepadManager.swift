@@ -1,6 +1,10 @@
 /**
  `NotepadManager`: observable backing store for the quick notepad. Holds the
  compose buffer and the saved-notes archive, persisted to the App Group container.
+ 
+
+ Module: settings · Target: ClinkKit
+ Learn: docs/01-settings-and-storage.md
  */
 import SwiftUI
 

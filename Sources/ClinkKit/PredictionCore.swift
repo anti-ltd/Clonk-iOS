@@ -7,6 +7,10 @@
  language out of the `.clex` blobs); `SuggestionEngine` kicks a prebuild off
  the main actor on every language/learning change and falls back to building
  synchronously on first swipe if the prebuild hasn't landed yet.
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 

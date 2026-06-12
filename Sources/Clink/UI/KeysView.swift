@@ -1,6 +1,10 @@
 /**
  Keys settings — Geometry tab (size & shape) and Padding tab.
  Backspace repeat timing lives under Gestures → Backspace.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

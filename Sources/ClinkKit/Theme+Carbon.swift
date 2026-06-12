@@ -1,5 +1,9 @@
 /**
  Pure black with near-invisible dark keys and a vivid red accent.
+ 
+
+ Module: theme · Target: ClinkKit
+ Learn: THEMING.md
  */
 extension Theme {
     /// Pure black background with near-invisible keys and a vivid red accent.

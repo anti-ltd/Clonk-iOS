@@ -3,6 +3,10 @@
  file and surfaces the reset-to-defaults actions. The controls live in
  `BackupControls`, hosted both as a pushed screen (`BackupView`) and as a
  themedSheet from the sidebar.
+ 
+
+ Module: app-ui · Target: Clink
+ Learn: docs/09-app-ui.md
  */
 import SwiftUI
 import iUXiOS

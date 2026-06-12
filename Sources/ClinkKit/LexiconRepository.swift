@@ -3,6 +3,10 @@
  base language code, and builds the merged multi-language view matching
  `SuggestionEngine.setLanguages` semantics (multiple languages active at once,
  priority order preserved).
+ 
+
+ Module: prediction · Target: ClinkKit
+ Learn: docs/04-prediction.md
  */
 import Foundation
 
