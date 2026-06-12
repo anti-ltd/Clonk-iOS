@@ -96,7 +96,7 @@ struct RootView: View {
     }
 
     enum SidebarDestination: Hashable {
-        case clink, permissions, localization, layout, theme
+        case clink, permissions, localization, layout, theme, artificialIntelligence
         // Customization placeholders (pages to be built out).
         case animation, automation, cursor, keys, sounds, haptics, suggestions, popups, gestures, adaptation
         // Advanced placeholders.
@@ -347,6 +347,7 @@ private struct DetailHost: View {
         case .localization: LocalizationView()
         case .layout:       LayoutView()
         case .theme:        ThemeEditorView()
+        case .artificialIntelligence: ArtificialIntelligenceView()
         case .clipboard:  ClipboardHistoryView()
         case .notepad:    NotepadView()
         case .emoji:      EmojiSettingsView()
@@ -533,6 +534,9 @@ private struct SidebarPanel: View {
                 }
                 SidebarRow("Layout", icon: "textformat.abc", selected: destination == .layout) {
                     select(.layout)
+                }
+                SidebarRow("Artificial Intelligence", icon: "sparkles", selected: destination == .artificialIntelligence) {
+                    select(.artificialIntelligence)
                 }
 
                 sectionLabel("Customization")
@@ -809,16 +813,37 @@ private struct ExtensionPickerContent: View {
                 ToggleRow("Top-left icon",
                           subtitle: "Show a panel button in the top-left corner of the keyboard.",
                           isOn: $m.settings.activateWithIcon)
+                if m.settings.activateWithIcon && enabledPanelCount >= 2 {
+                    Divider()
+                    HStack {
+                        Text("Icon picker style")
+                        Spacer()
+                        Picker("Icon picker style", selection: $m.settings.iconPickerStyle) {
+                            ForEach(PanelPickerStyle.allCases) { style in
+                                Text(style.label).tag(style)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                    }
+                    .padding(.vertical, UX.rowVPadding)
+                }
+                if enabledPanelCount >= 2 {
+                    Divider()
+                    ToggleRow("Show icons on open",
+                              subtitle: "Expand the panel icons automatically when the keyboard appears, until you start typing.",
+                              isOn: $m.settings.autoShowPanelIcons)
+                }
                 Divider()
                 ToggleRow("Slide up on 123",
                           subtitle: "Drag up on the 123 key to open the panel picker.",
                           isOn: $m.settings.activateWithSlideUp)
-                if enabledPanelCount >= 2 {
+                if m.settings.activateWithSlideUp && enabledPanelCount >= 2 {
                     Divider()
                     HStack {
-                        Text("Picker style")
+                        Text("Slide-up picker style")
                         Spacer()
-                        Picker("Picker style", selection: $m.settings.panelPickerStyle) {
+                        Picker("Slide-up picker style", selection: $m.settings.slideUpPickerStyle) {
                             ForEach(PanelPickerStyle.allCases) { style in
                                 Text(style.label).tag(style)
                             }
@@ -998,6 +1023,7 @@ private struct ClinkContent: View {
         DestCard(title: "Permissions", icon: "lock.shield",    description: "Enable the keyboard and grant Full Access", dest: .permissions),
         DestCard(title: "Localization", icon: "globe",         description: "Language and dictionary",                  dest: .localization),
         DestCard(title: "Layout",       icon: "textformat.abc", description: "Key arrangement and row options",         dest: .layout),
+        DestCard(title: "Artificial Intelligence", icon: "sparkles", description: "On-device Apple Intelligence",       dest: .artificialIntelligence),
     ]
 
     private var customizationCards: [DestCard] {

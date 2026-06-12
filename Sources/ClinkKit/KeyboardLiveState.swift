@@ -162,6 +162,10 @@ public final class KeyboardLiveState {
     /// than one panel can live behind the top-left button.
     public var activePanel: ActionPanel? = nil
 
+    /// Incremented each time the keyboard finishes settling into view. Observed
+    /// by the canvas to trigger auto-expand behaviours on each appearance.
+    public var appearanceCount: Int = 0
+
     /// Next-letter probability distribution for the word being typed, pushed by
     /// the host after each edit (derived from the lexicon's completion set).
     /// `KeyTouchRouter` prefers this over its built-in English letter tables

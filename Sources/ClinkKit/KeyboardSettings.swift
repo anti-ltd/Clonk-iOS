@@ -65,14 +65,16 @@ public enum NotepadMode: String, Codable, Sendable, CaseIterable, Identifiable {
 public enum PanelPickerStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     case popover
     case inline
+    case inlineIcons
     case cards
 
     public var id: String { rawValue }
     public var label: String {
         switch self {
-        case .popover: return "Popover"
-        case .inline:  return "Inline"
-        case .cards:   return "Cards"
+        case .popover:      return "Popover"
+        case .inline:       return "Inline"
+        case .inlineIcons:  return "Inline Icons"
+        case .cards:        return "Cards"
         }
     }
 }
@@ -307,8 +309,13 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Reach the action panels by dragging the 123 key upward (the gesture emoji
     /// used to own). Independent of `activateWithIcon` — both can be on.
     public var activateWithSlideUp: Bool
-    /// How the panel button / slide-up offers a choice when 2+ panels are enabled.
-    public var panelPickerStyle: PanelPickerStyle
+    /// When true, expand the inline panel icons automatically each time the
+    /// keyboard appears, collapsing when the user starts typing.
+    public var autoShowPanelIcons: Bool
+    /// How the top-left icon offers a panel choice when 2+ panels are enabled.
+    public var iconPickerStyle: PanelPickerStyle
+    /// How the slide-up on the 123 key offers a panel choice when 2+ panels are enabled.
+    public var slideUpPickerStyle: PanelPickerStyle
     /// User-chosen display order for extension panels. Stored as lowercase
     /// destination IDs ("calculator", "clipboard", "emoji", "notepad").
     public var extensionOrder: [String]
@@ -324,6 +331,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// reject. Stored locally (App Group file), never leaves the device, and
     /// can be wiped from the app's settings. Off by default.
     public var learningEnabled: Bool
+    /// Master switch for on-device Apple Intelligence features (iOS 26+ on
+    /// Apple Intelligence-capable hardware). Fully offline — inference runs in
+    /// a system process and nothing ever leaves the device. Future AI features
+    /// (predictive typing, translation, suggestions) all gate on this.
+    /// Off by default.
+    public var aiEnabled: Bool
     /// How long (ms) after the last keystroke before the suggestion engine runs.
     /// Higher = fewer UITextChecker invocations during fast bursts (saves CPU/battery);
     /// lower = snappier bar updates. Default 80ms matches the historical hardcoded value.
@@ -596,12 +609,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         customPanelsStandalone: Bool = false,
         activateWithIcon: Bool = true,
         activateWithSlideUp: Bool = true,
-        panelPickerStyle: PanelPickerStyle = .popover,
+        autoShowPanelIcons: Bool = false,
+        iconPickerStyle: PanelPickerStyle = .popover,
+        slideUpPickerStyle: PanelPickerStyle = .popover,
         extensionOrder: [String] = ["calculator", "clipboard", "emoji", "notepad"],
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
         revertAutocorrectOnDelete: Bool = true,
         learningEnabled: Bool = false,
+        aiEnabled: Bool = false,
         suggestionDebounceDelay: Double = 80.0,
         autoPunctuationEnabled: Bool = true,
         autoReturnToLetters: Bool = true,
@@ -719,12 +735,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.customPanelsStandalone = customPanelsStandalone
         self.activateWithIcon = activateWithIcon
         self.activateWithSlideUp = activateWithSlideUp
-        self.panelPickerStyle = panelPickerStyle
+        self.autoShowPanelIcons = autoShowPanelIcons
+        self.iconPickerStyle = iconPickerStyle
+        self.slideUpPickerStyle = slideUpPickerStyle
         self.extensionOrder = extensionOrder
         self.suggestionsEnabled = suggestionsEnabled
         self.autocorrectEnabled = autocorrectEnabled
         self.revertAutocorrectOnDelete = revertAutocorrectOnDelete
         self.learningEnabled = learningEnabled
+        self.aiEnabled = aiEnabled
         self.suggestionDebounceDelay = suggestionDebounceDelay
         self.autoPunctuationEnabled = autoPunctuationEnabled
         self.autoReturnToLetters = autoReturnToLetters
@@ -800,6 +819,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// `keyboardLanguages` array.
     private enum LegacyKeys: String, CodingKey {
         case keyboardLanguage
+        /// Pre-split picker style key — migrated into `iconPickerStyle` + `slideUpPickerStyle`.
+        case panelPickerStyle
     }
 
     public init(from decoder: any Decoder) throws {
@@ -868,12 +889,17 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         customPanelsStandalone = try c.decodeIfPresent(Bool.self, forKey: .customPanelsStandalone) ?? false
         activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
         activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
-        panelPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
+        autoShowPanelIcons = try c.decodeIfPresent(Bool.self, forKey: .autoShowPanelIcons) ?? false
+        let legacyPickerStyle = (try? decoder.container(keyedBy: LegacyKeys.self)
+            .decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
+        iconPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .iconPickerStyle)) ?? legacyPickerStyle
+        slideUpPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .slideUpPickerStyle)) ?? legacyPickerStyle
         extensionOrder = try c.decodeIfPresent([String].self, forKey: .extensionOrder) ?? ["calculator", "clipboard", "emoji", "notepad"]
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
         revertAutocorrectOnDelete = try c.decodeIfPresent(Bool.self, forKey: .revertAutocorrectOnDelete) ?? true
         learningEnabled = try c.decodeIfPresent(Bool.self, forKey: .learningEnabled) ?? false
+        aiEnabled = try c.decodeIfPresent(Bool.self, forKey: .aiEnabled) ?? false
         suggestionDebounceDelay = try c.decodeIfPresent(Double.self, forKey: .suggestionDebounceDelay) ?? 80.0
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
         autoReturnToLetters = try c.decodeIfPresent(Bool.self, forKey: .autoReturnToLetters) ?? true

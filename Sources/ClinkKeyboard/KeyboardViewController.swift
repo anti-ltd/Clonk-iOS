@@ -420,6 +420,7 @@ final class KeyboardViewController: UIInputViewController {
         let target = (view as? ClinkInputView)?.targetHeight ?? 0
         if target > 0, view.bounds.height <= target + 12 {
             isSettling = false
+            live.appearanceCount += 1
             hosting?.view.isHidden = false
             if settings.autoCopyOnKeyboardOpen && hasFullAccess {
                 clipboard.captureFromPasteboard()

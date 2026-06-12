@@ -10,8 +10,8 @@
  If you change `KeyboardSettings` and this test fails, you've broken an existing
  user's saved config. Add a migration in `init(from:)`, don't change this blob.
  */
+import Foundation
 import Testing
-@testable import ClinkKit
 
 @Suite struct SettingsBackCompatTests {
 
@@ -54,7 +54,8 @@ import Testing
         #expect(s.clipboardStyle == .grid)
         #expect(s.cursorMovementType == .combined)
         #expect(s.hapticStyle == .rigid)
-        #expect(s.panelPickerStyle == .popover)
+        #expect(s.iconPickerStyle == .popover)      // migrated from legacy panelPickerStyle
+        #expect(s.slideUpPickerStyle == .popover)   // migrated from legacy panelPickerStyle
         #expect(s.keyPopupStyle == .balloon)
         #expect(s.notepadMode == .scratchpad)
         #expect(s.emojiScrollDirection == .vertical)
@@ -89,13 +90,12 @@ import Testing
 
     @Test func absentKeysFallBackToDefaults() throws {
         let s = try Self.decoded()
-        // This v1 export predates / omits these keys — they must default cleanly
-        // rather than throw or leave the value undefined.
-        #expect(s.themeID == Theme.default.id)
-        #expect(s.lightThemeID == Theme.defaultLight.id)
-        #expect(s.darkThemeID == Theme.defaultDark.id)
-        #expect(s.customThemes.isEmpty)
+        // This v1 export omits these config keys — they must default cleanly rather
+        // than throw or leave the value undefined. (Theme keys are a SEPARATE system
+        // and are intentionally not part of the config, so they're not asserted here.)
         #expect(s.longPressHintsEnabled == false)
         #expect(s.suggestionTopPadding == 0)
+        // AI is opt-in: a legacy config without the key must decode to OFF.
+        #expect(s.aiEnabled == false)
     }
 }

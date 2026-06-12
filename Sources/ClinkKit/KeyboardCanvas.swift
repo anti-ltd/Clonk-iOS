@@ -290,9 +290,9 @@ public struct KeyboardCanvas: View {
     /// For `.popover` it floats a menu; for `.inline` it expands the bar.
     @State private var pickerOpen = false
 
-    /// How the popover picker was opened, so it can anchor itself near whatever
-    /// the user touched: under the top-left icon, or above the 123 key.
-    private enum PickerOrigin { case icon, slideUp }
+    /// How the picker was opened — drives its anchor position and style.
+    /// `.auto` is the keyboard-appear auto-expand; it always shows inline icons.
+    private enum PickerOrigin { case icon, slideUp, auto }
     @State private var pickerOrigin: PickerOrigin = .icon
 
     /// While the notepad is in `notes` mode, whether the saved-notes archive is
@@ -505,14 +505,35 @@ public struct KeyboardCanvas: View {
         return active
     }
 
+    /// The picker style that applies to the trigger that opened the picker.
+    /// `.auto` always shows inline icons regardless of the user's style settings.
+    private var activePickerStyle: PanelPickerStyle {
+        switch pickerOrigin {
+        case .slideUp: return settings.slideUpPickerStyle
+        case .auto:    return .inlineIcons
+        case .icon:    return settings.iconPickerStyle
+        }
+    }
+
     /// True when the inline picker should expand across the bar.
     private var pickerInlineExpanded: Bool {
-        pickerOpen && settings.panelPickerStyle == .inline && enabledPanels.count >= 2
+        pickerOpen && activePickerStyle == .inline && enabledPanels.count >= 2
+    }
+
+    /// True when the inline-icons picker should expand across the bar.
+    private var pickerInlineIconsExpanded: Bool {
+        pickerOpen && activePickerStyle == .inlineIcons
+            && pickerOrigin != .auto && enabledPanels.count >= 2
     }
 
     /// True when the cards picker should take over the whole keyboard.
     private var pickerCardsActive: Bool {
-        pickerOpen && settings.panelPickerStyle == .cards && enabledPanels.count >= 2
+        pickerOpen && activePickerStyle == .cards && enabledPanels.count >= 2
+    }
+
+    /// True when the inline icons bar has been auto-expanded on keyboard appear.
+    private var pickerAutoExpanded: Bool {
+        pickerOpen && pickerOrigin == .auto && enabledPanels.count >= 2
     }
 
     /// SF Symbol for the top-left button: the active panel's filled icon, the lone
@@ -556,7 +577,7 @@ public struct KeyboardCanvas: View {
     /// under the finger. `windowPoint` is in window coords, matching the rows'
     /// `.global` frames. Only the popover picker supports drag-onto-row.
     private func slideHoverUpdate(_ windowPoint: CGPoint) {
-        guard settings.panelPickerStyle == .popover, pickerOpen else { return }
+        guard settings.slideUpPickerStyle == .popover, pickerOpen else { return }
         pickerDragHover = panelRowFrames.first { $0.value.contains(windowPoint) }?.key
     }
 
@@ -566,7 +587,7 @@ public struct KeyboardCanvas: View {
     /// dismisses — matching the suggestion-bar icon's "dragged off → dismiss".
     private func slideDragEnd(_ windowPoint: CGPoint) {
         defer { pickerDragHover = nil }
-        guard settings.panelPickerStyle == .popover, pickerOpen else { return }
+        guard settings.slideUpPickerStyle == .popover, pickerOpen else { return }
         if let hover = panelRowFrames.first(where: { $0.value.contains(windowPoint) })?.key {
             activate(hover)
         } else {
@@ -606,7 +627,7 @@ public struct KeyboardCanvas: View {
     /// 2+ panels); otherwise there's no picker to fall back to, so it closes to
     /// the main keyboard. `closePanel()` already clears `notepadBrowsing`.
     private func backToPicker() {
-        let canPick = settings.panelPickerStyle == .cards && enabledPanels.count >= 2
+        let canPick = activePickerStyle == .cards && enabledPanels.count >= 2
         guard canPick else { closePanel(); return }
         withAnimation(Motion.pickerOpen.animation) {
             live.activePanel = nil
@@ -629,7 +650,7 @@ public struct KeyboardCanvas: View {
             Group {
                 // Popover with 2+ panels gets the press-hold-drag-release button;
                 // every other case is a plain tap button.
-                if settings.panelPickerStyle == .popover && enabledPanels.count >= 2 {
+                if settings.iconPickerStyle == .popover && enabledPanels.count >= 2 {
                     panelDragButton
                 } else {
                     ActionPanelButton(systemName: panelButtonIcon,
@@ -730,7 +751,7 @@ public struct KeyboardCanvas: View {
     /// The inline picker: a close button then one labelled chip per panel,
     /// expanded across the whole bar.
     @ViewBuilder private var inlinePickerRow: some View {
-        ActionPanelButton(systemName: "xmark", isActive: false, theme: theme) {
+        ActionPanelButton(systemName: "chevron.left", isActive: false, theme: theme) {
             pickerOpen = false
         }
         .frame(width: Metrics.suggestionBarHeight)
@@ -747,6 +768,52 @@ public struct KeyboardCanvas: View {
                 .foregroundStyle(theme.keyText.color.opacity(0.8))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// The inline-icons picker: a close button then one icon-only chip per panel,
+    /// expanded across the whole bar.
+    @ViewBuilder private var inlineIconsPickerRow: some View {
+        ActionPanelButton(systemName: "chevron.left", isActive: false, theme: theme) {
+            pickerOpen = false
+        }
+        .frame(width: Metrics.suggestionBarHeight)
+        barDivider(theme: theme)
+        ForEach(Array(enabledPanels.enumerated()), id: \.element) { idx, panel in
+            if idx > 0 { barDivider(theme: theme) }
+            Button { activate(panel) } label: {
+                Image(systemName: panel.icon(active: false))
+                    .font(.system(size: 17))
+                    .foregroundStyle(theme.keyText.color.opacity(0.8))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// The auto-expanded icon bar: shown on keyboard appear when `autoShowPanelIcons`
+    /// is on. Typing dismisses it; the collapse chevron lets the user dismiss it
+    /// manually. The chevron is hidden when there is no suggestion bar to return to.
+    @ViewBuilder private var autoInlineIconsRow: some View {
+        let hasBarToReturn = settings.suggestionsEnabled || settings.activateWithIcon
+        if hasBarToReturn {
+            ActionPanelButton(systemName: "chevron.left", isActive: false, theme: theme) {
+                pickerOpen = false
+            }
+            .frame(width: Metrics.suggestionBarHeight)
+            barDivider(theme: theme)
+        }
+        ForEach(Array(enabledPanels.enumerated()), id: \.element) { idx, panel in
+            if idx > 0 { barDivider(theme: theme) }
+            Button { activate(panel) } label: {
+                Image(systemName: panel.icon(active: false))
+                    .font(.system(size: 17))
+                    .foregroundStyle(theme.keyText.color.opacity(0.8))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
@@ -845,6 +912,8 @@ public struct KeyboardCanvas: View {
                 || (settings.activateWithIcon && !enabledPanels.isEmpty)
                 || live.activePanel != nil
                 || pickerInlineExpanded
+                || pickerInlineIconsExpanded
+                || pickerAutoExpanded
 
             if let overlay = overlayPanel {
                 // Full-keyboard replacement: panel header + scrollable content.
@@ -947,6 +1016,10 @@ public struct KeyboardCanvas: View {
                     HStack(spacing: 0) {
                         if pickerInlineExpanded {
                             inlinePickerRow
+                        } else if pickerInlineIconsExpanded {
+                            inlineIconsPickerRow
+                        } else if pickerAutoExpanded {
+                            autoInlineIconsRow
                         } else {
                             actionPanelArea
                             barContent
@@ -1206,7 +1279,7 @@ public struct KeyboardCanvas: View {
         // so it sits above the key-glyph overlay (which is itself an overlay layer
         // — otherwise the letters behind the menu bleed through it).
         .overlayPreferenceValue(KeyFrameKey.self) { anchors in
-            if pickerOpen && settings.panelPickerStyle == .popover && enabledPanels.count >= 2 {
+            if pickerOpen && activePickerStyle == .popover && enabledPanels.count >= 2 {
                 GeometryReader { proxy in
                     // The 123 key (bottom row, index 0) in this overlay's space,
                     // so a slide-up popover can float right above it. Falls back
@@ -1226,6 +1299,12 @@ public struct KeyboardCanvas: View {
         // slide-up handlers).
         .onChange(of: settings) { keySpecCache.invalidate() }
         .onChange(of: keySpecExternalsSignature) { keySpecCache.invalidate() }
+        .onChange(of: live.appearanceCount) { _, _ in
+            if settings.autoShowPanelIcons && enabledPanels.count >= 2 {
+                pickerOrigin = .auto
+                pickerOpen = true
+            }
+        }
     }
 
     /// A cheap Equatable fingerprint of the non-plane/shift inputs to the keyspecs
