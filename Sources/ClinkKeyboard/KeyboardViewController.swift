@@ -433,9 +433,28 @@ final class KeyboardViewController: UIInputViewController {
     private func applyKeyboardHeight() {
         let target = KeyboardCanvas.preferredHeight(for: settings, hasFullAccess: hasFullAccess)
             + live.extraBarHeight
-        heightConstraint?.constant = target
+        guard let heightConstraint, heightConstraint.constant != target else { return }
+        heightConstraint.constant = target
         hostContentHeight?.constant = target
         (view as? ClinkInputView)?.targetHeight = target
+        // Snap mode: apply the new height in one frame so it reads as "nothing
+        // moved". The canvas-side collapse is also un-animated (see
+        // `dismissPickerOnInput`), so frame and keys land together instantly.
+        guard settings.animatePanelBarResize else {
+            view.layoutIfNeeded()
+            return
+        }
+        // The letter rows FILL the canvas (`maxHeight: .infinity`), so each row's
+        // height is `(frameHeight − barHeight) / rows`. The keys only hold still
+        // if this frame animation and the SwiftUI bar collapse (KeyboardCanvas,
+        // `.animation(…, value: pickerOpen)`) run the *exact same* curve — then
+        // `frameHeight − barHeight` is constant at every frame. Both use
+        // `Motion.keyboardHeight` (easeInOut), which UIKit and SwiftUI render
+        // near-identically; a spring would diverge and breathe the rows.
+        UIView.animate(withDuration: Motion.keyboardHeight.uiDuration, delay: 0,
+                       options: [.curveEaseInOut, .allowUserInteraction, .beginFromCurrentState]) {
+            self.view.layoutIfNeeded()
+        }
     }
 
     /// Re-arms the `withObservationTracking` loop that watches `live.extraBarHeight`.

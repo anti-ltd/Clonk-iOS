@@ -312,6 +312,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// When true, expand the inline panel icons automatically each time the
     /// keyboard appears, collapsing when the user starts typing.
     public var autoShowPanelIcons: Bool
+    /// Animate the keyboard's height change when the on-open icon bar grows in /
+    /// collapses on typing. Off snaps instantly — the resize lands in one frame
+    /// so it reads as "nothing moved" rather than a sweep. On by default.
+    public var animatePanelBarResize: Bool
+    /// Keep the panel-icons row permanently in the bar. Only applies when the
+    /// suggestion bar is off (the icons take the bar's place) and at least one
+    /// panel is enabled. Unlike `autoShowPanelIcons` it never collapses on typing,
+    /// so the bar height is reserved up front — no grow/shrink, no transition.
+    public var pinPanelIcons: Bool
     /// How the top-left icon offers a panel choice when 2+ panels are enabled.
     public var iconPickerStyle: PanelPickerStyle
     /// How the slide-up on the 123 key offers a panel choice when 2+ panels are enabled.
@@ -610,6 +619,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         activateWithIcon: Bool = true,
         activateWithSlideUp: Bool = true,
         autoShowPanelIcons: Bool = false,
+        animatePanelBarResize: Bool = true,
+        pinPanelIcons: Bool = false,
         iconPickerStyle: PanelPickerStyle = .popover,
         slideUpPickerStyle: PanelPickerStyle = .popover,
         extensionOrder: [String] = ["calculator", "clipboard", "emoji", "notepad"],
@@ -736,6 +747,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.activateWithIcon = activateWithIcon
         self.activateWithSlideUp = activateWithSlideUp
         self.autoShowPanelIcons = autoShowPanelIcons
+        self.animatePanelBarResize = animatePanelBarResize
+        self.pinPanelIcons = pinPanelIcons
         self.iconPickerStyle = iconPickerStyle
         self.slideUpPickerStyle = slideUpPickerStyle
         self.extensionOrder = extensionOrder
@@ -890,6 +903,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         activateWithIcon = try c.decodeIfPresent(Bool.self, forKey: .activateWithIcon) ?? true
         activateWithSlideUp = try c.decodeIfPresent(Bool.self, forKey: .activateWithSlideUp) ?? true
         autoShowPanelIcons = try c.decodeIfPresent(Bool.self, forKey: .autoShowPanelIcons) ?? false
+        animatePanelBarResize = try c.decodeIfPresent(Bool.self, forKey: .animatePanelBarResize) ?? true
+        pinPanelIcons = try c.decodeIfPresent(Bool.self, forKey: .pinPanelIcons) ?? false
         let legacyPickerStyle = (try? decoder.container(keyedBy: LegacyKeys.self)
             .decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
         iconPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .iconPickerStyle)) ?? legacyPickerStyle

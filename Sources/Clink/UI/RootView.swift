@@ -810,31 +810,50 @@ private struct ExtensionPickerContent: View {
             }
 
             CardSection("Panel access") {
-                ToggleRow("Top-left icon",
-                          subtitle: "Show a panel button in the top-left corner of the keyboard.",
-                          isOn: $m.settings.activateWithIcon)
-                if m.settings.activateWithIcon && enabledPanelCount >= 2 {
+                // Pinned icons stand in for the suggestion bar and never collapse,
+                // so the icon-button / show-on-open / animate controls don't apply —
+                // hide them to avoid presenting dead options.
+                let pinned = m.settings.pinPanelIcons
+                    && !m.settings.suggestionsEnabled && enabledPanelCount >= 1
+                if !m.settings.suggestionsEnabled && enabledPanelCount >= 1 {
+                    ToggleRow("Pin panel icons",
+                              subtitle: "Keep the panel icons in the bar permanently, in place of the suggestion bar. Stays put while you type.",
+                              isOn: $m.settings.pinPanelIcons)
                     Divider()
-                    HStack {
-                        Text("Icon picker style")
-                        Spacer()
-                        Picker("Icon picker style", selection: $m.settings.iconPickerStyle) {
-                            ForEach(PanelPickerStyle.allCases) { style in
-                                Text(style.label).tag(style)
+                }
+                if !pinned {
+                    ToggleRow("Top-left icon",
+                              subtitle: "Show a panel button in the top-left corner of the keyboard.",
+                              isOn: $m.settings.activateWithIcon)
+                    if m.settings.activateWithIcon && enabledPanelCount >= 2 {
+                        Divider()
+                        HStack {
+                            Text("Icon picker style")
+                            Spacer()
+                            Picker("Icon picker style", selection: $m.settings.iconPickerStyle) {
+                                ForEach(PanelPickerStyle.allCases) { style in
+                                    Text(style.label).tag(style)
+                                }
                             }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
+                        .padding(.vertical, UX.rowVPadding)
                     }
-                    .padding(.vertical, UX.rowVPadding)
-                }
-                if enabledPanelCount >= 2 {
+                    if enabledPanelCount >= 2 {
+                        Divider()
+                        ToggleRow("Show icons on open",
+                                  subtitle: "Expand the panel icons automatically when the keyboard appears, until you start typing.",
+                                  isOn: $m.settings.autoShowPanelIcons)
+                        if m.settings.autoShowPanelIcons {
+                            Divider()
+                            ToggleRow("Animate icon bar",
+                                      subtitle: "Sweep the keyboard height as the icons grow in and collapse. Off snaps instantly so it reads as if nothing moved.",
+                                      isOn: $m.settings.animatePanelBarResize)
+                        }
+                    }
                     Divider()
-                    ToggleRow("Show icons on open",
-                              subtitle: "Expand the panel icons automatically when the keyboard appears, until you start typing.",
-                              isOn: $m.settings.autoShowPanelIcons)
                 }
-                Divider()
                 ToggleRow("Slide up on 123",
                           subtitle: "Drag up on the 123 key to open the panel picker.",
                           isOn: $m.settings.activateWithSlideUp)

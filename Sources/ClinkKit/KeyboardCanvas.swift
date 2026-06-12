@@ -415,7 +415,10 @@ public struct KeyboardCanvas: View {
         let anyPanel = (settings.clipboardEnabled && hasFullAccess)
             || settings.notepadEnabled || settings.emojiEnabled
             || settings.calculatorEnabled
-        if settings.suggestionsEnabled || (settings.activateWithIcon && anyPanel) {
+        // The pinned icons row also occupies the bar (only when suggestions are
+        // off — it stands in for them), so reserve the height up front.
+        let pinnedIcons = settings.pinPanelIcons && !settings.suggestionsEnabled && anyPanel
+        if settings.suggestionsEnabled || (settings.activateWithIcon && anyPanel) || pinnedIcons {
             h += Metrics.suggestionBarHeight + CGFloat(settings.suggestionTopPadding)
         }
         // User-chosen top/bottom breathing room around the key block.
@@ -536,6 +539,13 @@ public struct KeyboardCanvas: View {
         pickerOpen && pickerOrigin == .auto && enabledPanels.count >= 2
     }
 
+    /// True when the panel-icons row is pinned permanently in place of the (off)
+    /// suggestion bar. Independent of `pickerOpen` — it never collapses on typing,
+    /// and `preferredHeight` reserves its bar height so there's no transition.
+    private var iconsRowPinned: Bool {
+        settings.pinPanelIcons && !settings.suggestionsEnabled && !enabledPanels.isEmpty
+    }
+
     /// SF Symbol for the top-left button: the active panel's filled icon, the lone
     /// enabled panel's icon, or a neutral grid when a picker is needed.
     private var panelButtonIcon: String {
@@ -640,6 +650,9 @@ public struct KeyboardCanvas: View {
     /// user resumed typing rather than choosing a panel.
     private func dismissPickerOnInput() {
         guard pickerOpen else { return }
+        // Snap mode collapses the bar in one frame so it reads as "nothing moved"
+        // — paired with the un-animated height change in the ViewController.
+        guard settings.animatePanelBarResize else { pickerOpen = false; return }
         withAnimation(Motion.pickerClose.animation) { pickerOpen = false }
     }
 
@@ -798,7 +811,10 @@ public struct KeyboardCanvas: View {
     /// is on. Typing dismisses it; the collapse chevron lets the user dismiss it
     /// manually. The chevron is hidden when there is no suggestion bar to return to.
     @ViewBuilder private var autoInlineIconsRow: some View {
-        let hasBarToReturn = settings.suggestionsEnabled || settings.activateWithIcon
+        // Pinned is the resting state — there's nothing to collapse back to, so no
+        // chevron. The on-open auto row keeps its chevron to dismiss to the bar.
+        let hasBarToReturn = !iconsRowPinned
+            && (settings.suggestionsEnabled || settings.activateWithIcon)
         if hasBarToReturn {
             ActionPanelButton(systemName: "chevron.left", isActive: false, theme: theme) {
                 pickerOpen = false
@@ -914,6 +930,7 @@ public struct KeyboardCanvas: View {
                 || pickerInlineExpanded
                 || pickerInlineIconsExpanded
                 || pickerAutoExpanded
+                || iconsRowPinned
 
             if let overlay = overlayPanel {
                 // Full-keyboard replacement: panel header + scrollable content.
@@ -1018,10 +1035,23 @@ public struct KeyboardCanvas: View {
                             inlinePickerRow
                         } else if pickerInlineIconsExpanded {
                             inlineIconsPickerRow
-                        } else if pickerAutoExpanded {
+                        } else if pickerAutoExpanded || (iconsRowPinned && live.activePanel == nil) {
                             autoInlineIconsRow
                         } else {
-                            actionPanelArea
+                            // Pinned + an in-bar panel open (clipboard/notepad bar):
+                            // the icons row is gone, so give an explicit back chevron
+                            // to return to the pinned icons — the top-left icon button
+                            // may be off in this mode.
+                            if iconsRowPinned {
+                                ActionPanelButton(systemName: "chevron.left",
+                                                  isActive: false, theme: theme) {
+                                    closePanel()
+                                }
+                                .frame(width: Metrics.suggestionBarHeight)
+                                barDivider(theme: theme)
+                            } else {
+                                actionPanelArea
+                            }
                             barContent
                         }
                     }
@@ -1112,7 +1142,15 @@ public struct KeyboardCanvas: View {
             }
         }
         .animation(Motion.panelTransition.animation, value: live.activePanel)
-        .animation(Motion.panelTransition.animation, value: pickerOpen)
+        // Implicit animation on every `pickerOpen` change — this is what the
+        // on-open icon bar rides. It MUST match the ViewController's frame-height
+        // curve exactly (`Motion.keyboardHeight`, easeInOut): the rows fill
+        // `frameHeight − barHeight`, so only identical curves keep that constant
+        // and stop the keys breathing mid-transition. Snap mode nils it so the
+        // bar (and the height it drives) lands in one frame. Manual picker sites
+        // use explicit `withAnimation`, so they still animate regardless.
+        .animation(settings.animatePanelBarResize ? Motion.keyboardHeight.animation : nil,
+                   value: pickerOpen)
         .animation(Motion.panelTransition.animation, value: notepadBrowsing)
         // Backdrop. By default transparent so the keyboard blends with whatever
         // sits behind it — iOS's own keyboard surface in the extension, the
@@ -1311,6 +1349,7 @@ public struct KeyboardCanvas: View {
             // Signal the ViewController to grow/shrink the keyboard dynamically.
             let barPreAllocated = settings.suggestionsEnabled
                 || (settings.activateWithIcon && !enabledPanels.isEmpty)
+                || iconsRowPinned
             guard !barPreAllocated else { return }
             let inlineStyle = activePickerStyle == .inline || activePickerStyle == .inlineIcons
             live.extraBarHeight = (open && inlineStyle)
