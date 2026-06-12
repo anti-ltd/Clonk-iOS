@@ -7,6 +7,49 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [1.2.0]
 
 ### Added
+- **Swipe / glide typing** — trace a continuous path across the letter keys and
+  it decodes into ranked words. The decoder scores each candidate by symmetric
+  key-proximity: a *forward* term (every letter visited in order) so an `h→e→y`
+  flick doesn't become "happy", plus a *reverse coverage* term (every traced
+  point explained) so a short word can't win by matching only the trace's
+  endpoints. First/last-letter anchoring prunes the dictionary before the
+  compare; word frequency breaks ties toward the commoner word. (`SwipeDecoder`,
+  `KeyTouchRouter`)
+- **Next-word prediction & completion** — predictions and completions are
+  ranked from bundled n-gram lexicons (unigrams + bigrams across en/fr/es/de/
+  it/pt/ru, built by `make lexicons` from open frequency corpora). The `.clex`
+  files are memory-mapped, so a loaded language costs near-zero resident memory
+  until queried — cheap enough to run synchronously on the typing path.
+  (`Lexicon`, `Tools/GenerateLexicons.swift`)
+- **On-device learning** — opt-in adaptive store that remembers words you
+  actually commit, boosts ones you accept from the bar, and permanently
+  suppresses corrections you reject, so the keyboard stops fighting your
+  vocabulary. One JSON file in the App Group; nothing leaves the device, gated
+  by the `learningEnabled` setting. (`UserAdaptation`)
+- **Apple Intelligence backend** — optional on-device AI via the
+  `FoundationModels` framework (iOS 26+, A17 Pro / M-series), used for the
+  auto-shown inline suggestion picker. Inference runs in an Apple system process
+  so it works inside the extension without counting against its memory cap. Off
+  by default (`aiEnabled`), with full availability probing for older OS /
+  ineligible hardware / Apple Intelligence disabled. (`AIEngine`)
+- **Custom keys** — build your own keys in *Layout → Custom*: insert text (with
+  optional Gboard-style long-press alternates) or act as a function key (cursor
+  nudge, plane switch, emoji, backspace), placed beside the space bar or in
+  whole custom rows above/below the letters. Cap shows a literal string or an SF
+  Symbol. (`CustomKey`, `CustomKeysView`)
+- **Grid clipboard** — the clipboard panel can render as a grid in addition to
+  the list, with per-row swipe actions (pin / delete). (`ClipboardPanel`,
+  `SwipeRow`)
+- **Motion engine** — a dedicated animation layer (`Motion`, `MotionProfile`,
+  `MotionSequence`, `MotionDiagnostics`) backing key-press and panel animations,
+  with tunable profiles and a diagnostics path.
+- **Key previews & key faces** — per-key preview rendering and customizable key
+  faces, surfaced in the container's *Keys* settings.
+- **Suggestion-bar font** setting, a richer interactive in-app keyboard preview,
+  and a suggestion-bar padding control.
+- **Auto keyboard height** — height auto-adjusts for the default icon set, with
+  an option to hide the suggestion bar entirely.
+- New app icon.
 - **Multi-language typing** — pick more than one language in *Localization* and
   type them at once (e.g. Spanish **and** English in the same field). Offline
   completions, next-word predictions, and swipe-typing vocabulary are merged
@@ -22,7 +65,15 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   un-corrected on the next space. Mirrors the native keyboard. New toggle in both
   *Suggestions* and *Automation*, on by default.
 
+### Changed
+- Settings that don't apply to the current configuration are now hidden rather
+  than shown disabled, in both the container app and the in-extension controls.
+
 ### Fixed
+- **Function-key flash** — fixed a flash on the function keys during plane
+  switches, alongside App Store compliance for ITMS-90737 / ITMS-90788.
+- Settings schema is backward-compatible across upgrades — older saved configs
+  decode without loss (covered by `SettingsBackCompatTests`).
 - `make device` now installs onto an iPhone paired over Wi-Fi, not just one
   cabled in. The device-detection step only matched the `connected` state, but a
   wireless pairing reports `available (paired)`, so it falsely reported "No

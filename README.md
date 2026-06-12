@@ -28,10 +28,10 @@
 
 > A custom iOS keyboard you can make completely your own — 30 built-in themes
 > (including a Liquid Glass collection for iOS 26), four layouts, offline
-> autocomplete and autocorrect, an emoji keyboard, clipboard history, a quick
-> notepad, and a full custom-theme builder. Private by default: it works
-> completely without Full Access, and never phones home. The iOS sibling of
-> clonk-macos.
+> autocomplete and autocorrect, swipe typing, custom keys, clipboard history, a
+> quick notepad, calculator, custom Python actions, and a full custom-theme
+> builder. Private by default: it works completely without Full Access, and never
+> phones home. The iOS sibling of clonk-macos.
 
 ---
 
@@ -74,15 +74,27 @@ The routing is `#if DEBUG` — none of it ships in Release.
 - Liquid key press: bloom + warp animation on each key; independently tunable springs
 
 **Text**
-- Offline autocomplete + autocorrect via `UITextChecker` — no network, no telemetry
+- Offline autocomplete + autocorrect — `UITextChecker` plus bundled frequency
+  lexicons (`.clex`) and bigram models (`.cngm`); no network, no telemetry
+- Swipe / glide typing with geometry-matched word decoding
 - Smart punctuation: curly quotes, double-space to period, contraction apostrophes
 - Auto-capitalize, auto-return-to-letters after symbols, configurable per preference
+- Optional on-device learning: remembers words you type and corrections you reject
 
 **Panels**
 - Clipboard history: FIFO list, pin entries, bar or overlay display style
 - Quick notepad: scratchpad buffer or saved-notes archive, drop text anywhere
+- Calculator: arithmetic overlay, insert result into the document
 - Full emoji keyboard with skin-tone picking, per-emoji tone memory, recents tab
+- Custom actions: Python-subset scripts (`transform(text)`) behind the panel picker
+- Custom panels: user-authored UI panels via the same PyMini runtime
 - Panel switcher: tap the suggestion-bar icon or slide up on 123; cards or cycling picker
+
+**Customization**
+- Custom keys and rows: insert text or trigger function actions
+- Per-key hitbox tuning; adaptive next-letter target sizing from lexicon bigrams
+- Motion system: fixed animation tokens + user-tunable key/space/popup springs
+- Export / import whole config as `.clinkconfig`; per-theme `.clink` files
 
 **Sound & haptics**
 - Per-keypress sound packs; standard system click works without Full Access
@@ -91,6 +103,18 @@ The routing is `#if DEBUG` — none of it ships in Release.
 **Cursor**
 - Spacebar cursor: slide to move the cursor; three modes (slide / trackpad / combined)
 - Configurable activation delay, scroll sensitivity, and line stride
+
+---
+
+## Documentation
+
+**[docs/](docs/README.md)** — codebase learning guide. Module-by-module walkthroughs
+(settings, keyboard core, touch, prediction, emoji, sound, app UI, extension host,
+PyMini), plus a [complete file index](docs/FILE-INDEX.md) for all 153 Swift sources.
+
+Topic-specific guides at repo root: [THEMING.md](THEMING.md), [MOTION.md](MOTION.md),
+[EXTENDING.md](EXTENDING.md) (action panels), [EXTENSIONS-SDK.md](EXTENSIONS-SDK.md)
+(custom Python actions).
 
 ---
 
@@ -122,94 +146,35 @@ file-based I/O reads the current bytes every time.
 
 ### Source layout
 
+High-level map — see [docs/FILE-INDEX.md](docs/FILE-INDEX.md) for every Swift
+file (153 total) and [docs/README.md](docs/README.md) for module walkthroughs.
+
 ```
 Sources/
 ├── ClinkKit/                       shared (compiled into both targets)
-│   │
-│   ├── Theme + theming
-│   │   ├── Theme.swift             core value type (colors, material, font, gradients)
-│   │   ├── ThemeTypes.swift        ThemeGradient, KeyMaterial, GlassVariant, font enums
-│   │   ├── ThemePresets.swift      built-in preset catalog + default accessors
-│   │   ├── Theme+<Name>.swift      one file per preset (30 total)
-│   │   ├── RGBA.swift              Codable color bridging SwiftUI + UIKit
-│   │   └── ThemeBackgroundStore.swift  App Group photo storage (down-scaled JPEGs)
-│   │
-│   ├── Settings + IPC
-│   │   ├── KeyboardSettings.swift  the Codable config that crosses processes
-│   │   └── SharedStore.swift       file-based App Group store + Darwin change-notify
-│   │
-│   ├── Keyboard core
-│   │   ├── KeyboardCanvas.swift    ⭐ the full keyboard view (app + extension)
-│   │   ├── KeyboardController.swift  shift / plane / emoji mode state
-│   │   ├── KeyboardLiveState.swift   per-keystroke suggestion + panel state
-│   │   ├── KeyboardLayout.swift    QWERTY / AZERTY / QWERTZ / Dvorak presets
-│   │   ├── KeyTouchRouter.swift    multitouch routing for the key grid
-│   │   ├── KeyView.swift           individual key rendering + bloom animation
-│   │   ├── KeySpec.swift           key identity, label, and action value type
-│   │   ├── KeyPopup.swift          pressed-key popup bubble
-│   │   └── KeyGlyphLayer.swift     unified glyph-layer draw pass
-│   │
-│   ├── Autocomplete
-│   │   ├── SuggestionEngine.swift  offline UITextChecker + Damerau-Levenshtein ranker
-│   │   ├── SuggestionBar.swift     autocomplete / correction strip
-│   │   └── SmartPunctuation.swift  curly quotes, double-space, contractions
-│   │
-│   ├── Emoji keyboard
-│   │   ├── EmojiCanvas.swift       emoji keyboard (sibling of KeyboardCanvas)
-│   │   ├── EmojiCell.swift         tappable emoji cell + long-press for skin tone
-│   │   ├── EmojiBarTouchSurface.swift  UIKit touch surface for the emoji bar
-│   │   ├── EmojiTabTapSurface.swift    UIKit touch surface for category tabs
-│   │   ├── EmojiDeleteTile.swift   backspace tile with hold-to-repeat
-│   │   ├── SkinTonePicker.swift    long-press skin-tone picker overlay
-│   │   ├── EmojiSkinTone.swift     SkinTone enum + modifier application
-│   │   ├── EmojiData.swift         EmojiCategory model + name-based search
-│   │   └── EmojiData.generated.swift  full Unicode 16.0 emoji set (generated)
-│   │
-│   ├── Action panels
-│   │   ├── ClipboardBar.swift      inline clipboard strip (bar style)
-│   │   ├── ClipboardPanel.swift    full-keyboard clipboard overlay
-│   │   ├── ClipboardManager.swift  FIFO history + pin / delete, persisted
-│   │   ├── ClipboardEntry.swift    one clipboard entry + relative-time label
-│   │   ├── NotepadBar.swift        inline notepad compose strip
-│   │   ├── NotepadBrowsePanel.swift  full-keyboard saved-notes browser
-│   │   ├── NotepadManager.swift    scratch buffer + notes archive, persisted
-│   │   ├── NotepadNote.swift       one saved note
-│   │   ├── PanelSwitcherPanel.swift  cards-style panel picker
-│   │   └── ActionPanelButton.swift   suggestion-bar panel-open button
-│   │
-│   ├── Sound
-│   │   ├── SoundPack.swift         named sound-pack definitions
-│   │   └── SoundPlayer.swift       AVFoundation playback + haptics
-│   │
-│   └── Utilities
-│       ├── SwipeRow.swift          swipe-to-reveal list row (clipboard / notepad)
-│       ├── TrackpadPanel.swift     trackpad-mode move-glyph overlay
-│       └── InputViewHeight.swift   tame UIView-Encapsulated-Layout-Height constraint
+│   ├── Theme/                      Theme.swift, ThemeTypes, RGBA, 30× Theme+<Name>, photos
+│   ├── Settings + IPC              KeyboardSettings, SharedStore, FeatureFlags
+│   ├── Keyboard core               KeyboardCanvas ⭐, KeyboardController, KeyboardLayout, keys
+│   ├── Touch + input               KeyTouchRouter, AdaptiveHitbox, SwipeDecoder, accents
+│   ├── Prediction                  SuggestionEngine, Lexicon (.clex), NgramModel (.cngm),
+│   │                               CorrectionScorer, UserAdaptation, AIEngine (iOS 26+)
+│   ├── Emoji                       EmojiCanvas, EmojiData.generated (make emoji)
+│   ├── Action panels               clipboard, notepad, calculator, panel switcher
+│   ├── Extensions/                 custom PyMini actions (ClinkExtension, ExtensionsPanel)
+│   ├── Panels/                     custom PyMini UI panels (ClinkPanel, PanelRuntime)
+│   ├── PyMini/                     sandboxed Python-subset interpreter
+│   ├── Motion/                     Motion tokens, MotionProfile, MotionSequence
+│   └── Sound                       SoundPack, SoundPlayer
 │
 ├── Clink/                          container app
-│   ├── ClinkApp.swift              @main entry point
-│   ├── AppModel.swift              app-wide observable state
-│   ├── AppStage.swift              DEBUG marketing-capture routing
-│   └── UI/
-│       ├── RootView.swift          four-tab root (Style / Typing / Feel / Setup)
-│       ├── KeyboardPreview.swift   live preview widget + PinnedPreviewLayout / TabbedPreviewLayout
-│       ├── ThemeEditorView.swift   theme grid picker + export / import
-│       ├── ThemeBuilderView.swift  custom theme editor sheet + GradientEditorView
-│       ├── LayoutPickerView.swift  layout, size, popups, and feel tabs
-│       ├── TypingView.swift        autocorrect + suggestions settings
-│       ├── AdvancedSettingsView.swift  touch / spring / timing tuning with presets
-│       ├── TuningPresets.swift     Preset type, named catalogs, PresetChips, TunedSection
-│       ├── ClipboardHistoryView.swift  clipboard settings + history browser
-│       ├── NotepadView.swift       notepad settings + note browser
-│       ├── EmojiSettingsView.swift emoji preferences + skin-tone picker
-│       ├── SoundPickerView.swift   sound pack list + volume + haptics
-│       ├── EnableFlowView.swift    step-by-step setup guide
-│       ├── BackupView.swift        export / import whole config as .clinkconfig
-│       ├── ShowcaseView.swift      SHOWCASE: automated typing simulator for footage
-│       └── StagedHeroView.swift    DEBUG: deterministic hero-shot for marketing
+│   ├── ClinkApp.swift, AppModel.swift, AppStage.swift
+│   └── UI/                         sidebar settings shell + live KeyboardPreview
+│       ├── RootView.swift          collapsible sidebar (Style / Typing / Feel / Setup)
+│       ├── theme, layout, keys, typing, panels, extensions, sound, backup…
+│       └── Panels/, Extensions/    script editors + live preview
 │
-└── ClinkKeyboard/                  keyboard extension
-    └── KeyboardViewController.swift  principal class: wires canvas, proxy, IPC, sound
+└── ClinkKeyboard/
+    └── KeyboardViewController.swift  extension host: proxy, suggestions, sound, IPC
 ```
 
 ---
@@ -234,15 +199,18 @@ path. Check it out as a sibling directory before building:
 
 ```
 Projects/
-├── clonk-ios/   ← this repo
+├── Clink-iOS/   ← this repo
 └── iUX-ios/     ← shared iOS design system
 ```
 
 ```bash
 make icon      # render the app icon from Tools/RenderAppIcon.swift
 make project   # regenerate Clink.xcodeproj from project.yml (needs xcodegen)
+make lexicons  # compile .clex / .cngm frequency dictionaries (Tools/GenerateLexicons.swift)
+make emoji     # regenerate EmojiData.generated.swift from Tools/emoji-test.txt
 make build     # xcodebuild for the iOS Simulator
 make run       # boot the sim, install, launch
+make test      # unit tests on the simulator
 make device    # build, sign, install on the paired iPhone
 make clean     # remove build/ and Clink.xcodeproj
 make help      # list every target
@@ -260,9 +228,13 @@ glass themes simply render a `.ultraThinMaterial` fallback on earlier OS version
 
 ### Generated files
 
-`EmojiData.generated.swift` is produced from `Tools/emoji-test.txt` (Unicode 16.0)
-by `Tools/GenerateEmojiData.swift`. Regenerate with `make emoji` — only needed
-when updating the Unicode emoji set.
+| Output | Source | Command |
+|---|---|---|
+| `Sources/ClinkKit/EmojiData.generated.swift` | `Tools/emoji-test.txt` (Unicode 16.0) | `make emoji` |
+| `Resources/Lexicons/*.clex`, `*.cngm` | wordlists under `Tools/wordlists/` | `make lexicons` |
+
+Only needed when updating the emoji set or lexicon wordlists. Format details in
+`Tools/GenerateLexicons.swift` and [docs/04-prediction.md](docs/04-prediction.md).
 
 ---
 
