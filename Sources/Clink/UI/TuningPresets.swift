@@ -57,12 +57,13 @@ enum TuningPresets {
 
     /// Cursor engagement — how eager the space-bar cursor is to activate.
     static let cursor: [Preset] = [
-        Preset(name: "Default",    apply: { $0.spaceCursorActivationDelay = 0;   $0.spaceCursorStride = 10 },
-               matches: { aeq($0.spaceCursorActivationDelay, 0) && aeq($0.spaceCursorStride, 10) },
-               detail: "Instant · 10pt per character."),
+        // Deliberate is the shipped default (see `KeyboardSettings` field defaults).
         Preset(name: "Deliberate", apply: { $0.spaceCursorActivationDelay = 150; $0.spaceCursorStride = 16 },
                matches: { aeq($0.spaceCursorActivationDelay, 150) && aeq($0.spaceCursorStride, 16) },
                detail: "150ms hold · 16pt per character — fewer accidental scrolls."),
+        Preset(name: "Instant",    apply: { $0.spaceCursorActivationDelay = 0;   $0.spaceCursorStride = 10 },
+               matches: { aeq($0.spaceCursorActivationDelay, 0) && aeq($0.spaceCursorStride, 10) },
+               detail: "Instant · 10pt per character."),
         Preset(name: "Sensitive",  apply: { $0.spaceCursorActivationDelay = 0;   $0.spaceCursorStride = 8 },
                matches: { aeq($0.spaceCursorActivationDelay, 0) && aeq($0.spaceCursorStride, 8) },
                detail: "Instant · 8pt per character — the cursor flies."),

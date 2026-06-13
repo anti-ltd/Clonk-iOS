@@ -1106,12 +1106,16 @@ private struct ClinkContent: View {
     ]
 
     private var extensionCards: [DestCard] {
+        // Only surface extensions the user has actually enabled — a disabled one
+        // has nothing to show on its page. (Manage, below, is always present so
+        // they can re-enable.)
+        let s = model.settings
         var cards = model.settings.extensionOrder.compactMap { id -> DestCard? in
             switch id {
-            case "calculator": return DestCard(title: "Calculator", icon: "numbers.rectangle", description: "Built-in calculator panel",       dest: .calculator)
-            case "clipboard":  return DestCard(title: "Clipboard",  icon: "clipboard",         description: "Recent clipboard history",        dest: .clipboard)
-            case "emoji":      return DestCard(title: "Emoji",      icon: "face.smiling",      description: "Emoji picker and skin tones",     dest: .emoji)
-            case "notepad":    return DestCard(title: "Notepad",    icon: "note.text",         description: "Scratch pad inside the keyboard", dest: .notepad)
+            case "calculator": return s.calculatorEnabled ? DestCard(title: "Calculator", icon: "numbers.rectangle", description: "Built-in calculator panel",       dest: .calculator) : nil
+            case "clipboard":  return s.clipboardEnabled  ? DestCard(title: "Clipboard",  icon: "clipboard",         description: "Recent clipboard history",        dest: .clipboard)  : nil
+            case "emoji":      return s.emojiEnabled      ? DestCard(title: "Emoji",      icon: "face.smiling",      description: "Emoji picker and skin tones",     dest: .emoji)      : nil
+            case "notepad":    return s.notepadEnabled    ? DestCard(title: "Notepad",    icon: "note.text",         description: "Scratch pad inside the keyboard", dest: .notepad)    : nil
             default:           return nil
             }
         }

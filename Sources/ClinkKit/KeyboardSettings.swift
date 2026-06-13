@@ -482,12 +482,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// text cursor by one character — also the threshold before a press flips
     /// from "tap to type a space" into cursor-trackpad mode. Smaller = more
     /// sensitive (the cursor flies, and a slight wobble can trigger it); larger =
-    /// firmer (you must drag deliberately, fewer accidental scrolls). Default 10.
+    /// firmer (you must drag deliberately, fewer accidental scrolls). Default 16
+    /// (the "Deliberate" feel preset).
     public var spaceCursorStride: Double
     /// How long (ms) the space bar must be held before cursor-trackpad mode can
-    /// engage. 0 = instant (the existing behaviour — movement alone triggers it);
-    /// higher values require an intentional hold, reducing accidental activation
-    /// when typing fast. Works hand-in-hand with `spaceCursorStride`.
+    /// engage. 0 = instant (movement alone triggers it); higher values require an
+    /// intentional hold, reducing accidental activation when typing fast. Works
+    /// hand-in-hand with `spaceCursorStride`. Default 150 (the "Deliberate" feel
+    /// preset).
     public var spaceCursorActivationDelay: Double
     /// How the cursor is moved: slide on the space bar (`spacebar`, default) or
     /// hold the space bar to open a full-keyboard 2-D trackpad (`trackpad`).
@@ -707,8 +709,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         adaptiveShrink: Double = AdaptiveHitbox.defaultShrink,
         adaptivePredictionWeight: Double = AdaptiveHitbox.defaultPredictionWeight,
         adaptivePredictAtWordStart: Bool = true,
-        spaceCursorStride: Double = 10,
-        spaceCursorActivationDelay: Double = 0,
+        spaceCursorStride: Double = 16,
+        spaceCursorActivationDelay: Double = 150,
         cursorMovementType: CursorMovementType = .spacebar,
         cursorLineStride: Double = 30,
         keyBloomScale: Double = 1.06,
@@ -993,8 +995,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         adaptiveShrink = try c.decodeIfPresent(Double.self, forKey: .adaptiveShrink) ?? AdaptiveHitbox.defaultShrink
         adaptivePredictionWeight = try c.decodeIfPresent(Double.self, forKey: .adaptivePredictionWeight) ?? AdaptiveHitbox.defaultPredictionWeight
         adaptivePredictAtWordStart = try c.decodeIfPresent(Bool.self, forKey: .adaptivePredictAtWordStart) ?? true
-        spaceCursorStride = try c.decodeIfPresent(Double.self, forKey: .spaceCursorStride) ?? 10
-        spaceCursorActivationDelay = try c.decodeIfPresent(Double.self, forKey: .spaceCursorActivationDelay) ?? 0
+        spaceCursorStride = try c.decodeIfPresent(Double.self, forKey: .spaceCursorStride) ?? 16
+        spaceCursorActivationDelay = try c.decodeIfPresent(Double.self, forKey: .spaceCursorActivationDelay) ?? 150
         cursorMovementType = (try? c.decodeIfPresent(CursorMovementType.self, forKey: .cursorMovementType)) ?? .spacebar
         cursorLineStride = try c.decodeIfPresent(Double.self, forKey: .cursorLineStride) ?? 30
         keyBloomScale = try c.decodeIfPresent(Double.self, forKey: .keyBloomScale) ?? 1.12
