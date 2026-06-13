@@ -30,6 +30,7 @@ struct AdaptationView: View {
     /// app-launch-time snapshot.
     @State private var learnedWords: [String] = []
     @State private var justCleared = false
+    @State private var openRow: Int? = nil
 
     private var learnedCount: Int { learnedWords.count }
 
@@ -93,7 +94,11 @@ struct AdaptationView: View {
             .padding(.vertical, UX.rowVPadding)
             Divider()
             Button(role: .destructive) {
-                UserAdaptation.shared.clear()
+                // Fresh instance, not `.shared` (an app-launch snapshot): `clear`
+                // keeps pinned custom words, and the live file may hold custom
+                // words added this session that the stale snapshot lacks — using
+                // `.shared` would drop them. See `forget` below.
+                UserAdaptation().clear()
                 learnedWords = []
                 justCleared = true
             } label: {
@@ -117,29 +122,42 @@ struct AdaptationView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 4)
-                VStack(spacing: 0) {
-                    ForEach(Array(learnedWords.enumerated()), id: \.offset) { index, word in
-                        if index > 0 { Divider() }
-                        HStack {
-                            Text(word)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                            Spacer()
+                VStack(spacing: 8) {
+                    ForEach(Array(learnedWords.enumerated()), id: \.element) { index, word in
+                        SwipeRow(id: index, cornerRadius: cardCornerRadius, actions: [
+                            SwipeAction(icon: "trash.fill", label: "Forget",
+                                        tint: .red) { forget(word) },
+                        ], openID: $openRow,
+                           cardBackground: {
+                            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                                .fill(Color(.secondarySystemGroupedBackground))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                                )
+                        }) {
+                            HStack {
+                                Text(word)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
                     }
                 }
-                .background(
-                    RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
-                        )
-                )
             }
         }
+    }
+
+    private func forget(_ word: String) {
+        // Fresh instance loads the latest on-disk store (the keyboard writes it
+        // from another process) and removes just this one key — so we don't
+        // clobber words learned since the app launched, the way the stale
+        // `.shared` snapshot would.
+        UserAdaptation().forgetLearnedWord(word)
+        learnedWords.removeAll { $0 == word }
     }
 
     private var countLabel: String {

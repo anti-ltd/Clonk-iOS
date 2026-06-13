@@ -4,11 +4,18 @@
  permanently suppresses corrections they reject — so the keyboard stops
  fighting the user's vocabulary.
 
+ It also holds the user's hand-curated custom dictionary: words pinned by the
+ app's Suggestions › Custom tab (`addCustomWord`). Pinned entries are user
+ intent rather than observed usage, so unlike learned words they never decay,
+ are never evicted, and survive `clear()`. They share this store (not a
+ separate file) so they ride every ranking/completion/swipe path for free.
+
  Everything lives in one JSON file in the App Group container (same pattern
  as `SharedStore`; falls back to standard UserDefaults when the container is
  unavailable — fine, since the keyboard extension is the only real consumer).
- Nothing ever leaves the device. All reads/writes are gated by the
- `learningEnabled` setting at the call sites; this store is mechanism only.
+ Nothing ever leaves the device. The organic-learning reads/writes are gated
+ by the `learningEnabled` setting at the call sites; custom words are not (a
+ deliberate dictionary edit stands on its own). This store is mechanism only.
  
 
  Module: prediction · Target: ClinkKit
@@ -218,6 +225,19 @@ public final class UserAdaptation: @unchecked Sendable {
         lock.unlock()
         save(snapshot)
         return true
+    }
+
+    /// Forget a single organically-learned word (the per-row delete in the
+    /// Adaptation history). No effect on pinned custom words.
+    public func forgetLearnedWord(_ word: String) {
+        let key = word.lowercased()
+        lock.lock()
+        guard let e = payload.words[key], e.pinned != true else { lock.unlock(); return }
+        payload.words.removeValue(forKey: key)
+        unsavedChanges = 0
+        let snapshot = payload
+        lock.unlock()
+        save(snapshot)
     }
 
     /// Remove a hand-curated word. No effect on organically learned words.

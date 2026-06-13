@@ -29,24 +29,41 @@ struct SuggestionsView: View {
     @State private var openRow: Int? = nil
     @FocusState private var fieldFocused: Bool
 
+    private var tabPicker: some View {
+        ThemedTabPicker(
+            options: [("General", Tab.general), ("Custom", Tab.custom)],
+            selection: $selectedTab)
+    }
+
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings,
-                            bottomBar: AnyView(
-                                ThemedTabPicker(
-                                    options: [("General", Tab.general),
-                                              ("Custom", Tab.custom)],
-                                    selection: $selectedTab)
-                            )) {
+        Group {
             switch selectedTab {
-            case .general: generalTab(model: model)
-            case .custom:  customTab
+            case .general:
+                // Keeps the live keyboard preview pinned above the controls.
+                PinnedPreviewLayout(settings: model.settings,
+                                    bottomBar: AnyView(tabPicker)) {
+                    generalTab(model: model)
+                }
+            case .custom:
+                // No preview — managing the dictionary has no on-screen effect.
+                VStack(spacing: 0) {
+                    ScrollView {
+                        VStack(spacing: UX.cardSpacing) { customTab }
+                            .padding(UX.screenPadding)
+                    }
+                    tabPicker
+                        .padding(.horizontal, UX.screenPadding)
+                        .padding(.vertical, 12)
+                        .overlay(alignment: .top) { Divider().opacity(0.4) }
+                }
+                .themePageBackground()
             }
         }
         .tint(themeAccent)
         .navigationTitle("Suggestions")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { customWords = UserAdaptation.shared.customWords() }
+        .onAppear { customWords = UserAdaptation().customWords() }
     }
 
     // MARK: - General
@@ -169,15 +186,23 @@ struct SuggestionsView: View {
         !newWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    // Custom-word edits go through a *fresh* `UserAdaptation`, never `.shared`:
+    // the keyboard extension writes the store from another process, so the app's
+    // `.shared` is an app-launch-time snapshot. Saving that back would clobber
+    // any words the keyboard has learned since. A fresh instance loads the
+    // current file, mutates one entry, and saves — preserving the rest. (Same
+    // reasoning as `AdaptationView.forget`.)
     private func addWord() {
-        guard UserAdaptation.shared.addCustomWord(newWord) else { return }
+        let store = UserAdaptation()
+        guard store.addCustomWord(newWord) else { return }
         newWord = ""
-        customWords = UserAdaptation.shared.customWords()
+        customWords = store.customWords()
     }
 
     private func remove(_ word: String) {
-        UserAdaptation.shared.removeCustomWord(word)
-        customWords = UserAdaptation.shared.customWords()
+        let store = UserAdaptation()
+        store.removeCustomWord(word)
+        customWords = store.customWords()
     }
 }
 

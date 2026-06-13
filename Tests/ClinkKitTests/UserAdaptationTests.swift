@@ -110,6 +110,18 @@ private func freshStore() -> UserAdaptation {
         #expect(!store.isLearned("smeagol"))
     }
 
+    @Test func forgetLearnedWordRemovesOrganicNotPinned() {
+        let store = freshStore()
+        store.recordCommit("hobbit"); store.recordCommit("hobbit")
+        store.addCustomWord("Bilbo")
+        store.forgetLearnedWord("HOBBIT")              // case-insensitive
+        #expect(!store.isLearned("hobbit"))
+        #expect(!store.learnedWords().contains("hobbit"))
+        // Won't touch a pinned custom word.
+        store.forgetLearnedWord("bilbo")
+        #expect(store.customWords() == ["Bilbo"])
+    }
+
     @Test func persistenceRoundTripsThroughFlush() {
         let groupID = "group.test.invalid.persist"
         let a = UserAdaptation(appGroupID: groupID)
