@@ -81,6 +81,35 @@ private func freshStore() -> UserAdaptation {
         #expect(store.learnedWords().isEmpty)
     }
 
+    @Test func customWordIsImmediatelyLearnedAndListed() {
+        let store = freshStore()
+        #expect(store.addCustomWord("Frodo"))
+        #expect(store.isLearned("frodo"))                 // valid from the start
+        #expect(store.customWords() == ["Frodo"])         // user casing kept
+        #expect(store.learnedWords().contains("Frodo"))   // engine sees it
+        #expect(!store.organicLearnedWords().contains("Frodo")) // but UI history doesn't
+        #expect(!store.addCustomWord("frodo"))            // dup (any casing) rejected
+        #expect(!store.addCustomWord("a"))                // noise rejected
+    }
+
+    @Test func clearKeepsCustomWordsButWipesLearned() {
+        let store = freshStore()
+        store.recordCommit("hello"); store.recordCommit("hello")
+        store.addCustomWord("Galadriel")
+        store.clear()
+        #expect(!store.isLearned("hello"))                // organic word gone
+        #expect(store.isLearned("galadriel"))             // custom word stays
+        #expect(store.customWords() == ["Galadriel"])
+    }
+
+    @Test func removeCustomWordDropsIt() {
+        let store = freshStore()
+        store.addCustomWord("Smeagol")
+        store.removeCustomWord("smeagol")                 // case-insensitive
+        #expect(store.customWords().isEmpty)
+        #expect(!store.isLearned("smeagol"))
+    }
+
     @Test func persistenceRoundTripsThroughFlush() {
         let groupID = "group.test.invalid.persist"
         let a = UserAdaptation(appGroupID: groupID)

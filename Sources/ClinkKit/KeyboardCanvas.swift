@@ -1187,8 +1187,13 @@ public struct KeyboardCanvas: View {
         // Glyph layer: every key's letter, drawn ON TOP of the glass container so
         // the morph (which blends a bloomed key into its neighbours) can't drag
         // the glyph off-centre. Each glyph blooms in place with its key.
-        .overlayPreferenceValue(KeyGlyphKey.self) { glyphs in
-            GeometryReader { proxy in
+        .overlayPreferenceValue(KeyGlyphKey.self) { allGlyphs in
+            // Drop any glyph stamped with a different plane — a key from the plane
+            // we just switched away from can briefly still publish under a keyID
+            // the new plane reuses (positional IDs), which would otherwise leave a
+            // stale symbol glyph stuck on the letters layout.
+            let glyphs = allGlyphs.filter { $0.plane == plane }
+            return GeometryReader { proxy in
                 ForEach(glyphs) { g in
                     glyphLabel(g)
                         .frame(width: g.multiChar ? max(proxy[g.anchor].width - 6, 0) : nil)
@@ -1556,10 +1561,21 @@ public struct KeyboardCanvas: View {
         // the row above — the native keyboard's signature middle-row indent.
         let homeInset = usableWidth * CGFloat(settings.homeRowInsetAmount)
         let stack = VStack(spacing: CGFloat(settings.rowSpacing)) {
-            if settings.showNumberRow, plane == .letters {
-                row(KeyboardLayout.numberRows[0].map { plainKey($0, fontSize: CGFloat(settings.numberRowFontSize)) },
-                    rowID: "num",
-                    fixedHeight: CGFloat(settings.keyHeight) * CGFloat(settings.numberRowHeightScale))
+            if settings.showNumberRow {
+                let numberRowHeight = CGFloat(settings.keyHeight) * CGFloat(settings.numberRowHeightScale)
+                // The number strip only carries keys on the letters plane, but its
+                // slot is reserved in `preferredHeight` on EVERY plane. Off letters,
+                // hold the slot open with a clear spacer of the same height — drop
+                // the row entirely and the flexible rows below would swallow the
+                // freed height, growing every key (and yanking the 123 key out from
+                // under the finger mid-tap) on the number/symbol planes.
+                if plane == .letters {
+                    row(KeyboardLayout.numberRows[0].map { plainKey($0, fontSize: CGFloat(settings.numberRowFontSize)) },
+                        rowID: "num",
+                        fixedHeight: numberRowHeight)
+                } else {
+                    Color.clear.frame(height: numberRowHeight)
+                }
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { idx, r in
                 // The middle letter row is the home row — the only one iOS indents.
@@ -1945,6 +1961,7 @@ public struct KeyboardCanvas: View {
                             swipeMorph: settings.swipeTypingEnabled && settings.swipeKeyMorph,
                             swipeMorphStrength: CGFloat(settings.swipeMorphStrength),
                             keyID: "\(rowID)-\(i)",
+                            plane: plane,
                             simulatedPressed: controller.pressedKeyID == "\(rowID)-\(i)",
                             router: touch,
                             physics: physics,

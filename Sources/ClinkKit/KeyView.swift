@@ -86,6 +86,9 @@ struct KeyView: View {
     /// Stable identity (row-col) so the glyph layer can track this key across
     /// rebuilds for its symbol animations.
     let keyID: String
+    /// Plane this key belongs to, stamped onto its published glyph so the canvas
+    /// can drop glyphs left over from the previous plane during a switch.
+    let plane: KeyboardController.Plane
     /// Driven by an external typing simulator (the device showcase) — shows the
     /// key as pressed even though no finger is on it.
     let simulatedPressed: Bool
@@ -285,7 +288,7 @@ struct KeyView: View {
         case .system(let n): isSystem = true;  glyph = n; multiChar = false
         }
         return KeyGlyphInfo(
-            id: keyID, anchor: anchor, isSystem: isSystem, glyph: glyph,
+            id: keyID, plane: plane, anchor: anchor, isSystem: isSystem, glyph: glyph,
             color: isPressed ? .white : textColor,
             scaleX: warp.scaleX, scaleY: warp.scaleY, offsetX: warp.offset,
             // Only the backspace key bounces on auto-repeat; every other key

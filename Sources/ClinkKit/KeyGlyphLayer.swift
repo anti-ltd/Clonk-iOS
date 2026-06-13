@@ -19,6 +19,13 @@ import SwiftUI
 struct KeyGlyphInfo: Identifiable, Equatable {
     /// Stable row-col key ID (`"\(rowID)-\(index)"`).
     let id: String
+    /// Plane this glyph was built for. keyIDs are positional and reused across
+    /// planes, so during a plane switch an outgoing key can briefly publish a
+    /// glyph with the SAME id as its incoming replacement — `ForEach`'s
+    /// duplicate-id handling then keeps one arbitrarily, leaving stale symbol
+    /// glyphs on the letters layout. The canvas filters on this so only the live
+    /// plane's glyphs render.
+    let plane: KeyboardController.Plane
     /// Key bounds in the glyph overlay's coordinate space.
     let anchor: Anchor<CGRect>
     /// When true, `glyph` is an SF Symbol name; otherwise literal text.

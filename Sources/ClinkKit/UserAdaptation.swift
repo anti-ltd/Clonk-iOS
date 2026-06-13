@@ -25,6 +25,11 @@ public final class UserAdaptation: @unchecked Sendable {
         var weight: Double
         var lastUsed: Date
         var display: String
+        /// A hand-curated custom-dictionary word. Pinned entries never decay,
+        /// are never evicted, and survive `clear()` — they're user intent, not
+        /// observed usage. `nil`/`false` = an ordinary organically-learned word
+        /// (kept optional so older payloads decode unchanged).
+        var pinned: Bool?
     }
     private struct Rejection: Codable {
         var to: String
@@ -44,6 +49,9 @@ public final class UserAdaptation: @unchecked Sendable {
     /// Usage weights halve after this many days without use, so abandoned
     /// words fade out instead of polluting ranking forever.
     private static let decayHalfLifeDays = 30.0
+    /// Seed weight given to a hand-added custom word, comfortably above
+    /// `learnedThreshold` so it's immediately valid, rank-boosted and swipeable.
+    private static let customWordWeight = 5.0
     private static let wordCap = 2_000
     private static let rejectionCap = 500
     /// Commits between coalesced saves (plus an explicit `flush()` on hide).
@@ -86,6 +94,25 @@ public final class UserAdaptation: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         return payload.words.values
             .filter { $0.weight >= Self.learnedThreshold }
+            .map(\.display)
+    }
+
+    /// Organically learned words only — excludes hand-curated custom words.
+    /// For the Adaptation history list; the engine uses `learnedWords()` (which
+    /// includes custom words) for vocabulary.
+    public func organicLearnedWords() -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        return payload.words.values
+            .filter { $0.weight >= Self.learnedThreshold && $0.pinned != true }
+            .map(\.display)
+    }
+
+    /// Hand-curated custom-dictionary words, alphabetical.
+    public func customWords() -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        return payload.words.values
+            .filter { $0.pinned == true }
+            .sorted { $0.display.localizedCaseInsensitiveCompare($1.display) == .orderedAscending }
             .map(\.display)
     }
 
@@ -153,13 +180,56 @@ public final class UserAdaptation: @unchecked Sendable {
         if dirty { save(snapshot) }
     }
 
-    /// Wipe everything (the app's "Clear learned words" action).
+    /// Wipe organically learned words and rejections (the app's "Clear learned
+    /// words" action). Hand-curated custom words (pinned) are user intent, not
+    /// observed usage, so they survive.
     public func clear() {
         lock.lock()
+        let kept = payload.words.filter { $0.value.pinned == true }
         payload = Payload()
+        payload.words = kept
         unsavedChanges = 0
+        let snapshot = payload
         lock.unlock()
-        save(Payload())
+        save(snapshot)
+    }
+
+    // MARK: - Custom dictionary (user-curated)
+
+    /// Add a hand-curated word to the dictionary. Returns false when the word
+    /// isn't usable (`isLearnable`) or is already pinned. Persists immediately
+    /// — curated edits are rare and want to survive a crash before the next
+    /// coalesced save.
+    @discardableResult
+    public func addCustomWord(_ word: String) -> Bool {
+        let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isLearnable(trimmed) else { return false }
+        let key = trimmed.lowercased()
+        lock.lock()
+        if payload.words[key]?.pinned == true { lock.unlock(); return false }
+        var e = payload.words[key] ?? Entry(weight: 0, lastUsed: Date(), display: trimmed)
+        e.weight = max(e.weight, Self.customWordWeight)
+        e.display = trimmed
+        e.lastUsed = Date()
+        e.pinned = true
+        payload.words[key] = e
+        unsavedChanges = 0
+        let snapshot = payload
+        lock.unlock()
+        save(snapshot)
+        return true
+    }
+
+    /// Remove a hand-curated word. No effect on organically learned words.
+    public func removeCustomWord(_ word: String) {
+        let key = word.lowercased()
+        lock.lock()
+        guard payload.words[key]?.pinned == true else { lock.unlock(); return }
+        payload.words.removeValue(forKey: key)
+        unsavedChanges = 0
+        let snapshot = payload
+        lock.unlock()
+        save(snapshot)
     }
 
     // MARK: - Internals
@@ -191,9 +261,12 @@ public final class UserAdaptation: @unchecked Sendable {
     /// Keep the store bounded: drop the weakest/oldest entries past the caps.
     private func evictIfNeededLocked() {
         if payload.words.count > Self.wordCap {
-            let sorted = payload.words.sorted {
-                ($0.value.weight, $0.value.lastUsed) < ($1.value.weight, $1.value.lastUsed)
-            }
+            // Only organic words are evictable; curated words are never dropped.
+            let sorted = payload.words
+                .filter { $0.value.pinned != true }
+                .sorted {
+                    ($0.value.weight, $0.value.lastUsed) < ($1.value.weight, $1.value.lastUsed)
+                }
             for (key, _) in sorted.prefix(payload.words.count - Self.wordCap) {
                 payload.words.removeValue(forKey: key)
             }
@@ -211,6 +284,7 @@ public final class UserAdaptation: @unchecked Sendable {
     private static func decayed(_ payload: Payload, now: Date) -> Payload {
         var out = payload
         for (key, var e) in out.words {
+            if e.pinned == true { continue }   // curated words never fade
             let days = now.timeIntervalSince(e.lastUsed) / 86_400
             if days > 1 {
                 e.weight *= pow(0.5, days / decayHalfLifeDays)
