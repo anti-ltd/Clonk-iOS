@@ -11,7 +11,7 @@
  `aiSuggestions` / `aiAutocorrect` / `aiPrediction` settings docs).
 
  No keyboard preview: enabling AI has no visible on-screen effect yet, so this
- is a plain scrolled page (like `AdaptationView`) rather than `PinnedPreviewLayout`.
+ is a plain scrolled page rather than `PinnedPreviewLayout`.
  
 
  Module: app-ui · Target: Clink

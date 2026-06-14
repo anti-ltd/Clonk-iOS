@@ -226,6 +226,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     // MARK: - Appearance
     /// Theme used when NOT matching the system appearance.
     public var themeID: String
+    /// App-only UI preference: when false (Simple mode), the settings screens
+    /// hide every "Fine-tune" advanced block; when true (Advanced mode) they're
+    /// shown. The toggle lives at the top of Home. The keyboard extension ignores
+    /// this — it only affects which controls the app surfaces.
+    public var advancedSettings: Bool
     /// When true, the keyboard auto-switches between `lightThemeID` and
     /// `darkThemeID` to follow the system's light/dark mode.
     public var matchSystemAppearance: Bool
@@ -615,18 +620,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// on the visual press at the cost of the liquid ease. Overrides the spring
     /// speed/damping when on.
     public var keyPressInstant: Bool
-    /// Strength of the additive white "tap registered" flash on each press
-    /// (0 = off). The crisp visual snap that confirms a keystroke landed. Fires
-    /// independently — it self-gates on this strength alone, not on the bloom.
-    public var tapFlashStrength: Double
     /// The geometric character of the key press warp (bloom / press-in / jelly /
     /// stretch). Same single-`scaleEffect` cost regardless of choice. Applies when
     /// the bloom is on (`keyBloomScale` > 1).
     public var keyPressStyle: KeyPressStyle
-    /// Tint the tap-registered flash with the theme accent instead of white.
-    public var tapFlashAccent: Bool
-    /// Render the tap flash as an expanding ring outline instead of a filled wash.
-    public var tapFlashRing: Bool
     /// Soft accent-coloured glow behind a key while it's pressed (0 = off). A
     /// blurred tinted halo on the few currently-pressed keys; gated on the motion
     /// profile's expensive-effects tier so it drops under power/thermal pressure.
@@ -734,6 +731,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
 
     public init(
         themeID: String = Theme.preset(id: "liquid-light").id,
+        advancedSettings: Bool = false,
         matchSystemAppearance: Bool = true,
         lightThemeID: String = Theme.preset(id: "liquid-light").id,
         darkThemeID: String = Theme.preset(id: "liquid-dark").id,
@@ -835,10 +833,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keySpringResponse: Double = 0.12,
         keySpringDamping: Double = 0.90,
         keyPressInstant: Bool = false,
-        tapFlashStrength: Double = 0.34,
         keyPressStyle: KeyPressStyle = .bloom,
-        tapFlashAccent: Bool = false,
-        tapFlashRing: Bool = false,
         keyPressGlow: Double = 0,
         keyboardEntrance: KeyboardEntrance = .none,
         spaceBloomScale: Double = 1.04,
@@ -871,6 +866,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         recentEmoji: [String] = []
     ) {
         self.themeID = themeID
+        self.advancedSettings = advancedSettings
         self.matchSystemAppearance = matchSystemAppearance
         self.lightThemeID = lightThemeID
         self.darkThemeID = darkThemeID
@@ -972,10 +968,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.keySpringResponse = keySpringResponse
         self.keySpringDamping = keySpringDamping
         self.keyPressInstant = keyPressInstant
-        self.tapFlashStrength = tapFlashStrength
         self.keyPressStyle = keyPressStyle
-        self.tapFlashAccent = tapFlashAccent
-        self.tapFlashRing = tapFlashRing
         self.keyPressGlow = keyPressGlow
         self.keyboardEntrance = keyboardEntrance
         self.spaceBloomScale = spaceBloomScale
@@ -1032,6 +1025,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         themeID = try c.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.default.id
+        advancedSettings = try c.decodeIfPresent(Bool.self, forKey: .advancedSettings) ?? false
         matchSystemAppearance = try c.decodeIfPresent(Bool.self, forKey: .matchSystemAppearance) ?? true
         lightThemeID = try c.decodeIfPresent(String.self, forKey: .lightThemeID) ?? Theme.defaultLight.id
         darkThemeID = try c.decodeIfPresent(String.self, forKey: .darkThemeID) ?? Theme.defaultDark.id
@@ -1147,19 +1141,15 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keySpringResponse = try c.decodeIfPresent(Double.self, forKey: .keySpringResponse) ?? 0.26
         keySpringDamping = try c.decodeIfPresent(Double.self, forKey: .keySpringDamping) ?? 0.60
         keyPressInstant = try c.decodeIfPresent(Bool.self, forKey: .keyPressInstant) ?? false
-        tapFlashStrength = try c.decodeIfPresent(Double.self, forKey: .tapFlashStrength) ?? 0.34
         keyPressStyle = (try? c.decodeIfPresent(KeyPressStyle.self, forKey: .keyPressStyle)) ?? .bloom
-        tapFlashAccent = try c.decodeIfPresent(Bool.self, forKey: .tapFlashAccent) ?? false
-        tapFlashRing = try c.decodeIfPresent(Bool.self, forKey: .tapFlashRing) ?? false
         keyPressGlow = try c.decodeIfPresent(Double.self, forKey: .keyPressGlow) ?? 0
         // Migrate the retired master switch: a payload that turned `keyPressWarp`
         // OFF meant "no key-press effects". Effects now self-gate on their own
-        // strengths, so reproduce that intent by zeroing bloom, tap-flash, and
-        // glow. (Default true → leave the decoded strengths as-is.)
+        // strengths, so reproduce that intent by zeroing bloom and glow. (Default
+        // true → leave the decoded strengths as-is.)
         if let legacyWarp = try? decoder.container(keyedBy: LegacyKeys.self)
             .decodeIfPresent(Bool.self, forKey: .keyPressWarp), legacyWarp == false {
             keyBloomScale = 1.0
-            tapFlashStrength = 0
             keyPressGlow = 0
         }
         keyboardEntrance = (try? c.decodeIfPresent(KeyboardEntrance.self, forKey: .keyboardEntrance)) ?? .none

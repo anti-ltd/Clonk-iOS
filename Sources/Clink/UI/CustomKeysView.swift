@@ -424,5 +424,5 @@ struct CustomKeyEditorBody: View {
 }
 
 #if DEBUG
-#Preview { LayoutView().clinkPreview() }
+#Preview { KeysView().clinkPreview() }
 #endif

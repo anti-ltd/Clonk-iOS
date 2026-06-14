@@ -115,11 +115,15 @@ struct RootView: View {
 
     /// Every screen the sidebar and home card grid can route to.
     enum SidebarDestination: Hashable {
-        case clink, permissions, localization, layout, theme, artificialIntelligence
+        case clink, permissions, localization, theme, artificialIntelligence
         // Customization placeholders (pages to be built out).
-        case animation, automation, cursor, keys, sounds, haptics, suggestions, popups, gestures, adaptation
+        // Simple-mode merged pages.
+        case typing, keys, feel, text
+        // Advanced-mode granular pages (same content, one feature each).
+        case animation, popups, cursor, gestures, sounds, haptics
+        case suggestions, automation, adaptation, keyGeometry, hitboxes, layout
         // Advanced placeholders.
-        case hitboxes, overlays, response, performance
+        case overlays, response, performance
         case clipboard, notepad, translate, emoji, calculator
         /// Full-page extension manager (same content as the gear-icon sheet).
         case manageExtensions
@@ -370,7 +374,6 @@ private struct DetailHost: View {
         case .clink:        ClinkContent()
         case .permissions:  PermissionsView()
         case .localization: LocalizationView()
-        case .layout:       LayoutView()
         case .theme:        ThemeEditorView()
         case .artificialIntelligence: ArtificialIntelligenceView()
         case .clipboard:  ClipboardHistoryView()
@@ -382,17 +385,23 @@ private struct DetailHost: View {
         case .customActions: if FeatureFlags.experimental { ExtensionsView() }
         case .customPanels: if FeatureFlags.experimental { PanelsView() }
         // Placeholder pages — content to be built out.
-        case .animation:   AnimationView()
-        case .automation:  AutomationView()
-        case .cursor:      CursorView()
+        case .typing:      TypingView()
         case .keys:        KeysView()
-        case .sounds:      SoundsView()
-        case .haptics:     HapticsView()
-        case .gestures:    GesturesView()
-        case .suggestions: SuggestionsView()
-        case .adaptation:  AdaptationView()
-        case .popups:      PopupsView()
-        case .hitboxes:     HitboxView()
+        case .feel:        FeelView()
+        case .text:        TextView()
+        // Advanced-mode granular pages.
+        case .animation:   AnimationPage()
+        case .popups:      PopupsPage()
+        case .cursor:      CursorPage()
+        case .gestures:    GesturesPage()
+        case .sounds:      SoundsPage()
+        case .haptics:     HapticsPage()
+        case .suggestions: SuggestionsPage()
+        case .automation:  AutomationPage()
+        case .adaptation:  AdaptationPage()
+        case .keyGeometry: KeyGeometryPage()
+        case .hitboxes:    HitboxesPage()
+        case .layout:      LayoutPage()
         case .overlays:     OverlaysView()
         case .performance:  PerformanceView()
         case .response:     ResponseView()
@@ -517,19 +526,28 @@ private struct SidebarPanel: View {
 
     /// Customization pages, alphabetical. (Several are placeholders pending build-out.)
     private var customizationRows: [NavItem] {
-        var rows: [NavItem] = [
-            NavItem(title: "Adaptation",  icon: "brain.head.profile",    dest: .adaptation),
-            NavItem(title: "Animation",   icon: "wand.and.stars",        dest: .animation),
-            NavItem(title: "Automation",  icon: "gearshape.2",           dest: .automation),
-            NavItem(title: "Cursor",      icon: "cursorarrow",           dest: .cursor),
-            NavItem(title: "Gestures",    icon: "hand.draw",             dest: .gestures),
-            NavItem(title: "Haptics",     icon: "hand.tap",                         dest: .haptics),
-            NavItem(title: "Keys",        icon: "keyboard",              dest: .keys),
-            NavItem(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait", dest: .popups),
-            NavItem(title: "Sounds",      icon: "speaker.wave.2",        dest: .sounds),
-            NavItem(title: "Suggestions", icon: "text.cursor",            dest: .suggestions),
-            NavItem(title: "Theme",       icon: "paintpalette",          dest: .theme),
-        ]
+        // Simple = merged tabbed pages; Advanced = one row per feature.
+        var rows: [NavItem] = model.settings.advancedSettings
+            ? [
+                NavItem(title: "Adaptation",  icon: "brain.head.profile",    dest: .adaptation),
+                NavItem(title: "Animation",   icon: "wand.and.stars",        dest: .animation),
+                NavItem(title: "Automation",  icon: "gearshape.2",           dest: .automation),
+                NavItem(title: "Cursor",      icon: "cursorarrow",           dest: .cursor),
+                NavItem(title: "Gestures",    icon: "hand.draw",             dest: .gestures),
+                NavItem(title: "Haptics",     icon: "hand.tap",              dest: .haptics),
+                NavItem(title: "Keys",        icon: "keyboard",              dest: .keyGeometry),
+                NavItem(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait", dest: .popups),
+                NavItem(title: "Sounds",      icon: "speaker.wave.2",        dest: .sounds),
+                NavItem(title: "Suggestions", icon: "text.cursor",           dest: .suggestions),
+                NavItem(title: "Theme",       icon: "paintpalette",          dest: .theme),
+              ]
+            : [
+                NavItem(title: "Feel",        icon: "hand.tap",              dest: .feel),
+                NavItem(title: "Keys",        icon: "keyboard",              dest: .keys),
+                NavItem(title: "Text",        icon: "text.cursor",           dest: .text),
+                NavItem(title: "Theme",       icon: "paintpalette",          dest: .theme),
+                NavItem(title: "Typing",      icon: "wand.and.stars",        dest: .typing),
+              ]
         if FeatureFlags.experimental {
             rows += [
                 NavItem(title: "Custom Actions", icon: "puzzlepiece.extension", dest: .customActions),
@@ -541,11 +559,13 @@ private struct SidebarPanel: View {
 
     /// Advanced pages, alphabetical. (Placeholders pending build-out.)
     private var advancedRows: [NavItem] {
-        [
-            NavItem(title: "Hitboxes",    icon: "square.dashed",       dest: .hitboxes),
-            NavItem(title: "Overlays",    icon: "square.stack.3d.up",  dest: .overlays),
-            NavItem(title: "Performance", icon: "gauge.with.dots.needle.bottom.50percent", dest: .performance),
-            NavItem(title: "Response",    icon: "timer",               dest: .response),
+        // Advanced-only: Hitboxes + the debug Overlays page. Performance +
+        // Response are retired from the UI (settings still apply at their stored
+        // values). Empty in Simple → the section header is skipped.
+        guard model.settings.advancedSettings else { return [] }
+        return [
+            NavItem(title: "Hitboxes", icon: "square.dashed",      dest: .hitboxes),
+            NavItem(title: "Overlays", icon: "square.stack.3d.up", dest: .overlays),
         ].sorted { $0.title < $1.title }
     }
 
@@ -561,8 +581,10 @@ private struct SidebarPanel: View {
                 SidebarRow("Localization", icon: "globe", selected: destination == .localization) {
                     select(.localization)
                 }
-                SidebarRow("Layout", icon: "textformat.abc", selected: destination == .layout) {
-                    select(.layout)
+                if model.settings.advancedSettings {
+                    SidebarRow("Layout", icon: "textformat.abc", selected: destination == .layout) {
+                        select(.layout)
+                    }
                 }
                 SidebarRow("Artificial Intelligence", icon: "sparkles", selected: destination == .artificialIntelligence) {
                     select(.artificialIntelligence)
@@ -577,10 +599,12 @@ private struct SidebarPanel: View {
 
                 extensionsSection
 
-                sectionLabel("Advanced")
-                ForEach(advancedRows) { row in
-                    SidebarRow(row.title, icon: row.icon, selected: destination == row.dest) {
-                        select(row.dest)
+                if !advancedRows.isEmpty {
+                    sectionLabel("Advanced")
+                    ForEach(advancedRows) { row in
+                        SidebarRow(row.title, icon: row.icon, selected: destination == row.dest) {
+                            select(row.dest)
+                        }
                     }
                 }
             }
@@ -1072,27 +1096,43 @@ private struct ClinkContent: View {
         var action: (() -> Void)? = nil
     }
 
-    private let generalCards: [DestCard] = [
-        DestCard(title: "Permissions", icon: "lock.shield",    description: "Enable the keyboard and grant Full Access", dest: .permissions),
-        DestCard(title: "Localization", icon: "globe",         description: "Language and dictionary",                  dest: .localization),
-        DestCard(title: "Layout",       icon: "textformat.abc", description: "Key arrangement and row options",         dest: .layout),
-        DestCard(title: "Artificial Intelligence", icon: "sparkles", description: "On-device Apple Intelligence",       dest: .artificialIntelligence),
-    ]
+    private var generalCards: [DestCard] {
+        var cards = [
+            DestCard(title: "Permissions", icon: "lock.shield",    description: "Enable the keyboard and grant Full Access", dest: .permissions),
+            DestCard(title: "Localization", icon: "globe",         description: "Language and dictionary",                  dest: .localization),
+        ]
+        // Advanced mode breaks Layout back out into its own page; Simple folds it
+        // into the Keys page.
+        if model.settings.advancedSettings {
+            cards.append(DestCard(title: "Layout", icon: "textformat.abc", description: "Key arrangement and row options", dest: .layout))
+        }
+        cards.append(DestCard(title: "Artificial Intelligence", icon: "sparkles", description: "On-device Apple Intelligence", dest: .artificialIntelligence))
+        return cards
+    }
 
     private var customizationCards: [DestCard] {
-        var cards: [DestCard] = [
-            DestCard(title: "Adaptation",  icon: "brain.head.profile",                          description: "On-device learning from your typing",   dest: .adaptation),
-            DestCard(title: "Animation",   icon: "wand.and.stars",                              description: "Spring physics and press timing",       dest: .animation),
-            DestCard(title: "Automation",  icon: "gearshape.2",                                 description: "Auto-capitalize and smart punctuation", dest: .automation),
-            DestCard(title: "Cursor",      icon: "cursorarrow",                                 description: "Movement style and feel",               dest: .cursor),
-            DestCard(title: "Gestures",    icon: "hand.draw",                                   description: "Swipe typing and the glide trail",      dest: .gestures),
-            DestCard(title: "Haptics",     icon: "hand.tap",                                    description: "Key press haptic feedback",             dest: .haptics),
-            DestCard(title: "Keys",        icon: "keyboard",                                    description: "Size, shape, and backspace repeat",     dest: .keys),
-            DestCard(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait",    description: "Popup style and Liquid Glass",          dest: .popups),
-            DestCard(title: "Sounds",      icon: "speaker.wave.2",                              description: "Sound pack and volume",                 dest: .sounds),
-            DestCard(title: "Suggestions", icon: "text.cursor",                                 description: "Autocorrect and suggestion bar",        dest: .suggestions),
-            DestCard(title: "Theme",       icon: "paintpalette",                                description: "Colors, materials, and themes",         dest: .theme),
-        ]
+        // Simple mode = the merged tabbed pages; Advanced = one card per feature.
+        var cards: [DestCard] = model.settings.advancedSettings
+            ? [
+                DestCard(title: "Adaptation",  icon: "brain.head.profile",                       description: "On-device learning from your typing",   dest: .adaptation),
+                DestCard(title: "Animation",   icon: "wand.and.stars",                           description: "Spring physics and press timing",       dest: .animation),
+                DestCard(title: "Automation",  icon: "gearshape.2",                              description: "Auto-capitalize and smart punctuation", dest: .automation),
+                DestCard(title: "Cursor",      icon: "cursorarrow",                              description: "Movement style and feel",               dest: .cursor),
+                DestCard(title: "Gestures",    icon: "hand.draw",                                description: "Swipe typing and the glide trail",      dest: .gestures),
+                DestCard(title: "Haptics",     icon: "hand.tap",                                 description: "Key press haptic feedback",             dest: .haptics),
+                DestCard(title: "Keys",        icon: "keyboard",                                 description: "Size, shape, and spacing",              dest: .keyGeometry),
+                DestCard(title: "Popups",      icon: "rectangle.portrait.on.rectangle.portrait", description: "Popup style and Liquid Glass",         dest: .popups),
+                DestCard(title: "Sounds",      icon: "speaker.wave.2",                           description: "Sound pack and volume",                 dest: .sounds),
+                DestCard(title: "Suggestions", icon: "text.cursor",                              description: "Autocorrect and suggestion bar",        dest: .suggestions),
+                DestCard(title: "Theme",       icon: "paintpalette",                             description: "Colors, materials, and themes",         dest: .theme),
+              ]
+            : [
+                DestCard(title: "Feel",        icon: "hand.tap",                                    description: "Sounds and haptics",                    dest: .feel),
+                DestCard(title: "Keys",        icon: "keyboard",                                    description: "Geometry, hitboxes, and layout",        dest: .keys),
+                DestCard(title: "Text",        icon: "text.cursor",                                 description: "Suggestions, automation, learning",     dest: .text),
+                DestCard(title: "Theme",       icon: "paintpalette",                                description: "Colors, materials, and themes",         dest: .theme),
+                DestCard(title: "Typing",      icon: "wand.and.stars",                              description: "Animation, popups, cursor, gestures",   dest: .typing),
+              ]
         if FeatureFlags.experimental {
             cards += [
                 DestCard(title: "Custom Actions", icon: "puzzlepiece.extension", description: "Write keyboard actions in Python", dest: .customActions),
@@ -1102,12 +1142,17 @@ private struct ClinkContent: View {
         return cards
     }
 
-    private let advancedCards: [DestCard] = [
-        DestCard(title: "Hitboxes",    icon: "square.dashed",                                  description: "Touch target size and presets",      dest: .hitboxes),
-        DestCard(title: "Overlays",    icon: "square.stack.3d.up",                             description: "Debug overlays",                     dest: .overlays),
-        DestCard(title: "Performance", icon: "gauge.with.dots.needle.bottom.50percent",         description: "Suggestion timing and CPU budget",   dest: .performance),
-        DestCard(title: "Response",    icon: "timer",                                          description: "Long-press and slide-up timing",     dest: .response),
-    ]
+    private var advancedCards: [DestCard] {
+        // Advanced-only pages: Hitboxes (folded into Keys in Simple) and the
+        // debug Overlays page. Performance + Response are retired from the UI —
+        // their settings still drive the keyboard at their stored values, there's
+        // just no editing page. Empty in Simple → the section is hidden (see body).
+        guard model.settings.advancedSettings else { return [] }
+        return [
+            DestCard(title: "Hitboxes", icon: "square.dashed",       description: "Touch target size and presets", dest: .hitboxes),
+            DestCard(title: "Overlays", icon: "square.stack.3d.up",  description: "Debug overlays",                 dest: .overlays),
+        ]
+    }
 
     private var extensionCards: [DestCard] {
         // Only surface extensions the user has actually enabled — a disabled one
@@ -1146,20 +1191,43 @@ private struct ClinkContent: View {
                         .font(.title.weight(.bold))
                     Text(appVersion)
                         .font(.caption).foregroundStyle(specialKeyTextColor)
-                    // Required attribution for the bundled prediction data
-                    // (see Tools/wordlists/README.md for sources + licenses).
-                    Text("Dictionaries: FrequencyWords (CC-BY-SA 4.0) · Tatoeba (CC-BY 2.0 FR)")
-                        .font(.caption2).foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .id("header")
 
+                CardSection {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Picker("Settings mode", selection: $model.settings.advancedSettings) {
+                            Text("Simple").tag(false)
+                            Text("Advanced").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        Text(model.settings.advancedSettings
+                             ? "Advanced: every fine-tune control is shown."
+                             : "Simple: just the essentials. Switch to Advanced for fine-tune controls throughout the app.")
+                            .font(.caption)
+                            .foregroundStyle(specialKeyTextColor)
+                    }
+                    .padding(.vertical, UX.rowVPadding)
+                }
+                .id("mode")
+
                 gridSection("General", cards: generalCards).id("general")
                 gridSection("Customization", cards: customizationCards).id("customization")
                 gridSection("Extensions", cards: extensionCards, gearAction: { showExtensionPicker = true }).id("extensions")
-                gridSection("Advanced", cards: advancedCards).id("advanced")
+                if !advancedCards.isEmpty {
+                    gridSection("Advanced", cards: advancedCards).id("advanced")
+                }
+
+                // Required attribution for the bundled prediction data
+                // (see Tools/wordlists/README.md for sources + licenses).
+                Text("Dictionaries: FrequencyWords (CC-BY-SA 4.0) · Tatoeba (CC-BY 2.0 FR)")
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                    .id("footer")
             }
             .padding(UX.screenPadding)
         }

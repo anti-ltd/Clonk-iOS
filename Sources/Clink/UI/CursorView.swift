@@ -17,21 +17,14 @@ import SwiftUI
 import iUXiOS
 
 /// Space-bar cursor mode and feel, as a single calm scroll.
-struct CursorView: View {
+struct CursorControls: View {
     @Environment(AppModel.self) private var model
     @Environment(\.cardCornerRadius) private var cardCornerRadius
-    @State private var fineTuneExpanded = false
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings,
-                            previewCursorActive: model.settings.cursorMovementType != .spacebar,
-                            lockedPreviewText: "The quick brown fox jumps over the lazy dog") {
-            cursorCard(model: model)
-            feelCard(model: model)
-        }
-        .navigationTitle("Cursor")
-        .navigationBarTitleDisplayMode(.inline)
+        cursorCard(model: model)
+        feelCard(model: model)
     }
 
     // MARK: - Cursor (movement type)
@@ -63,36 +56,30 @@ struct CursorView: View {
         CardSection("Feel") {
             PresetChips(presets: TuningPresets.cursor)
                 .padding(.vertical, UX.rowVPadding)
-            Divider()
-            DisclosureGroup("Fine-tune", isExpanded: $fineTuneExpanded) {
-                VStack(spacing: 0) {
-                    SliderRow("Activation time",
-                              tooltip: "How long you must hold the space bar before cursor mode engages. Raise it if the cursor triggers accidentally while typing.",
-                              value: $model.settings.spaceCursorActivationDelay,
-                              in: 0...500, step: 25) {
-                        $0 < 5 ? "Instant" : "\(Int($0))ms"
-                    }
-                    Divider()
-                    SliderRow("Scroll sensitivity",
-                              tooltip: "How far your finger travels to move the cursor one character. If it jumps too fast, lower this.",
-                              value: Binding(
-                                get: { 30 - model.settings.spaceCursorStride },
-                                set: { model.settings.spaceCursorStride = 30 - $0 }),
-                              in: 8...24, step: 2) {
-                        $0 == 20 ? "Default" : "\(Int(($0 / 20 * 100).rounded()))%"
-                    }
-                    Divider()
-                    SliderRow("Line length",
-                              tooltip: "Characters per line used to calculate vertical cursor jumps when you drag up or down.",
-                              value: $model.settings.cursorLineStride,
-                              in: 5...80, step: 5) {
-                        "\(Int($0)) chars"
-                    }
+            FineTune {
+                SliderRow("Activation time",
+                          tooltip: "How long you must hold the space bar before cursor mode engages. Raise it if the cursor triggers accidentally while typing.",
+                          value: $model.settings.spaceCursorActivationDelay,
+                          in: 0...500, step: 25) {
+                    $0 < 5 ? "Instant" : "\(Int($0))ms"
                 }
-                .padding(.top, 6)
+                Divider()
+                SliderRow("Scroll sensitivity",
+                          tooltip: "How far your finger travels to move the cursor one character. If it jumps too fast, lower this.",
+                          value: Binding(
+                            get: { 30 - model.settings.spaceCursorStride },
+                            set: { model.settings.spaceCursorStride = 30 - $0 }),
+                          in: 8...24, step: 2) {
+                    $0 == 20 ? "Default" : "\(Int(($0 / 20 * 100).rounded()))%"
+                }
+                Divider()
+                SliderRow("Line length",
+                          tooltip: "Characters per line used to calculate vertical cursor jumps when you drag up or down.",
+                          value: $model.settings.cursorLineStride,
+                          in: 5...80, step: 5) {
+                    "\(Int($0)) chars"
+                }
             }
-            .tint(.primary)
-            .padding(.vertical, UX.rowVPadding)
         }
     }
 
@@ -262,5 +249,5 @@ private struct CursorModePreview: View {
 }
 
 #if DEBUG
-#Preview { CursorView().clinkPreview() }
+#Preview { TypingView().clinkPreview() }
 #endif

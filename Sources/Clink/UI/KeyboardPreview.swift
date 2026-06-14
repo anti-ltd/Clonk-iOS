@@ -819,7 +819,7 @@ extension View {
     /// Usage at the bottom of a panel file:
     ///
     ///     #if DEBUG
-    ///     #Preview { CursorView().clinkPreview() }
+    ///     #Preview { TypingView().clinkPreview() }
     ///     #endif
     ///
     /// Select the **Clink** app scheme (not ClinkKeyboard) before previewing.

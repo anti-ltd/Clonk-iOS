@@ -1,6 +1,6 @@
 /**
  `KeyView`: a single key rendered with its fill, text, bloom animation, and
- optional glass effect. Also defines `TapPulse` (the additive press-flash animation).
+ optional glass effect.
  
 
  Module: keyboard-core · Target: ClinkKit
@@ -8,82 +8,6 @@
  */
 import SwiftUI
 
-// MARK: - Tap pulse
-
-/// A one-shot, additive "tap registered" flash, replayed on every press.
-///
-/// Keyed to `TouchEngine`'s per-key tap tick (which bumps on every
-/// touch-down), so it fires even when the same key is re-pressed while it's
-/// still in the pressed/linger state — the case where the bloom, sprung on
-/// `isPressed`, can't re-animate. It briefly brightens the key over its own
-/// shape and fades out; it changes no geometry, so it layers on top of the
-/// bloom/popup without overriding either. Self-gates on `tapFlashStrength`
-/// (0 = off), independent of the bloom — each press effect stands alone.
-struct TapPulse: ViewModifier {
-    let trigger: Int
-    let shape: RoundedRectangle
-    let enabled: Bool
-    /// Peak opacity of the flash (0 = off). Tunable via `tapFlashStrength`.
-    var strength: CGFloat = 0.34
-    /// Flash colour — white by default, accent when `tapFlashAccent`.
-    var color: Color = .white
-    /// Draw the flash as a stroked ring instead of a filled wash.
-    var ring: Bool = false
-    /// Additive (`.plusLighter`) compositing — the bright "snap" for the white
-    /// flash. Off → a normal-blend tint, so a coloured (accent) flash actually
-    /// reads as its hue instead of washing out toward white. Set false for accent.
-    var additive: Bool = true
-
-    /// Current flash opacity. Driven by explicit writes (bright on trigger,
-    /// fade 50ms later) with render-side animations in between — NOT a
-    /// `keyframeAnimator` (its content closure re-runs on the main thread every
-    /// frame, and per-frame `.plusLighter` compositing over a glass surface
-    /// dropped the press bloom to a crawl) and NOT a `phaseAnimator` (a
-    /// re-trigger mid-cycle — double-tapping a key fast — could park it on the
-    /// bright phase, leaving the key visibly stuck lit). Every code path here
-    /// ends with an animated fade to 0, so a stuck flash is impossible.
-    @State private var flash: CGFloat = 0
-    @State private var fadeTask: Task<Void, Never>?
-
-    func body(content: Content) -> some View {
-        // The additive `.plusLighter` layer is the GPU-expensive part — skipped
-        // under power/thermal pressure (the profile gate), where it historically
-        // cost frames on older GPUs. Reading the profile here also subscribes
-        // this view to tier changes, so flashes resume when pressure lifts.
-        if enabled, strength > 0.001, MotionProfile.shared.allowsExpensiveEffects {
-            content.overlay {
-                Group {
-                    if ring {
-                        // Outline burst — reads as a quick ripple around the cap.
-                        // Thicker than a fill needs to be (a thin line has little
-                        // area), and driven at ~2× opacity so the brief stroke
-                        // registers.
-                        shape.strokeBorder(color, lineWidth: 4)
-                            .opacity(min(1, flash * 2))
-                    } else {
-                        shape.fill(color)
-                            .opacity(flash)
-                    }
-                }
-                // White → additive bright pop; accent → normal-blend tint so the
-                // colour is unmistakable (additive accent just reads as "brighter").
-                .blendMode(additive ? .plusLighter : .normal)
-                .allowsHitTesting(false)
-            }
-            .onChange(of: trigger) { _, _ in
-                fadeTask?.cancel()
-                withAnimation(Motion.tapFlashIn.animation) { flash = strength }   // snap bright
-                fadeTask = Task { @MainActor in
-                    try? await Task.sleep(for: .seconds(0.05))
-                    guard !Task.isCancelled else { return }
-                    withAnimation(Motion.tapFlashOut.animation) { flash = 0 }     // ease back out
-                }
-            }
-        } else {
-            content
-        }
-    }
-}
 
 // MARK: - Key view
 
@@ -274,19 +198,6 @@ struct KeyView: View {
             .animation(spec.isSpace
                        ? physics.spaceSpringAnimation : nil,
                        value: cursorActive)
-            // Additive "tap registered" flash. The bloom above is sprung on
-            // `isPressed`, which never re-toggles when the SAME key is tapped
-            // twice inside the linger window (the second `l` in "tell") — so the
-            // re-press reads as dropped though the character did insert. This
-            // pulse is keyed to the router's per-press tick, which bumps on every
-            // landing, so each tap gets its own confirmation. It only flashes a
-            // brief highlight over the key — it never touches the bloom geometry,
-            // so it adds to the press effect rather than overriding it.
-            .modifier(TapPulse(trigger: state.tapTick, shape: shape, enabled: true,
-                               strength: physics.tapFlashStrength,
-                               color: physics.tapFlashAccent ? pressedTint : .white,
-                               ring: physics.tapFlashRing,
-                               additive: !physics.tapFlashAccent))
             // Publish the glyph for the on-top layer — except shift, which draws
             // its own so it can morph with its interactive glass.
             .anchorPreference(key: KeyGlyphKey.self, value: .bounds) { anchor in

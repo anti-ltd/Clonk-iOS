@@ -383,19 +383,13 @@ struct TunedSection<Content: View>: View {
     let title: String
     let presets: [Preset]
     @ViewBuilder var fineTune: Content
-    @State private var expanded = false
 
     var body: some View {
         CardSection(title) {
             PresetChips(presets: presets)
                 .padding(.vertical, UX.rowVPadding)
-            Divider()
-            DisclosureGroup("Fine-tune", isExpanded: $expanded) {
-                VStack(spacing: 0) { fineTune }
-                    .padding(.top, 6)
-            }
-            .tint(.primary)
-            .padding(.vertical, UX.rowVPadding)
+            // The disclosure hides in Simple mode (see `FineTune`).
+            FineTune { fineTune }
         }
     }
 }
@@ -467,5 +461,48 @@ extension View {
             if !enabled { LockedReason(reason) }
         }
         .animation(.snappy(duration: 0.25), value: enabled)
+    }
+}
+
+// MARK: - Fine-tune (Simple / Advanced mode)
+
+/// A "Fine-tune" advanced block that DISAPPEARS in Simple mode and shows a
+/// collapsed disclosure of raw controls in Advanced mode. The Home screen's
+/// Simple/Advanced toggle (`settings.advancedSettings`) drives it — this is the
+/// single place that hides every fine-tune across the app, so a page in Simple
+/// mode is just its presets + primary control. Optionally gated: when
+/// `enabledWhen` is false the (advanced-visible) block is disabled with a reason,
+/// composing with the feature-gating house rule.
+///
+/// Includes its own leading `Divider`, so call sites drop the separator they used
+/// to put before the disclosure — in Simple mode nothing (not even a stray rule)
+/// is left behind.
+struct FineTune<Content: View>: View {
+    @Environment(AppModel.self) private var model
+    @State private var expanded = false
+    let enabledWhen: Bool
+    let reason: String
+    @ViewBuilder var content: Content
+
+    init(enabledWhen: Bool = true, reason: String = "",
+         @ViewBuilder content: () -> Content) {
+        self.enabledWhen = enabledWhen
+        self.reason = reason
+        self.content = content()
+    }
+
+    var body: some View {
+        if model.settings.advancedSettings {
+            VStack(spacing: 0) {
+                Divider()
+                DisclosureGroup("Fine-tune", isExpanded: $expanded) {
+                    VStack(spacing: 0) { content }
+                        .padding(.top, 6)
+                }
+                .tint(.primary)
+                .padding(.vertical, UX.rowVPadding)
+            }
+            .gated(enabledWhen, reason: reason)
+        }
     }
 }

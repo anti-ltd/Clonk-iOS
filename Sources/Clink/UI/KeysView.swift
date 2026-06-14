@@ -15,37 +15,82 @@
 import SwiftUI
 import iUXiOS
 
-/// Key geometry, padding, and long-press hint toggle, as a single calm scroll.
+/// Keys — geometry, hitboxes, and layout under one page with three tabs. Merges
+/// the former Keys, Hitboxes, and Layout pages. The Hitboxes tab turns on the
+/// preview's hitbox overlay; the Layout tab hosts the custom-key editor sheet.
 struct KeysView: View {
+    private enum Tab { case keys, hitboxes, layout }
+
     @Environment(AppModel.self) private var model
-    @State private var fineTuneExpanded = false
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedTab: Tab = .keys
+    /// Non-nil while the custom-key editor sheet is up (Layout tab). Hosted here
+    /// at the page root so the themed sheet presents full-screen.
+    @State private var keyEditing: CustomKeysView.KeyEdit?
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings) {
-            CardSection("Size & shape") {
-                PresetChips(presets: TuningPresets.size)
-                    .padding(.vertical, UX.rowVPadding)
-                Divider()
-                DisclosureGroup("Fine-tune", isExpanded: $fineTuneExpanded) {
-                    VStack(spacing: 0) {
-                        geometryFineTune(model: model)
-                        paddingFineTune(model: model)
-                    }
-                    .padding(.top, 6)
-                }
-                .tint(.primary)
-                .padding(.vertical, UX.rowVPadding)
-            }
-
-            CardSection("Long press") {
-                ToggleRow("Long press previews",
-                          subtitle: "Show a small glyph on each key previewing its first long-press alternate.",
-                          isOn: $model.settings.longPressHintsEnabled)
+        PinnedPreviewLayout(
+            settings: model.settings,
+            showHitboxOverlay: selectedTab == .hitboxes,
+            bottomBar: AnyView(
+                ThemedTabPicker(
+                    options: [("Keys", Tab.keys), ("Hitboxes", Tab.hitboxes), ("Layout", Tab.layout)],
+                    selection: $selectedTab)
+            )) {
+            switch selectedTab {
+            case .keys:     KeyGeometryControls()
+            case .hitboxes: HitboxControls()
+            case .layout:   LayoutControls(editing: $keyEditing)
             }
         }
+        .tint(themeAccent)
         .navigationTitle("Keys")
         .navigationBarTitleDisplayMode(.inline)
+        .themedSheet(isPresented: Binding(get: { keyEditing != nil },
+                                          set: { if !$0 { keyEditing = nil } }),
+                     title: "Custom key") {
+            if let edit = keyEditing {
+                CustomKeyEditorBody(
+                    initial: edit.key,
+                    canRemove: edit.index != nil,
+                    onSave: { saved in
+                        CustomKeysView.commit(model: model, edit: edit, key: saved)
+                        keyEditing = nil
+                    },
+                    onRemove: {
+                        CustomKeysView.remove(model: model, edit: edit)
+                        keyEditing = nil
+                    })
+            }
+        }
+    }
+}
+
+/// Key geometry, padding, and the long-press hint toggle — a single scroll.
+struct KeyGeometryControls: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        CardSection("Size & shape") {
+            PresetChips(presets: TuningPresets.size)
+                .padding(.vertical, UX.rowVPadding)
+            FineTune {
+                geometryFineTune(model: model)
+                paddingFineTune(model: model)
+            }
+        }
+
+        CardSection("Long press") {
+            ToggleRow("Long press previews",
+                      subtitle: "Show a small glyph on each key previewing its first long-press alternate.",
+                      isOn: $model.settings.longPressHintsEnabled)
+        }
     }
 
     @ViewBuilder

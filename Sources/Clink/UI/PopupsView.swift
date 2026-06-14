@@ -10,12 +10,12 @@ import iUXiOS
 
 /// Key popup style and spring tuning.
 /// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
-struct PopupsView: View {
+struct PopupsControls: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings) {
+        Group {
             CardSection("Key popups") {
                 ToggleRow("Key popups",
                           subtitle: "Show an enlarged bubble when a key is pressed.",
@@ -62,11 +62,9 @@ struct PopupsView: View {
                 }
             }
         }
-        .navigationTitle("Popups")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 #if DEBUG
-#Preview { PopupsView().clinkPreview() }
+#Preview { TypingView().clinkPreview() }
 #endif

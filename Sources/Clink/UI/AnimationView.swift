@@ -21,10 +21,9 @@ import iUXiOS
 
 /// Key-press feel + effects tuning with a pinned live preview, as a single
 /// calm scroll: presets up top, advanced knobs collapsed by default.
-struct AnimationView: View {
+struct AnimationControls: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
-    @State private var fineTuneExpanded = false
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
@@ -38,17 +37,12 @@ struct AnimationView: View {
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings, previewColorScheme: nil) {
-            feelCard(model: model)
-            effectsCard(model: model)
-            Text("Effects are optional and run only on press or appearance — never in the typing hot path, so the keyboard stays fast. Works on Liquid Glass and solid themes alike.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 4)
-        }
-        .navigationTitle("Animation")
-        .navigationBarTitleDisplayMode(.inline)
-        .tint(themeAccent)
+        feelCard(model: model)
+        effectsCard(model: model)
+        Text("Effects are optional and run only on press or appearance — never in the typing hot path, so the keyboard stays fast. Works on Liquid Glass and solid themes alike.")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 4)
     }
 
     // MARK: - Feel
@@ -66,17 +60,11 @@ struct AnimationView: View {
                       in: 1.0...1.4, step: 0.02) {
                 $0 == 1.0 ? "Off" : "\(Int(($0 * 100).rounded()))%"
             }
-            Divider()
-            DisclosureGroup("Fine-tune", isExpanded: $fineTuneExpanded) {
-                VStack(spacing: 0) {
-                    keyFineTune(model: model)
-                    spaceFineTune(model: model)
-                    popupFineTune(model: model)
-                }
-                .padding(.top, 6)
+            FineTune {
+                keyFineTune(model: model)
+                spaceFineTune(model: model)
+                popupFineTune(model: model)
             }
-            .tint(.primary)
-            .padding(.vertical, UX.rowVPadding)
         }
     }
 
@@ -209,32 +197,8 @@ struct AnimationView: View {
     @ViewBuilder
     private func effectsCard(model: AppModel) -> some View {
         @Bindable var model = model
-        // Each effect is self-contained — "off" when its own strength is 0, on
-        // independently of the others. No master switch, nothing greyed out by
-        // another control (except the tap-flash look, which needs the flash on).
-        let flashOn = model.settings.tapFlashStrength >= 0.005
+        // Each effect is self-contained — "off" when its own strength is 0.
         CardSection("Effects") {
-            SliderRow("Tap flash",
-                      tooltip: "Brightness burst on the key cap at the moment of the press. 0% turns it off. Fires on every tap, independent of the bloom.",
-                      value: $model.settings.tapFlashStrength,
-                      in: 0...0.7, step: 0.02) {
-                $0 < 0.005 ? "Off" : "\(Int(($0 * 100).rounded()))%"
-            }
-            Group {
-                Divider()
-                ToggleRow("Accent flash",
-                          subtitle: "Flash the key in the theme accent instead of white.",
-                          isOn: $model.settings.tapFlashAccent)
-                Divider()
-                ToggleRow("Ring flash",
-                          subtitle: "Burst an outline around the key instead of a filled wash.",
-                          isOn: $model.settings.tapFlashRing)
-            }
-            .disabled(!flashOn)
-            .opacity(flashOn ? 1 : 0.4)
-            .animation(Motion.settingsReveal.animation, value: flashOn)
-
-            Divider()
             SliderRow("Glow",
                       tooltip: "A soft accent-coloured halo behind each key while it's held. 0% turns it off. Only the keys you're touching glow, and it eases off automatically under low power or heat.",
                       value: $model.settings.keyPressGlow,
@@ -275,5 +239,5 @@ struct AnimationView: View {
 }
 
 #if DEBUG
-#Preview { AnimationView().clinkPreview() }
+#Preview { TypingView().clinkPreview() }
 #endif

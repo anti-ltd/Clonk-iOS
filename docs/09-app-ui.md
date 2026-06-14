@@ -181,6 +181,13 @@ User confirms in a sheet before `AppModel` commits.
 
 ## Gotchas
 
+- **Advanced fine-tune controls go in a `FineTune { }` block.** It renders a
+  collapsed "Fine-tune" disclosure only in Advanced mode and vanishes in Simple
+  mode (Home's Simple/Advanced toggle → `settings.advancedSettings`, default
+  Simple). Never hand-roll a `DisclosureGroup("Fine-tune")` — use `FineTune`
+  (in `TuningPresets.swift`) so the global Simple-mode hide applies. It can also
+  gate: `FineTune(enabledWhen:reason:)`.
+
 - **Don't hide settings behind an off feature — disable them with a reason.**
   When a control only does something once a feature toggle is on, show it
   *disabled + dimmed* with a one-line reason, not hidden, so the page never goes

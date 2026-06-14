@@ -1,6 +1,9 @@
 /**
- Sounds settings — two tabs: General (toggle + volume) and Sound pack (pack list).
- 
+ Feel settings — sounds and haptics under one page, two tabs (Sound · Haptics).
+ Merges the former separate Sounds and Haptics pages to cut a Home card and a
+ sidebar row. Each tab is a single scroll; custom sound packs and haptics need
+ Full Access (noted inline).
+
 
  Module: app-ui · Target: Clink
  Learn: docs/06-sound.md
@@ -8,14 +11,14 @@
 import SwiftUI
 import iUXiOS
 
-/// Sound pack selection and volume. Custom packs need Full Access.
+/// Sound + haptic feedback, two tabs sharing one pinned preview.
 /// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
-struct SoundsView: View {
-    private enum Tab { case general, soundPack }
+struct FeelView: View {
+    private enum Tab { case sound, haptics }
 
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedTab: Tab = .general
+    @State private var selectedTab: Tab = .sound
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
@@ -26,25 +29,35 @@ struct SoundsView: View {
         PinnedPreviewLayout(settings: model.settings,
                             bottomBar: AnyView(
                                 ThemedTabPicker(
-                                    options: [("General", Tab.general), ("Sound pack", Tab.soundPack)],
+                                    options: [("Sound", Tab.sound), ("Haptics", Tab.haptics)],
                                     selection: $selectedTab)
                             )) {
             switch selectedTab {
-            case .general:
-                generalTab(model: model)
-            case .soundPack:
-                soundPackTab(model: model)
+            case .sound:   SoundControls()
+            case .haptics: HapticControls()
             }
         }
         .tint(themeAccent)
-        .navigationTitle("Sounds")
+        .navigationTitle("Feel")
         .navigationBarTitleDisplayMode(.inline)
     }
+}
 
-    // MARK: - Tabs
+// MARK: - Sound
 
-    @ViewBuilder
-    private func generalTab(model: AppModel) -> some View {
+/// Key-sound toggle, volume, and sound-pack picker — a single scroll.
+struct SoundControls: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var themeAccent: Color {
+        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
+    private var needsFullAccess: Bool {
+        model.settings.soundEnabled && model.settings.soundPack.needsFullAccess
+    }
+
+    var body: some View {
         @Bindable var model = model
         CardSection {
             ToggleRow("Key sounds",
@@ -55,11 +68,6 @@ struct SoundsView: View {
                 .gated(model.settings.soundEnabled,
                        reason: "Turn on Key sounds to set the volume.")
         }
-    }
-
-    @ViewBuilder
-    private func soundPackTab(model: AppModel) -> some View {
-        @Bindable var model = model
         if needsFullAccess && !model.hasFullAccess {
             fullAccessNotice
         }
@@ -70,12 +78,6 @@ struct SoundsView: View {
                 packRow(pack)
             }
         }
-    }
-
-    // MARK: - Helpers
-
-    private var needsFullAccess: Bool {
-        model.settings.soundEnabled && model.settings.soundPack.needsFullAccess
     }
 
     private var fullAccessNotice: some View {
@@ -125,6 +127,68 @@ struct SoundsView: View {
     }
 }
 
+// MARK: - Haptics
+
+/// Key-press haptic toggle, style, and strength — a single scroll. Requires Full
+/// Access to fire in the extension.
+struct HapticControls: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        if !model.hasFullAccess {
+            fullAccessNotice
+        }
+        CardSection {
+            ToggleRow("Key press haptics",
+                      subtitle: "A tap on each keypress.",
+                      isOn: $model.settings.hapticsEnabled)
+        }
+        GatedCard("Feel", enabled: model.settings.hapticsEnabled,
+                  reason: "Turn on Key press haptics to adjust the feel.") {
+            HStack {
+                Text("Style")
+                Spacer()
+                Picker("Style", selection: $model.settings.hapticStyle) {
+                    ForEach(HapticStyle.allCases) { style in
+                        Text(style.label).tag(style)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+            .padding(.vertical, UX.rowVPadding)
+            Divider()
+            SliderRow("Strength",
+                      tooltip: "Higher feels punchier and more mechanical. Lower is a faint tick.",
+                      value: $model.settings.hapticIntensity,
+                      in: 0.1...1.0, step: 0.05) {
+                "\(Int(($0 * 100).rounded()))%"
+            }
+        }
+    }
+
+    private var fullAccessNotice: some View {
+        NavigationLink {
+            EnableFlowView().tracksNavigationDepth()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "lock.shield").font(.title3).foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Full Access required").font(.subheadline.weight(.semibold))
+                    Text("Haptics need Full Access to work.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 #if DEBUG
-#Preview { SoundsView().clinkPreview() }
+#Preview { FeelView().clinkPreview() }
 #endif

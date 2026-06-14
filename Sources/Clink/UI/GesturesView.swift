@@ -16,29 +16,18 @@ import SwiftUI
 import iUXiOS
 
 /// Swipe typing and backspace repeat tuning, as a single calm scroll.
-struct GesturesView: View {
+struct GesturesControls: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
-    @State private var swipeFineTuneExpanded = false
-    @State private var repeatFineTuneExpanded = false
-
-    private var themeAccent: Color {
-        model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
-    }
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings) {
-            swipeCard(model: model)
-            backspaceCard(model: model)
-            Text("Swipe decoding runs fully offline against the keyboard language's word list — no network, no Full Access. The first letter is typed the instant you touch down, then replaced by the recognised word once the glide is read.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 4)
-        }
-        .tint(themeAccent)
-        .navigationTitle("Gestures")
-        .navigationBarTitleDisplayMode(.inline)
+        swipeCard(model: model)
+        backspaceCard(model: model)
+        Text("Swipe decoding runs fully offline against the keyboard language's word list — no network, no Full Access. The first letter is typed the instant you touch down, then replaced by the recognised word once the glide is read.")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 4)
     }
 
     // MARK: - Swipe typing
@@ -50,15 +39,10 @@ struct GesturesView: View {
             ToggleRow("Swipe typing",
                       subtitle: "Trace a word by gliding across the letters. Lift to insert it. Tapping still works normally.",
                       isOn: $model.settings.swipeTypingEnabled)
-            Divider()
-            DisclosureGroup("Fine-tune", isExpanded: $swipeFineTuneExpanded) {
-                VStack(spacing: 0) { swipeFineTune(model: model) }
-                    .padding(.top, 6)
+            FineTune(enabledWhen: model.settings.swipeTypingEnabled,
+                     reason: "Turn on Swipe typing to adjust the trail and ripple.") {
+                swipeFineTune(model: model)
             }
-            .tint(.primary)
-            .padding(.vertical, UX.rowVPadding)
-            .gated(model.settings.swipeTypingEnabled,
-                   reason: "Turn on Swipe typing to adjust the trail and ripple.")
         }
     }
 
@@ -132,13 +116,7 @@ struct GesturesView: View {
                 .padding(.top, 6)
             PresetChips(presets: TuningPresets.timing)
                 .padding(.vertical, UX.rowVPadding)
-            Divider()
-            DisclosureGroup("Fine-tune", isExpanded: $repeatFineTuneExpanded) {
-                VStack(spacing: 0) { repeatFineTune(model: model) }
-                    .padding(.top, 6)
-            }
-            .tint(.primary)
-            .padding(.vertical, UX.rowVPadding)
+            FineTune { repeatFineTune(model: model) }
         }
         .animation(Motion.settingsReveal.animation, value: model.settings.swipeToDeleteWord)
     }
@@ -169,5 +147,5 @@ struct GesturesView: View {
 }
 
 #if DEBUG
-#Preview { GesturesView().clinkPreview() }
+#Preview { TypingView().clinkPreview() }
 #endif

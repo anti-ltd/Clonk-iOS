@@ -18,6 +18,7 @@
 		0647F416F450D418849D37A1 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 4A9313BB2D0F40FC5C7228F1 /* iUXiOS */; };
 		06A5A7AC798AA5392D92E7CA /* es.clex in Resources */ = {isa = PBXBuildFile; fileRef = D1AE1E773406958CF99E8539 /* es.clex */; };
 		076716723D5ED7F3D40DA89D /* en.clex in Resources */ = {isa = PBXBuildFile; fileRef = 754F284FBF70F12D8BAA0755 /* en.clex */; };
+		07A11952A7165BC85B9A5E41 /* FeelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E75BF71F75AEF2EDD0BF82D4 /* FeelView.swift */; };
 		07D4D2D24DA1FFC3E382E3DA /* AIEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D4408CBA5F759A94AA6C01 /* AIEngine.swift */; };
 		08128861323E4A9087428F15 /* Theme+Mint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E4160C12539AD69EF22CA3 /* Theme+Mint.swift */; };
 		09BB08FAD250B02E9A9532B0 /* SuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733674465CD135FB292C0FF9 /* SuggestionBar.swift */; };
@@ -35,6 +36,7 @@
 		1141C6D7936F9A7FE8C9DFF2 /* NgramModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B59FA23FA341B0C3341DDCB /* NgramModel.swift */; };
 		11AEEB1D7DDDB7164EC009A0 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF59E26E52134F6C6A4604F2 /* SharedStore.swift */; };
 		11DE900C1C28EE86BFA477FA /* SettingsBackCompatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30BFCDF2F44D8DA7F7A6A93 /* SettingsBackCompatTests.swift */; };
+		122B508DEA3DB1E3CFA8F0F7 /* GranularPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03923A7FC743DBB62A5FE93C /* GranularPages.swift */; };
 		12BF4CFC694D219D6B159B9E /* RGBA.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA82BC99C7A359DF18B9CDDD /* RGBA.swift */; };
 		14502B319F31C07584BE0863 /* KeyboardLiveState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6677F5637BFA29F320E57C15 /* KeyboardLiveState.swift */; };
 		146C6AF51CF20E45B3CD26C3 /* Theme+Dracula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5560818524A3D75B31CF7C /* Theme+Dracula.swift */; };
@@ -66,7 +68,6 @@
 		25674E38D35421FBD754EEB9 /* SoundPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7949529FFC551E295B024531 /* SoundPickerView.swift */; };
 		262AF70707B4A43BE17C9269 /* Theme+Dracula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5560818524A3D75B31CF7C /* Theme+Dracula.swift */; };
 		26922852107CC53E7E682482 /* de.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 8EFB62E40F5065213AA6613E /* de.cngm */; };
-		26BC73D67C4501CA4E3246D2 /* SoundsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5C9FC74FBF874FC1AA5FB1 /* SoundsView.swift */; };
 		26D0E059A96A1B87CF9AE0A6 /* NotepadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC337AC4FBF262FCDFD3A03 /* NotepadBar.swift */; };
 		26ED11A56D1A3533CE69847D /* Theme+Royal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F8C91666F857CFD1FDF518 /* Theme+Royal.swift */; };
 		27C3EBC3E5BF12D76458F333 /* PanelLeadingIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B366331E81E0CE029D842344 /* PanelLeadingIcon.swift */; };
@@ -83,7 +84,6 @@
 		2FBD1E052514EB56CCF0A011 /* PredictionCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6656F58D16F53F1A3D06E1 /* PredictionCore.swift */; };
 		30B323B0F36FED3B16754F0B /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */; };
 		3153F6606DC4308EF5C4B667 /* PanelSwitcherPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56FBF088403DCE7E480B111 /* PanelSwitcherPanel.swift */; };
-		32E29F1DCC570DCC25D69ED7 /* HapticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E54202EF97E8C78A6B0BB189 /* HapticsView.swift */; };
 		3344941A242B2568DFC78B3D /* MotionMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F266D65DA4F044AA7EF5C2 /* MotionMetrics.swift */; };
 		339C0C2F81219637976C8449 /* SuggestionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733674465CD135FB292C0FF9 /* SuggestionBar.swift */; };
 		3423A4D7502A83A9288E4F90 /* NgramModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B59FA23FA341B0C3341DDCB /* NgramModel.swift */; };
@@ -237,7 +237,6 @@
 		87F2C576325BB48774148334 /* CursorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C06DCCF18B498BC70F7B483D /* CursorView.swift */; };
 		8822C1881974514DBEA2E98E /* Theme+LiquidEmber.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1BB3D53C764134F2D95F2D /* Theme+LiquidEmber.swift */; };
 		8931B29D1FBE15B1C098C5FA /* TranslateBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D21C2BC9CB1D7A3F495B9E1 /* TranslateBar.swift */; };
-		893C69F41FABED68838F9E97 /* AdaptationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706EE7BC8796BED8A60B3B48 /* AdaptationView.swift */; };
 		898F1A896AA80537D3F6B6F0 /* Theme+Dracula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5560818524A3D75B31CF7C /* Theme+Dracula.swift */; };
 		89C490999D14CBD7E11654B4 /* TranslatePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A58A153279BC2C5DC3BA40 /* TranslatePanel.swift */; };
 		8A6DE391D33078FB15EC573F /* CalculatorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */; };
@@ -326,6 +325,7 @@
 		BDB509E96B5FD9A8A4F24898 /* PyProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385CB38B2FE8AFFC8C586AAE /* PyProgram.swift */; };
 		BEBEE45831B4043FF6A88AE4 /* CustomKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E84C54BDB032EBA9ACB1E3 /* CustomKey.swift */; };
 		BF04F250EE72481C7443F0A8 /* ClipboardBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A61D8AEA35863190C24F72 /* ClipboardBar.swift */; };
+		BFFED082916BD336DF9BA939 /* TextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B4B2141C4D2038B72B83EF /* TextView.swift */; };
 		C0EC13A9E58C214173DBD4DF /* fr.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 4305FB529BA07C78DC2C7B68 /* fr.cngm */; };
 		C0F38A72B69F1619B74EC5A0 /* ThemeBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473E6FADCC90F3A24F2711AC /* ThemeBuilderView.swift */; };
 		C1EA521550098D0D1E27D2B4 /* Theme+SolarizedLight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49FF9775427259E748BF57E4 /* Theme+SolarizedLight.swift */; };
@@ -335,7 +335,6 @@
 		C44779B75A2874B4E3C59223 /* Theme+LiquidDark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0687E21636A382CE51307EED /* Theme+LiquidDark.swift */; };
 		C54EF47EFE31637321DE1EC8 /* TranslatePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A58A153279BC2C5DC3BA40 /* TranslatePanel.swift */; };
 		C576639078F73C5EF212D064 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5181D0B09674CE8789540CEA /* RootView.swift */; };
-		C59299C5E20E2AC1B22BB372 /* SuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20464616D5B71AF83D8F3340 /* SuggestionsView.swift */; };
 		C5C12403CB0D258511C1B45D /* PanelLeadingIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = B366331E81E0CE029D842344 /* PanelLeadingIcon.swift */; };
 		C771C085E954D1EFB2D5979F /* CorrectionScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF63FC1969A663BF4C27E964 /* CorrectionScorer.swift */; };
 		C8790542F376C5363EDBBED4 /* KeyPopup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D10A388F860363D872978F /* KeyPopup.swift */; };
@@ -392,7 +391,6 @@
 		E8FCEB6A74C21FA687FB8687 /* Theme+Mechanical.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E0F42F4CC343BA2793B08D /* Theme+Mechanical.swift */; };
 		E90AFBB5D8A7267BCD721664 /* iUXiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 3FC50AE872783BD6CBFC8F4F /* iUXiOS */; };
 		E9468EF494FE4FD5F6481B79 /* PyParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA87EFC82B6BBB8B9D49864 /* PyParser.swift */; };
-		E972CCF25B6CFD941196E8B1 /* AutomationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B023BF2E190A738B123F9CAB /* AutomationView.swift */; };
 		EA3CB1E8DA7F5A60E231A7AC /* PredictionCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6656F58D16F53F1A3D06E1 /* PredictionCore.swift */; };
 		EA7845AF89A84EDD97631D01 /* pt.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 9907C910E96BD744FB60034B /* pt.cngm */; };
 		EAD928B1CCABB7E29E285FFC /* en.clex in Resources */ = {isa = PBXBuildFile; fileRef = 754F284FBF70F12D8BAA0755 /* en.clex */; };
@@ -470,6 +468,7 @@
 		0160583BC8270DF57E31D4E4 /* NotepadNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadNote.swift; sourceTree = "<group>"; };
 		02324DFD322F43E2CD9AEA08 /* SwipeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRow.swift; sourceTree = "<group>"; };
 		02ADE03EB55D826EE9EEABD0 /* Lexicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lexicon.swift; sourceTree = "<group>"; };
+		03923A7FC743DBB62A5FE93C /* GranularPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GranularPages.swift; sourceTree = "<group>"; };
 		0509D85BEBDDF08DDC933F33 /* AccentMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentMap.swift; sourceTree = "<group>"; };
 		05DEEB81EA4974F1D5FD0EB2 /* SwipeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeDecoder.swift; sourceTree = "<group>"; };
 		0687E21636A382CE51307EED /* Theme+LiquidDark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidDark.swift"; sourceTree = "<group>"; };
@@ -491,7 +490,6 @@
 		1D21C2BC9CB1D7A3F495B9E1 /* TranslateBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateBar.swift; sourceTree = "<group>"; };
 		1E12DFC4B4EFFA4222046212 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
 		1ECAD58407D805D2F19BE88F /* MotionDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionDiagnostics.swift; sourceTree = "<group>"; };
-		20464616D5B71AF83D8F3340 /* SuggestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionsView.swift; sourceTree = "<group>"; };
 		247100C266670E093E13EFC1 /* SmartPunctuation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartPunctuation.swift; sourceTree = "<group>"; };
 		24B886C95C9D9174E7C052AB /* UserAdaptationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAdaptationTests.swift; sourceTree = "<group>"; };
 		274FF636E4C3B8BECDFAEEF7 /* AccentPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentPicker.swift; sourceTree = "<group>"; };
@@ -558,7 +556,6 @@
 		6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardPreview.swift; sourceTree = "<group>"; };
 		6E9C7A15D827D03AE993837E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		70622CD9069B9679F09AF4A4 /* SkinTonePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinTonePicker.swift; sourceTree = "<group>"; };
-		706EE7BC8796BED8A60B3B48 /* AdaptationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptationView.swift; sourceTree = "<group>"; };
 		72B77D38959AA685774F7DDB /* Theme+LiquidLight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidLight.swift"; sourceTree = "<group>"; };
 		733674465CD135FB292C0FF9 /* SuggestionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionBar.swift; sourceTree = "<group>"; };
 		74A94D9FB1680B65CEFBE8B5 /* ClinkPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClinkPanel.swift; sourceTree = "<group>"; };
@@ -605,7 +602,6 @@
 		A489A347DD1897160C71F43A /* UserAdaptation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAdaptation.swift; sourceTree = "<group>"; };
 		A855E2E1593E2A931FDCBE57 /* PanelEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelEditorView.swift; sourceTree = "<group>"; };
 		AC0008CF2AE65494BCC583BA /* LanguageHeuristics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageHeuristics.swift; sourceTree = "<group>"; };
-		B023BF2E190A738B123F9CAB /* AutomationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationView.swift; sourceTree = "<group>"; };
 		B0965A705031568D3890913B /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		B29C8B699D584D8359017967 /* ExtensionEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionEditorView.swift; sourceTree = "<group>"; };
 		B3351629B8BC302520770F0F /* NotepadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotepadView.swift; sourceTree = "<group>"; };
@@ -625,11 +621,11 @@
 		C1B46A3DAD23518E0D767C90 /* KeySpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeySpec.swift; sourceTree = "<group>"; };
 		C30BFCDF2F44D8DA7F7A6A93 /* SettingsBackCompatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackCompatTests.swift; sourceTree = "<group>"; };
 		C5A58A153279BC2C5DC3BA40 /* TranslatePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslatePanel.swift; sourceTree = "<group>"; };
+		C5B4B2141C4D2038B72B83EF /* TextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextView.swift; sourceTree = "<group>"; };
 		C6959EF58425EE3D79388290 /* ThemePresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePresets.swift; sourceTree = "<group>"; };
 		C6D9D325281247E7BAFEEF3C /* PyInterpreter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PyInterpreter.swift; sourceTree = "<group>"; };
 		CA6B04AC4156D93A230B1EBB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		CAD96B2D63BE7BD3D16C2B4E /* Theme+Matrix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Matrix.swift"; sourceTree = "<group>"; };
-		CB5C9FC74FBF874FC1AA5FB1 /* SoundsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundsView.swift; sourceTree = "<group>"; };
 		CD7C2A154B1C5F8314809B15 /* en.cngm */ = {isa = PBXFileReference; path = en.cngm; sourceTree = "<group>"; };
 		D07CE5F41986DBEC496E6369 /* ThemeEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEditorView.swift; sourceTree = "<group>"; };
 		D1AE1E773406958CF99E8539 /* es.clex */ = {isa = PBXFileReference; path = es.clex; sourceTree = "<group>"; };
@@ -638,10 +634,10 @@
 		DD86C87065DBFAD706F52315 /* Theme+LiquidMint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+LiquidMint.swift"; sourceTree = "<group>"; };
 		E10C790FE1162939E62BDAA3 /* Theme+Ember.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Ember.swift"; sourceTree = "<group>"; };
 		E409F1A6F927F0EF03D8CC62 /* KeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeysView.swift; sourceTree = "<group>"; };
-		E54202EF97E8C78A6B0BB189 /* HapticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsView.swift; sourceTree = "<group>"; };
 		E59CD27F77EC36EDBC7AE8F0 /* SoundPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundPlayer.swift; sourceTree = "<group>"; };
 		E5F3126F333DF425DDCE4D0A /* CustomKeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomKeysView.swift; sourceTree = "<group>"; };
 		E6027B59C7DE78F22A746853 /* LocalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationView.swift; sourceTree = "<group>"; };
+		E75BF71F75AEF2EDD0BF82D4 /* FeelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeelView.swift; sourceTree = "<group>"; };
 		E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseView.swift; sourceTree = "<group>"; };
 		E887A5C7AFA3E881307455F8 /* AppStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStage.swift; sourceTree = "<group>"; };
 		E91E48B211B55CCF9D4AF918 /* TuningPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuningPresets.swift; sourceTree = "<group>"; };
@@ -960,11 +956,9 @@
 		C68EFFB03B2BF4A5F7331ACE /* UI */ = {
 			isa = PBXGroup;
 			children = (
-				706EE7BC8796BED8A60B3B48 /* AdaptationView.swift */,
 				934C595C40C802CA8F66B9CC /* AdvancedSettingsView.swift */,
 				0CA35E80AF975521E462AB2B /* AnimationView.swift */,
 				3199225CD02DAAABDF6ABA5D /* ArtificialIntelligenceView.swift */,
-				B023BF2E190A738B123F9CAB /* AutomationView.swift */,
 				4660055B8E24F96BEFC47475 /* BackupView.swift */,
 				7F101CB1DD74A4CF9831A8D7 /* CalculatorSettingsView.swift */,
 				FEC772F47B76E7DF377C293D /* ClipboardHistoryView.swift */,
@@ -972,8 +966,9 @@
 				E5F3126F333DF425DDCE4D0A /* CustomKeysView.swift */,
 				39FDB6FF761A1B9983D99D51 /* EmojiSettingsView.swift */,
 				07CA903F575F647CCA010CD1 /* EnableFlowView.swift */,
+				E75BF71F75AEF2EDD0BF82D4 /* FeelView.swift */,
 				90E70F4068777D9696762009 /* GesturesView.swift */,
-				E54202EF97E8C78A6B0BB189 /* HapticsView.swift */,
+				03923A7FC743DBB62A5FE93C /* GranularPages.swift */,
 				39336F1F36906A928233A48F /* HitboxView.swift */,
 				6E1D6F6CAE551B982EAEA3F9 /* KeyboardPreview.swift */,
 				E409F1A6F927F0EF03D8CC62 /* KeysView.swift */,
@@ -989,9 +984,8 @@
 				5181D0B09674CE8789540CEA /* RootView.swift */,
 				E7F89D5510BE5ADAE9BC8ECF /* ShowcaseView.swift */,
 				7949529FFC551E295B024531 /* SoundPickerView.swift */,
-				CB5C9FC74FBF874FC1AA5FB1 /* SoundsView.swift */,
 				5C04D6AA199C403FCC06DCF8 /* StagedHeroView.swift */,
-				20464616D5B71AF83D8F3340 /* SuggestionsView.swift */,
+				C5B4B2141C4D2038B72B83EF /* TextView.swift */,
 				473E6FADCC90F3A24F2711AC /* ThemeBuilderView.swift */,
 				4E3CF6C53B7A418EC448A5B8 /* ThemedSheet.swift */,
 				D07CE5F41986DBEC496E6369 /* ThemeEditorView.swift */,
@@ -1352,14 +1346,12 @@
 				C91926CA39628C7046A2312D /* AccentMap.swift in Sources */,
 				400F96F307203CBA896E8AAE /* AccentPicker.swift in Sources */,
 				F4275FAC9199499C724ED331 /* ActionPanelButton.swift in Sources */,
-				893C69F41FABED68838F9E97 /* AdaptationView.swift in Sources */,
 				900F8AE00F7628457A93AEAF /* AdaptiveHitbox.swift in Sources */,
 				B7AEFB5857D45F9FCF5A5F3D /* AdvancedSettingsView.swift in Sources */,
 				1624192ED34B1A906DA4817F /* AnimationView.swift in Sources */,
 				7700D18C30068362D47F3DDF /* AppModel.swift in Sources */,
 				556A45C2449169ACA72D6B1F /* AppStage.swift in Sources */,
 				41DCD430A9C9FD2D3134987D /* ArtificialIntelligenceView.swift in Sources */,
-				E972CCF25B6CFD941196E8B1 /* AutomationView.swift in Sources */,
 				FBDF432C0811C0D4E99CAF8A /* BackupView.swift in Sources */,
 				6729689C255FF2648C9B8FC6 /* CalculatorPanel.swift in Sources */,
 				7EA392CE09942EDB298E76AE /* CalculatorSettingsView.swift in Sources */,
@@ -1391,8 +1383,9 @@
 				C2BC899668E8FE744D9C794A /* ExtensionsPanel.swift in Sources */,
 				B6F487000FBE6A9D1DCF0236 /* ExtensionsView.swift in Sources */,
 				DC2D4AC3C3DADE212D4BD320 /* FeatureFlags.swift in Sources */,
+				07A11952A7165BC85B9A5E41 /* FeelView.swift in Sources */,
 				234FE56EB809D2AE6C4EDB4D /* GesturesView.swift in Sources */,
-				32E29F1DCC570DCC25D69ED7 /* HapticsView.swift in Sources */,
+				122B508DEA3DB1E3CFA8F0F7 /* GranularPages.swift in Sources */,
 				7C00707B35BE68B76E79C2D3 /* HitboxView.swift in Sources */,
 				9A449AEE3DC0530EA281DB64 /* InputViewHeight.swift in Sources */,
 				ED634FC67C89A063D8376FEC /* KeyGlyphLayer.swift in Sources */,
@@ -1452,14 +1445,13 @@
 				A02430FCE33EDD5CEDFD516C /* SoundPack.swift in Sources */,
 				25674E38D35421FBD754EEB9 /* SoundPickerView.swift in Sources */,
 				4BE2AF2874E1B00158143714 /* SoundPlayer.swift in Sources */,
-				26BC73D67C4501CA4E3246D2 /* SoundsView.swift in Sources */,
 				F8F7ED0153158B632C2232AD /* StagedHeroView.swift in Sources */,
 				19F570798E632E414DD41A8F /* SuggestionBar.swift in Sources */,
 				CEC0CEE762D47D9E688A6EF4 /* SuggestionEngine.swift in Sources */,
-				C59299C5E20E2AC1B22BB372 /* SuggestionsView.swift in Sources */,
 				DEFD16DE003B5AAC8387FDAD /* SwipeDecoder.swift in Sources */,
 				916A04317AED6BEB79F0795A /* SwipeLexicon.swift in Sources */,
 				AB58C4E13C3624393D1DBB74 /* SwipeRow.swift in Sources */,
+				BFFED082916BD336DF9BA939 /* TextView.swift in Sources */,
 				B73F0240AA82BC2F30FCB75C /* Theme+Bubblegum.swift in Sources */,
 				4EF90BFEBDA0E1AD70BB7E27 /* Theme+Carbon.swift in Sources */,
 				05DBC663D567D4F95270E3C0 /* Theme+Cinder.swift in Sources */,

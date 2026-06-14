@@ -21,14 +21,8 @@ struct KeyPressPhysics {
     var springDamping: Double        = 0.60
     /// Drop the press spring — snap to bloom/colour instantly (native highlight).
     var instant: Bool                = false
-    /// Strength of the additive tap-flash (0 = off).
-    var tapFlashStrength: CGFloat    = 0.34
     /// Geometric character of the press warp (bloom / press-in / jelly / stretch).
     var pressStyle: KeyPressStyle    = .bloom
-    /// Tint the tap flash with the accent instead of white.
-    var tapFlashAccent: Bool         = false
-    /// Render the tap flash as a ring outline rather than a fill.
-    var tapFlashRing: Bool           = false
     /// Accent glow behind a pressed key (0 = off).
     var pressGlow: CGFloat           = 0
     /// Space-bar press bloom scale (its own knob, not `bloomScale`).
@@ -441,10 +435,7 @@ public struct KeyboardCanvas: View {
             springResponse: settings.keySpringResponse,
             springDamping: settings.keySpringDamping,
             instant: settings.keyPressInstant,
-            tapFlashStrength: CGFloat(settings.tapFlashStrength),
             pressStyle: settings.keyPressStyle,
-            tapFlashAccent: settings.tapFlashAccent,
-            tapFlashRing: settings.tapFlashRing,
             pressGlow: CGFloat(settings.keyPressGlow),
             spaceBloomScale: CGFloat(settings.spaceBloomScale),
             spaceSpringResponse: settings.spaceSpringResponse,

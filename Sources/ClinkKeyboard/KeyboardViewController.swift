@@ -503,7 +503,10 @@ final class KeyboardViewController: UIInputViewController {
             extensions: extensions,
             panels: panels,
             hasFullAccess: hasFullAccess,
-            showHitboxOverlay: settings.showHitboxOverlay,
+            // Simple mode never shows the debug hitbox overlay, even if the
+            // setting was left on — the Overlays page that toggles it is hidden
+            // there, so a Simple user can't have meant to keep it.
+            showHitboxOverlay: settings.showHitboxOverlay && settings.advancedSettings,
             onInsert: { [weak self] text in
                 guard let self else { return }
                 self.isApplyingEdit = true

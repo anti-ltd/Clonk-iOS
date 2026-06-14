@@ -201,16 +201,11 @@ struct StagedRoot: View {
         // Customization — each wrapped in a NavigationStack so the nav bar
         // and title render exactly as they do in the live app.
         case "themes":      NavigationStack { ThemeEditorView() }
-        case "layout":      NavigationStack { LayoutView() }
-        case "animation":   NavigationStack { AnimationView() }
-        case "automation":  NavigationStack { AutomationView() }
-        case "cursor":      NavigationStack { CursorView() }
-        case "gestures":    NavigationStack { GesturesView() }
-        case "haptics":     NavigationStack { HapticsView() }
+        case "layout", "hitboxes": NavigationStack { KeysView() }
+        case "typing", "animation", "cursor", "gestures", "popups": NavigationStack { TypingView() }
+        case "text", "automation", "adaptation", "suggestions": NavigationStack { TextView() }
+        case "feel", "haptics", "sound", "sounds": NavigationStack { FeelView() }
         case "keys":        NavigationStack { KeysView() }
-        case "popups":      NavigationStack { PopupsView() }
-        case "sound", "sounds": NavigationStack { SoundsView() }
-        case "suggestions": NavigationStack { SuggestionsView() }
 
         // Extensions
         case "clipboard":   NavigationStack { ClipboardHistoryView() }
@@ -220,7 +215,6 @@ struct StagedRoot: View {
         case "calculator":  NavigationStack { CalculatorSettingsView() }
 
         // Advanced
-        case "hitboxes":    NavigationStack { HitboxView() }
         case "overlays":    NavigationStack { OverlaysView() }
         case "performance": NavigationStack { PerformanceView() }
         case "response":    NavigationStack { ResponseView() }

@@ -85,11 +85,10 @@ import Testing
         #expect(s.keyboardBottomPadding == 30)
         #expect(s.emojiColumnCount == 8)
         #expect(s.hapticIntensity == 1)
-        // `glassBloomFactor` (was 0 here) and `keyPressWarp` (true) are retired —
-        // the decoder ignores the former and reads the latter only for migration.
-        // With warp true, the press strengths survive unchanged from the blob:
+        // `glassBloomFactor`, `keyPressWarp`, and the `tapFlash*` keys are retired —
+        // the decoder ignores them (warp is read only for migration). With warp
+        // true in the blob, the surviving press values stay as decoded:
         #expect(s.keyBloomScale == 1.06)
-        #expect(s.tapFlashStrength == 0.34)
     }
 
     @Test func absentKeysFallBackToDefaults() throws {
