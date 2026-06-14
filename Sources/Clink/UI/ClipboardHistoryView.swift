@@ -96,27 +96,29 @@ struct ClipboardHistoryView: View {
                 }
                 .buttonStyle(.plain)
             }
-            if model.settings.clipboardEnabled {
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Style")
-                        .font(.subheadline)
-                        .padding(.top, 4)
-                    OptionChips(
-                        options: ClipboardStyle.allCases.map { ($0.label, $0) },
-                        selection: $model.settings.clipboardStyle
-                    )
-                    .padding(.bottom, 4)
-                }
-                .padding(.vertical, UX.rowVPadding)
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Style")
+                    .font(.subheadline)
+                    .padding(.top, 4)
+                OptionChips(
+                    options: ClipboardStyle.allCases.map { ($0.label, $0) },
+                    selection: $model.settings.clipboardStyle
+                )
+                .padding(.bottom, 4)
             }
+            .padding(.vertical, UX.rowVPadding)
+            .gated(model.settings.clipboardEnabled,
+                   reason: "Turn on Clipboard history to choose a style.")
         }
     }
 
     @ViewBuilder
     private func behaviourTab(model: AppModel) -> some View {
         @Bindable var model = model
-        CardSection("Paste") {
+        let on = model.settings.clipboardEnabled
+        let reason = "Turn on Clipboard history to use these."
+        GatedCard("Paste", enabled: on, reason: reason) {
             ToggleRow("Delete on paste",
                       subtitle: "Remove a clip from history after pasting it. Pinned clips are never deleted.",
                       isOn: $model.settings.clipboardDeleteOnPaste)
@@ -130,7 +132,7 @@ struct ClipboardHistoryView: View {
                       isOn: $model.settings.clipboardIgnorePinsOnDelete)
         }
 
-        CardSection("Auto Copy") {
+        GatedCard("Auto Copy", enabled: on, reason: reason) {
             ToggleRow("On keyboard open",
                       subtitle: "Capture the current clipboard when the keyboard finishes opening.",
                       isOn: $model.settings.autoCopyOnKeyboardOpen)

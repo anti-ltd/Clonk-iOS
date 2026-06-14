@@ -75,25 +75,25 @@ struct SuggestionsView: View {
             ToggleRow("Suggestion bar",
                       subtitle: "Offline autocomplete above the keys.",
                       isOn: $model.settings.suggestionsEnabled)
-            if model.settings.suggestionsEnabled {
-                Divider()
-                SliderRow("Top padding",
-                          tooltip: "Extra space above the suggestion bar.",
-                          value: $model.settings.suggestionTopPadding,
-                          in: 0...20, step: 1) {
-                    $0 == 0 ? "None" : "\(Int($0)) pt"
-                }
+            Divider()
+            SliderRow("Top padding",
+                      tooltip: "Extra space above the suggestion bar.",
+                      value: $model.settings.suggestionTopPadding,
+                      in: 0...20, step: 1) {
+                $0 == 0 ? "None" : "\(Int($0)) pt"
             }
+            .gated(model.settings.suggestionsEnabled,
+                   reason: "Turn on the Suggestion bar to adjust this.")
             Divider()
             ToggleRow("Auto-correction",
                       subtitle: "Fix the word when you type a space or punctuation.",
                       isOn: $model.settings.autocorrectEnabled)
-            if model.settings.autocorrectEnabled {
-                Divider()
-                ToggleRow("Revert on delete",
-                          subtitle: "Press delete after a correction to restore the word you typed.",
-                          isOn: $model.settings.revertAutocorrectOnDelete)
-            }
+            Divider()
+            ToggleRow("Revert on delete",
+                      subtitle: "Press delete after a correction to restore the word you typed.",
+                      isOn: $model.settings.revertAutocorrectOnDelete)
+            .gated(model.settings.autocorrectEnabled,
+                   reason: "Turn on Auto-correction to use this.")
         }
         // Learning (remembering words, suppressing rejected corrections) now
         // lives on its own Adaptation page under Customization.

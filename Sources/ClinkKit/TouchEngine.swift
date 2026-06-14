@@ -1,11 +1,22 @@
 /**
- Multitouch routing for the key grid. `KeyTouchRouter` / `KeyGridTouchView` maps
- raw `UITouch` events onto key IDs and callbacks. Also defines `MultiTouchSurface`
+ The keyboard's touch engine. `TouchEngine` / `KeyGridTouchView` map raw
+ `UITouch` events onto key IDs, commit keystrokes, and drive the gestures and
+ the press/animation state the renderer reads. Also defines `MultiTouchSurface`
  (UIViewRepresentable bridge) and the `KeyFrameKey` / `BarHitboxKey` preference keys.
- 
+
+ The engine has one hard contract — TEXT-FIRST: a keystroke is committed to the
+ document independently of, and never behind, any animation work (see
+ `touchDown`'s synchronous letter commit). Frames may drop freely; the character
+ is already in the document. Three concerns, kept separate so input can't starve
+ behind render:
+
+   • InputCore   — hit-test → bind touch → commit. Cheap, synchronous, text-first.
+   • GestureCore — swipe / accent / space-cursor / backspace-repeat / drag-up.
+   • RenderDriver — pushes animation intent into per-key `@Observable` state
+                    (`KeyPressState`); the only thing `KeyView` reads.
 
  Module: touch · Target: ClinkKit
- Learn: docs/03-touch-and-input.md
+ Learn: docs/03-touch-and-input.md, docs/15-touch-engine.md
  */
 import SwiftUI
 import UIKit
@@ -26,7 +37,7 @@ import UIKit
 /// release, backspace auto-repeats while held, the space bar is a tap-or-trackpad.
 /// Only the dropped-simultaneous-touch problem goes away.
 ///
-/// `KeyTouchRouter` is the shared, observable bridge: the UIView writes press
+/// `TouchEngine` is the shared, observable bridge: the UIView writes press
 /// state into it during touch events (on the main thread — safe), and every
 /// `KeyView` reads its own pressed/warp state back out. The SwiftUI views keep
 /// rendering exactly as before; only the *source* of the press changed.
@@ -67,18 +78,26 @@ public final class KeyPressState {
     public internal(set) var bulge: CGFloat = 0
 }
 
+/// The press / linger / neighbour / swipe-ripple state the renderer reads — the
+/// engine's RenderDriver. The input and gesture cores PUSH intent into it
+/// (`pressDown`, `release`, `clearPress`, `pushBulges`); nothing reads back out
+/// of it to make an input decision. `KeyView` observes the per-key
+/// `KeyPressState` this owns.
+///
+/// Splitting it out makes the text-first contract structural: a keystroke's
+/// commit path (InputCore) never touches this type, so animation work here can
+/// never gate or starve a commit. See docs/15-touch-engine.md.
 @MainActor
-@Observable
-public final class KeyTouchRouter {
+final class RenderDriver {
     /// Per-key observable press state, created on first access. The dictionary
     /// itself is deliberately NOT observed (only each `KeyPressState`'s own
     /// properties are), so lazily inserting a state — or flipping one key's
     /// press — never invalidates any other key's view.
-    @ObservationIgnored private var keyStates: [String: KeyPressState] = [:]
+    private var keyStates: [String: KeyPressState] = [:]
 
     /// This key's press state — `KeyView` reads its pressed/tap-pulse out of
     /// here, written by the touch surface during touch events.
-    public func state(for id: String) -> KeyPressState {
+    func state(for id: String) -> KeyPressState {
         if let s = keyStates[id] { return s }
         let s = KeyPressState()
         keyStates[id] = s
@@ -87,9 +106,195 @@ public final class KeyTouchRouter {
 
     /// Keys currently held down (by any finger) or lingering — the union of all
     /// active touches, so two fingers on one key keep it lit until both lift.
-    /// Internal diffing state only (deliberately unobserved): views are driven
-    /// by the per-key `KeyPressState`s, plus `neighborTick` for the glass merge.
-    @ObservationIgnored public private(set) var pressed: Set<String> = []
+    /// Internal diffing state only: views are driven by the per-key
+    /// `KeyPressState`s, plus `neighborTick` for the glass merge.
+    private(set) var pressed: Set<String> = []
+
+    // MARK: Config (pushed each layout pass by the engine)
+
+    /// How long a key stays visually pressed *after* the finger lifts (seconds).
+    /// A quick tap otherwise flips pressed on→off within a frame or two, so the
+    /// bloom/colour spring never reaches full strength and the press reads dim.
+    var lingerDuration: TimeInterval = 0.1
+    /// Minimum time a key reads pressed after touch-down, no matter how fast it's
+    /// released or cancelled. Screen-edge taps in the keyboard extension are
+    /// deferred by iOS's edge system-gestures and then delivered as a near-instant
+    /// down+up, collapsing the press to a sub-frame flicker — the letter types but
+    /// `A`/`L` never visibly highlight (the reported edge-tap miss). Guaranteeing a
+    /// minimum on-screen press makes an edge tap bloom like a held centre tap. The
+    /// post-release `lingerDuration` fade rides on top of this; the floor only
+    /// raises the total when the press itself was briefer than the floor.
+    var minPressVisible: TimeInterval = 0.09
+    /// Swipe-ripple config: whether the glide should swell keys at all, and the
+    /// influence radius in key-sizes.
+    var swipeMorphEnabled: Bool = false
+    var swipeMorphRadius: CGFloat = 1.0
+
+    // MARK: Geometry + neighbour map (pushed when frames change)
+
+    /// keyID → frame, the engine's hit-test geometry copied here for the bulge
+    /// falloff and the neighbour rebuild. Never drives a view directly.
+    private var frames: [String: CGRect] = [:]
+    /// keyID → adjacent key IDs (edge gap ≤ `neighborGap` on both axes). Drives
+    /// the glass-merge `neighborTick` nudges in `recomputePressed`.
+    private var neighbors: [String: [String]] = [:]
+    /// Maximum edge-to-edge gap (pt) for two keys to count as neighbours.
+    /// Comfortably above key/row spacing (~6pt) so diagonals qualify, and well
+    /// below a key width so next-but-one keys don't.
+    private let neighborGap: CGFloat = 18
+
+    /// Push the current frames; rebuilds the neighbour map. Called only when the
+    /// engine's frames actually changed (real layout change).
+    func setFrames(_ f: [String: CGRect]) {
+        frames = f
+        rebuildNeighbors()
+    }
+
+    // MARK: Press bookkeeping
+    //
+    // A key reads "pressed" while a finger holds it OR while it's lingering after
+    // release. `heldCounts` tracks fingers per key (so two fingers on one key keep
+    // it lit until both lift); `lingering` holds keys whose fade-out is pending.
+
+    private var heldCounts: [String: Int] = [:]
+    private var lingering: Set<String> = []
+    private var lingerTasks: [String: Task<Void, Never>] = [:]
+    /// Touch-down timestamp per key, used to floor how long a press stays visible.
+    private var pressStart: [String: Date] = [:]
+
+    /// Touch-down: light the key and fire its per-press tap pulse. Called by the
+    /// engine's InputCore on every key landing.
+    func pressDown(_ id: String) {
+        heldCounts[id, default: 0] += 1
+        pressStart[id] = Date()     // for the minimum-visible-press floor (see startLinger)
+        cancelLinger(id)            // pressed again → stop any pending fade-out
+        recomputePressed()
+        state(for: id).tapTick &+= 1   // fire the per-press tap pulse
+    }
+
+    /// Drop one finger from a key; once none remain, start its linger fade-out.
+    func release(_ id: String) {
+        let remaining = (heldCounts[id] ?? 1) - 1
+        if remaining <= 0 {
+            heldCounts[id] = nil
+            startLinger(id)
+        } else {
+            heldCounts[id] = remaining
+        }
+        recomputePressed()
+    }
+
+    /// Immediately drop a key's pressed state (no linger) — used when a gesture
+    /// (123→emoji drag) swaps the canvas out from under the touch, so the key
+    /// can't receive its normal release.
+    func clearPress(_ id: String) {
+        heldCounts[id] = nil
+        pressStart[id] = nil
+        cancelLinger(id)
+        recomputePressed()
+    }
+
+    private func recomputePressed() {
+        let next = Set(heldCounts.keys).union(lingering)
+        guard next != pressed else { return }
+        let changed = next.symmetricDifference(pressed)
+        for id in changed {
+            state(for: id).isPressed = next.contains(id)
+            // Nudge the neighbours so glass keys adjacent to the press
+            // re-evaluate too — the liquid merge needs both sides of the blend
+            // refreshed. Solid keys never read the tick, so this is free there.
+            for n in neighbors[id] ?? [] { state(for: n).neighborTick &+= 1 }
+        }
+        pressed = next
+    }
+
+    /// Keep a just-released key visually pressed, then clear it — so a quick tap
+    /// blooms fully before springing back. The hold is the longer of the
+    /// post-release `lingerDuration` and whatever remains of the `minPressVisible`
+    /// floor measured from touch-down, so a press the system collapsed to an
+    /// instant (a deferred screen-edge tap) still stays lit long enough to bloom.
+    private func startLinger(_ id: String) {
+        let held = pressStart[id].map { Date().timeIntervalSince($0) } ?? 0
+        pressStart[id] = nil
+        let duration = max(lingerDuration, minPressVisible - held)
+        guard duration > 0 else { return }
+        lingering.insert(id)
+        lingerTasks[id]?.cancel()
+        lingerTasks[id] = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(duration))
+            if Task.isCancelled { return }
+            lingering.remove(id)
+            lingerTasks[id] = nil
+            recomputePressed()
+        }
+    }
+
+    /// Cancel a pending fade-out — the key was pressed again before it expired.
+    private func cancelLinger(_ id: String) {
+        lingerTasks[id]?.cancel()
+        lingerTasks[id] = nil
+        lingering.remove(id)
+    }
+
+    /// Recompute the adjacency map from the current frames: two keys are
+    /// neighbours when their edge-to-edge gap is at most `neighborGap` on both
+    /// axes. O(n²) over ~35 keys, and only on real layout changes — trivial.
+    private func rebuildNeighbors() {
+        var map: [String: [String]] = [:]
+        let entries = Array(frames)
+        for i in entries.indices {
+            for j in (i + 1)..<entries.count {
+                let a = entries[i].value, b = entries[j].value
+                let dx = max(b.minX - a.maxX, a.minX - b.maxX, 0)
+                let dy = max(b.minY - a.maxY, a.minY - b.maxY, 0)
+                if dx <= neighborGap, dy <= neighborGap {
+                    map[entries[i].key, default: []].append(entries[j].key)
+                    map[entries[j].key, default: []].append(entries[i].key)
+                }
+            }
+        }
+        neighbors = map
+    }
+
+    /// Write each key's ripple swell, `0` (rest) … `1` (finger dead-centre),
+    /// falling off smoothly to `0` just past `swipeMorphRadius` key-sizes — a
+    /// travelling ripple, not the whole grid pulsing. `tip: nil` settles every
+    /// key back to rest. Writes are skipped when the value barely moved, so
+    /// keys far from the finger are never invalidated at all.
+    func pushBulges(tip: CGPoint?) {
+        for (id, f) in frames {
+            var target: CGFloat = 0
+            if let tip {
+                let d = hypot(tip.x - f.midX, tip.y - f.midY)
+                let radius = max(f.width, f.height) * swipeMorphRadius
+                if radius > 0, d < radius {
+                    let t = 1 - d / radius
+                    target = t * t   // ease-in falloff — gentle at the fringe, peaks under the finger
+                }
+            }
+            let s = state(for: id)
+            if abs(s.bulge - target) > 0.004 || (target == 0 && s.bulge != 0) {
+                s.bulge = target
+            }
+        }
+    }
+}
+
+@MainActor
+@Observable
+public final class TouchEngine {
+    /// The render-side state (press/linger/neighbour/bulge). InputCore and
+    /// GestureCore push intent into it; it is never read back to decide input —
+    /// that one-way edge is the text-first contract (docs/15-touch-engine.md).
+    @ObservationIgnored let render = RenderDriver()
+
+    /// This key's press state — `KeyView` reads its pressed/tap-pulse out of the
+    /// RenderDriver. Forwarded so the view layer is unchanged by the split.
+    public func state(for id: String) -> KeyPressState { render.state(for: id) }
+
+    /// Keys currently held down (by any finger) or lingering. Forwards to the
+    /// RenderDriver; internal diffing state only (no external readers).
+    public var pressed: Set<String> { render.pressed }
 
     /// Space-bar trackpad: live horizontal drag offset (drives the glass warp)
     /// and whether the current space touch has crossed into cursor-drag mode.
@@ -147,22 +352,10 @@ public final class KeyTouchRouter {
     // via `resolveSpec` at touch time, so they always reflect the current plane /
     // shift without round-tripping closures through the preference system.
 
-    /// keyID → frame in the grid's coordinate space. Unobserved: it feeds
-    /// hit-testing and the bulge/neighbour computations, never a view directly.
+    /// keyID → frame in the grid's coordinate space (InputCore's hit-test
+    /// geometry). Unobserved; also pushed to the RenderDriver on change for its
+    /// neighbour/bulge computations (see `update`). Never drives a view directly.
     @ObservationIgnored fileprivate var frames: [String: CGRect] = [:]
-    /// keyID → the IDs of adjacent keys (edge gap ≤ `neighborGap` on both
-    /// axes — same-row neighbours, the rows above/below, and diagonals).
-    /// Rebuilt only when `frames` actually changes. Drives the glass-merge
-    /// `neighborTick` nudges in `recomputePressed`.
-    @ObservationIgnored private var neighbors: [String: [String]] = [:]
-    /// Maximum edge-to-edge gap (pt) for two keys to count as neighbours.
-    /// Comfortably above key/row spacing (~6pt) so diagonals qualify, and well
-    /// below a key width so next-but-one keys don't.
-    private let neighborGap: CGFloat = 18
-    /// Swipe-ripple config (pushed from settings each layout pass): whether the
-    /// glide should swell keys at all, and the influence radius in key-sizes.
-    @ObservationIgnored fileprivate var swipeMorphEnabled: Bool = false
-    @ObservationIgnored fileprivate var swipeMorphRadius: CGFloat = 1.0
     /// keyID → its current spec. Resolved on demand at touch time so it always
     /// reads the *live* plane/shift (a sticky-shift flip mid-burst must affect the
     /// very next touch). The canvas memoizes the underlying build, so this closure
@@ -170,11 +363,6 @@ public final class KeyTouchRouter {
     fileprivate var resolveSpec: (String) -> KeySpec? = { _ in nil }
     /// Fired on every key-down — the host plays the clink + haptic here.
     fileprivate var onPressDown: () -> Void = {}
-    /// How long a key stays visually pressed *after* the finger lifts (seconds).
-    /// A quick tap otherwise flips pressed on→off within a frame or two, so the
-    /// bloom/colour spring never reaches full strength and the press reads dim.
-    /// Holding it briefly lets the effect bloom fully, then spring back.
-    fileprivate var lingerDuration: TimeInterval = 0.1
     /// Scale applied to each key's frame before hit-testing (see `key(at:)`).
     fileprivate var hitboxScale: Double = 1.0
     /// Adaptive hitboxes on: bias hit-testing toward the predicted next letter by
@@ -276,12 +464,12 @@ public final class KeyTouchRouter {
         // common per-render update path.
         if frames != self.frames {
             self.frames = frames
-            rebuildNeighbors()
+            render.setFrames(frames)   // RenderDriver rebuilds its neighbour map
         }
         self.resolveSpec = resolveSpec
         self.onPressDown = onPressDown
-        self.lingerDuration = lingerDuration
-        self.minPressVisible = minPressVisible
+        render.lingerDuration = lingerDuration
+        render.minPressVisible = minPressVisible
         self.hitboxScale = hitboxScale
         self.adaptiveEnabled = adaptiveEnabled
         self.adaptiveGrow = adaptiveGrow
@@ -305,33 +493,13 @@ public final class KeyTouchRouter {
         self.dragUpThreshold = dragUpThreshold
         self.surfaceWidth = surfaceWidth
         self.swipeEnabled = swipeEnabled
-        self.swipeMorphEnabled = swipeMorphEnabled
-        self.swipeMorphRadius = swipeMorphRadius
+        render.swipeMorphEnabled = swipeMorphEnabled
+        render.swipeMorphRadius = swipeMorphRadius
         self.onSwipeStart = onSwipeStart
         self.onSwipeEnd = onSwipeEnd
     }
 
-    /// Recompute the adjacency map from the current frames: two keys are
-    /// neighbours when their edge-to-edge gap is at most `neighborGap` on both
-    /// axes. O(n²) over ~35 keys, and only on real layout changes — trivial.
-    private func rebuildNeighbors() {
-        var map: [String: [String]] = [:]
-        let entries = Array(frames)
-        for i in entries.indices {
-            for j in (i + 1)..<entries.count {
-                let a = entries[i].value, b = entries[j].value
-                let dx = max(b.minX - a.maxX, a.minX - b.maxX, 0)
-                let dy = max(b.minY - a.maxY, a.minY - b.maxY, 0)
-                if dx <= neighborGap, dy <= neighborGap {
-                    map[entries[i].key, default: []].append(entries[j].key)
-                    map[entries[j].key, default: []].append(entries[i].key)
-                }
-            }
-        }
-        neighbors = map
-    }
-
-    // MARK: - Swipe session (driven by KeyGridTouchView)
+    // MARK: - GestureCore · Swipe session (driven by KeyGridTouchView)
 
     /// Whether swipe typing is on (read by the touch view to decide whether to
     /// track a path at all).
@@ -375,30 +543,7 @@ public final class KeyTouchRouter {
     /// actually moved (the handful around the finger).
     fileprivate func updateSwipeTrail(_ points: [CGPoint]) {
         swipeTrail = points
-        if swipeMorphEnabled { pushBulges(tip: points.last) }
-    }
-
-    /// Write each key's ripple swell, `0` (rest) … `1` (finger dead-centre),
-    /// falling off smoothly to `0` just past `swipeMorphRadius` key-sizes — a
-    /// travelling ripple, not the whole grid pulsing. `tip: nil` settles every
-    /// key back to rest. Writes are skipped when the value barely moved, so
-    /// keys far from the finger are never invalidated at all.
-    private func pushBulges(tip: CGPoint?) {
-        for (id, f) in frames {
-            var target: CGFloat = 0
-            if let tip {
-                let d = hypot(tip.x - f.midX, tip.y - f.midY)
-                let radius = max(f.width, f.height) * swipeMorphRadius
-                if radius > 0, d < radius {
-                    let t = 1 - d / radius
-                    target = t * t   // ease-in falloff — gentle at the fringe, peaks under the finger
-                }
-            }
-            let s = state(for: id)
-            if abs(s.bulge - target) > 0.004 || (target == 0 && s.bulge != 0) {
-                s.bulge = target
-            }
-        }
+        if render.swipeMorphEnabled { render.pushBulges(tip: points.last) }
     }
 
     /// Finish the swipe: hand the path + letter centres to the host to decode and
@@ -407,7 +552,7 @@ public final class KeyTouchRouter {
         guard swipeActive else { return }
         swipeActive = false
         swipeTrail = []
-        pushBulges(tip: nil)   // every swollen key springs back to rest
+        render.pushBulges(tip: nil)   // every swollen key springs back to rest
         onSwipeEnd(path, letterCenters())
     }
 
@@ -416,10 +561,10 @@ public final class KeyTouchRouter {
         guard swipeActive else { return }
         swipeActive = false
         swipeTrail = []
-        pushBulges(tip: nil)
+        render.pushBulges(tip: nil)
     }
 
-    // MARK: - Hit testing
+    // MARK: - InputCore · Hit testing
 
     /// The key nearest a point. The touch surface covers the whole key region
     /// (including the gaps between keys and the side margins), so we always map a
@@ -516,7 +661,7 @@ public final class KeyTouchRouter {
         return ch
     }
 
-    // MARK: - Per-touch lifecycle (called by the UIView)
+    // MARK: - InputCore · Per-touch lifecycle (called by the UIView)
     //
     // Each touch is bound to the key it lands on for its whole life — exactly how
     // the old per-key gesture behaved, just now genuinely multitouch.
@@ -534,11 +679,8 @@ public final class KeyTouchRouter {
         // life of a touch): used to map the dragging finger's window point back
         // into the touch surface's local space for accent-swatch hit-testing.
         viewOrigin = CGPoint(x: windowPoint.x - localPoint.x, y: windowPoint.y - localPoint.y)
-        heldCounts[id, default: 0] += 1
-        pressStart[id] = Date()     // for the minimum-visible-press floor (see startLinger)
-        cancelLinger(id)            // pressed again → stop any pending fade-out
-        recomputePressed()
-        state(for: id).tapTick &+= 1   // fire the per-press tap pulse
+        MotionDiagnostics.event("touch.down")   // one tick per real key landing
+        render.pressDown(id)        // light the key + fire its per-press tap pulse
         onPressDown()
 
         // Remember the letter just typed so the *next* touch can predict from it.
@@ -571,17 +713,36 @@ public final class KeyTouchRouter {
                     spaceCursorReady = true
                 }
             } else {
-                // Commit the character on the NEXT runloop turn, not inside the
-                // touch event. The insert is a cross-process proxy call (and, on
-                // a word terminator, runs the synchronous autocorrect check) —
-                // doing it here held up the render commit that STARTS the press
-                // bloom, so by the time frames appeared the spring was half done
-                // and the key seemed to snap. Deferring lets the press visual
-                // land on the very next frame; FIFO ordering on the main queue
-                // keeps the document text in exact key order, and the block runs
-                // before any later touch event can be delivered.
-                let action = spec.action
-                DispatchQueue.main.async { action() }
+                // Commit the character SYNCHRONOUSLY, inside the touch event,
+                // BEFORE returning to the runloop — text-first. The press-state
+                // writes that start the bloom (`recomputePressed` / `tapTick`,
+                // above) are already queued as @Observable invalidations, so the
+                // render commit they trigger still lands on the next frame; the
+                // insert no longer has to wait for it.
+                //
+                // This used to be `DispatchQueue.main.async { action() }`,
+                // deferred so the press bloom rendered before the insert ran the
+                // synchronous autocorrect (UITextChecker, tens of ms). That
+                // reason is gone: autocorrect is debounced off the hot path
+                // (KeyboardViewController.scheduleSuggestionUpdate / quietGated-
+                // Compute), so a letter commit is now just a cheap proxy enqueue
+                // + local-mirror update. Deferring it only put the keystroke on
+                // the SAME main queue the press/release springs flood — under
+                // animation load at speed the block landed late, piled up, and
+                // in the memory-pressured extension could be lost entirely. That
+                // was the "keys skipped while typing fast" review. Committing in
+                // the touch event removes the queue contention: animation may
+                // drop frames freely, but the character is already in the
+                // document. Ordering is now exact by construction (each touch
+                // commits before the next is delivered).
+                //
+                // Wrapped in a signpost interval (Release: compiles to a bare
+                // call) so the commit's on-thread cost is visible in Instruments.
+                // This is the text-first contract's regression guard: if the
+                // interval ever widens — someone re-adds synchronous autocorrect
+                // here, say — the trace shows the commit stalling the touch event
+                // again, the exact failure Stage 1 removed. See docs/15-touch-engine.md.
+                MotionDiagnostics.interval("commit.char") { spec.action() }
                 // Schedule the accent bar if this key has variants and the
                 // feature is on. The base is already typed (above); a hold then
                 // raises the bar, and releasing on a variant replaces it.
@@ -622,59 +783,79 @@ public final class KeyTouchRouter {
 
         guard let spec = resolveSpec(id) else { return }
 
-        // Backspace swipe-to-delete-word: a leftward drag deletes whole words.
-        if let deleteWord = spec.onDeleteWord, deleteWordKeyID == id {
-            if !deleteWordEngaged {
-                // Engage only on a clearly-leftward, horizontal-dominant drag past
-                // the threshold — so holding (then a vertical wiggle) still
-                // auto-repeats char-by-char as before.
-                guard translationX <= -deleteWordEngage,
-                      abs(translationX) > abs(translationY) else { return }
-                deleteWordEngaged = true
-                deleteWordSwipeActive = true     // drive the delete-glyph animation
-                stopRepeating()                 // switch from char-repeat to word-delete
-                deleteWordOriginX = translationX
-                deleteWordSteps = 0
-                dragHaptic.impactOccurred()
-                deleteWord()
-                deleteTick &+= 1
-                return
-            }
-            // Each further stride leftward removes another word.
-            let step = Int(((deleteWordOriginX - translationX) / deleteWordStride).rounded(.towardZero))
-            if step > deleteWordSteps {
-                for _ in 0..<(step - deleteWordSteps) { deleteWord(); deleteTick &+= 1 }
-                deleteWordSteps = step
-                dragHaptic.impactOccurred()
-            }
-            return
-        }
+        // Each gesture gets first refusal, in priority order; the first to consume
+        // the move stops the chain. Space-cursor is last and acts only on space.
+        if deleteWordMove(id: id, spec: spec, translationX: translationX, translationY: translationY) { return }
+        if dragUpMove(id: id, spec: spec, translationY: translationY, windowPoint: windowPoint) { return }
+        guard spec.isSpace else { return }
+        spaceCursorMove(spec: spec, translationX: translationX, translationY: translationY)
+    }
 
-        // Drag-up keys (the 123 → panel-picker gesture): once the finger has
-        // travelled far enough upward, fire once and mark the touch consumed so
-        // `touchUp` skips the normal tap action. Mirrors the space-bar trackpad's
-        // tap-vs-drag split.
+    /// Backspace swipe-to-delete-word: a leftward drag deletes whole words.
+    /// Owns the touch (returns true) for the whole life of a held delete key, so
+    /// a non-leftward wiggle on it still falls through to char-repeat, never to
+    /// the drag-up / space chain.
+    private func deleteWordMove(id: String, spec: KeySpec,
+                                translationX: CGFloat, translationY: CGFloat) -> Bool {
+        guard let deleteWord = spec.onDeleteWord, deleteWordKeyID == id else { return false }
+        if !deleteWordEngaged {
+            // Engage only on a clearly-leftward, horizontal-dominant drag past
+            // the threshold — so holding (then a vertical wiggle) still
+            // auto-repeats char-by-char as before.
+            guard translationX <= -deleteWordEngage,
+                  abs(translationX) > abs(translationY) else { return true }
+            deleteWordEngaged = true
+            deleteWordSwipeActive = true     // drive the delete-glyph animation
+            stopRepeating()                 // switch from char-repeat to word-delete
+            deleteWordOriginX = translationX
+            deleteWordSteps = 0
+            dragHaptic.impactOccurred()
+            deleteWord()
+            deleteTick &+= 1
+            return true
+        }
+        // Each further stride leftward removes another word.
+        let step = Int(((deleteWordOriginX - translationX) / deleteWordStride).rounded(.towardZero))
+        if step > deleteWordSteps {
+            for _ in 0..<(step - deleteWordSteps) { deleteWord(); deleteTick &+= 1 }
+            deleteWordSteps = step
+            dragHaptic.impactOccurred()
+        }
+        return true
+    }
+
+    /// Drag-up keys (the 123 → panel-picker gesture): once the finger has
+    /// travelled far enough upward, fire once and mark the touch consumed so
+    /// `touchUp` skips the normal tap action. Mirrors the space-bar trackpad's
+    /// tap-vs-drag split. Returns true while it owns the touch.
+    private func dragUpMove(id: String, spec: KeySpec,
+                            translationY: CGFloat, windowPoint: CGPoint) -> Bool {
         if spec.onDragUp != nil, !dragUpFired.contains(id),
            translationY < -dragUpThreshold {
             dragUpFired.insert(id)
             // The key's press is cleared so it doesn't stick "pressed" while the
             // picker is up. (We do NOT clear it via canvas swap-out anymore — the
             // keys stay on screen behind a popover, so the touch keeps flowing.)
-            clearPress(id)
+            render.clearPress(id)
             dragHaptic.impactOccurred()
             spec.onDragUp?()
             spec.onDragUpMove?(windowPoint)
-            return
+            return true
         }
-
         // After a drag-up fired, keep reporting the finger so the canvas can track
         // which picker row it's over.
         if dragUpFired.contains(id) {
             spec.onDragUpMove?(windowPoint)
-            return
+            return true
         }
+        return false
+    }
 
-        guard spec.isSpace else { return }
+    /// Space-bar trackpad: lean the bar with the finger from the first move, and
+    /// past the stride threshold drive the 2-D cursor pad (one char per
+    /// `cursorStride` horizontally, one line per coarser stride vertically).
+    /// Called only when `spec.isSpace`.
+    private func spaceCursorMove(spec: KeySpec, translationX: CGFloat, translationY: CGFloat) {
         // The bar's lean tracks the finger from the FIRST move, before the cursor
         // even engages — otherwise it sits frozen through the dead zone and then
         // lurches sideways the instant the threshold is crossed, which reads as a
@@ -725,7 +906,7 @@ public final class KeyTouchRouter {
     }
 
     fileprivate func touchUp(id: String, windowPoint: CGPoint) {
-        releaseHold(id)
+        render.release(id)
         if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false; deleteWordSwipeActive = false }
         // Pending accent hold that never fired (a quick tap) — drop it.
         if accentPendingID == id { cancelAccentHold() }
@@ -762,14 +943,28 @@ public final class KeyTouchRouter {
                     // bar "pressed" and pop it from its shrunk 0.9 up through the
                     // press-bloom (1.04) before settling — a visible glitch. Drop
                     // the press now so it springs straight back to full size.
-                    clearPress(id)
+                    render.clearPress(id)
                 } else {
-                    // Tap → space, deferred like the character keys: the space
-                    // is the terminator that runs the synchronous autocorrect
-                    // (UITextChecker — tens of ms on a miss), which would
-                    // otherwise stall the release animation's first frames.
+                    // Tap → space, deferred one runloop hop (unlike the letter
+                    // keys, which now commit synchronously — see `touchDown`).
+                    // Space is the word terminator: its action runs the
+                    // correction-only `UITextChecker` synchronously (one run per
+                    // word — KeyboardViewController.applyPendingAutocorrect), tens
+                    // of ms on a miss. Running that inside the touch event would
+                    // stall the release spring's first frames. Deferring is safe
+                    // here precisely because space is NOT the drop-prone case: it's
+                    // one deliberate press at the natural end-of-word pause, never
+                    // the fast overlapping burst that dropped letters. So the rule
+                    // is: commit synchronously when cheap AND drop-prone (letters);
+                    // defer when heavy AND not drop-prone (space terminator).
+                    //
+                    // Signposted so the trace shows WHERE the terminator's
+                    // synchronous `UITextChecker` cost lands — it should sit after
+                    // the release, never on top of the release spring. A wide
+                    // `commit.space` interval overlapping a hitch means the
+                    // deferral/quiet-gate slipped.
                     let action = spec.action
-                    DispatchQueue.main.async { action() }
+                    DispatchQueue.main.async { MotionDiagnostics.interval("commit.space") { action() } }
                 }
                 spaceCursorActive = false
                 spaceDragX = 0
@@ -787,7 +982,7 @@ public final class KeyTouchRouter {
     }
 
     fileprivate func touchCancelled(id: String) {
-        releaseHold(id)
+        render.release(id)
         if deleteWordKeyID == id { deleteWordKeyID = nil; deleteWordEngaged = false; deleteWordSwipeActive = false }
         if accentPendingID == id { cancelAccentHold() }
         if accentKeyID == id { endAccentSession() }   // abandon the pick, type nothing extra
@@ -800,7 +995,7 @@ public final class KeyTouchRouter {
             spaceCursorReadyTask?.cancel()
             spaceCursorReadyTask = nil
             spaceCursorReady = true
-            if spaceCursorActive { clearPress(id) }   // no post-drag bloom (see touchUp)
+            if spaceCursorActive { render.clearPress(id) }   // no post-drag bloom (see touchUp)
             spaceCursorActive = false
             spaceDragX = 0
             spaceSteps = 0
@@ -808,98 +1003,17 @@ public final class KeyTouchRouter {
         }
     }
 
-    // MARK: - Press state + linger
-    //
-    // A key reads "pressed" while a finger holds it OR while it's lingering after
-    // release. `heldCounts` tracks fingers per key (so two fingers on one key keep
-    // it lit until both lift); `lingering` holds keys whose fade-out is pending.
-
-    private var heldCounts: [String: Int] = [:]
-    private var lingering: Set<String> = []
-    private var lingerTasks: [String: Task<Void, Never>] = [:]
-    /// Touch-down timestamp per key, used to floor how long a press stays visible.
-    private var pressStart: [String: Date] = [:]
-    /// Minimum time a key reads pressed after touch-down, no matter how fast it's
-    /// released or cancelled. Screen-edge taps in the keyboard extension are
-    /// deferred by iOS's edge system-gestures and then delivered as a near-instant
-    /// down+up, collapsing the press to a sub-frame flicker — the letter types but
-    /// `A`/`L` never visibly highlight (the reported edge-tap miss). Guaranteeing a
-    /// minimum on-screen press makes an edge tap bloom like a held centre tap. The
-    /// post-release `lingerDuration` fade rides on top of this; the floor only
-    /// raises the total when the press itself was briefer than the floor. Pushed in
-    /// from `KeyboardSettings.minPressVisible` each layout pass (see `update`).
-    fileprivate var minPressVisible: TimeInterval = 0.09
-
-    /// Drop one finger from a key; once none remain, start its linger fade-out.
-    private func releaseHold(_ id: String) {
-        let remaining = (heldCounts[id] ?? 1) - 1
-        if remaining <= 0 {
-            heldCounts[id] = nil
-            startLinger(id)
-        } else {
-            heldCounts[id] = remaining
-        }
-        recomputePressed()
-    }
-
-    private func recomputePressed() {
-        let next = Set(heldCounts.keys).union(lingering)
-        guard next != pressed else { return }
-        let changed = next.symmetricDifference(pressed)
-        for id in changed {
-            state(for: id).isPressed = next.contains(id)
-            // Nudge the neighbours so glass keys adjacent to the press
-            // re-evaluate too — the liquid merge needs both sides of the blend
-            // refreshed. Solid keys never read the tick, so this is free there.
-            for n in neighbors[id] ?? [] { state(for: n).neighborTick &+= 1 }
-        }
-        pressed = next
-    }
-
-    /// Immediately drop a key's pressed state (no linger) — used when a gesture
-    /// (123→emoji drag) swaps the canvas out from under the touch, so the key
-    /// can't receive its normal release.
-    private func clearPress(_ id: String) {
-        heldCounts[id] = nil
-        pressStart[id] = nil
-        cancelLinger(id)
-        recomputePressed()
-    }
+    // The press / linger / neighbour state that used to live here now lives in
+    // `RenderDriver` (see top of file). The engine pushes into it
+    // (`render.pressDown` / `release` / `clearPress`); KeyView reads it via the
+    // forwarded `state(for:)`.
 
     /// Light tap played when the 123→emoji drag fires — the gesture's feedback,
     /// the haptic cousin of the shift/caps-lock morph. Only actually buzzes with
     /// Full Access granted; a silent no-op otherwise (never crashes).
     private let dragHaptic = UIImpactFeedbackGenerator(style: .rigid)
 
-    /// Keep a just-released key visually pressed, then clear it — so a quick tap
-    /// blooms fully before springing back. The hold is the longer of the
-    /// post-release `lingerDuration` and whatever remains of the `minPressVisible`
-    /// floor measured from touch-down, so a press the system collapsed to an
-    /// instant (a deferred screen-edge tap) still stays lit long enough to bloom.
-    private func startLinger(_ id: String) {
-        let held = pressStart[id].map { Date().timeIntervalSince($0) } ?? 0
-        pressStart[id] = nil
-        let duration = max(lingerDuration, minPressVisible - held)
-        guard duration > 0 else { return }
-        lingering.insert(id)
-        lingerTasks[id]?.cancel()
-        lingerTasks[id] = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(duration))
-            if Task.isCancelled { return }
-            lingering.remove(id)
-            lingerTasks[id] = nil
-            recomputePressed()
-        }
-    }
-
-    /// Cancel a pending fade-out — the key was pressed again before it expired.
-    private func cancelLinger(_ id: String) {
-        lingerTasks[id]?.cancel()
-        lingerTasks[id] = nil
-        lingering.remove(id)
-    }
-
-    // MARK: - Accent long-press
+    // MARK: - GestureCore · Accent long-press
 
     /// Window→surface offset captured at touch-down, so a window-space finger
     /// point can be mapped back into the touch surface's local space (where the
@@ -944,7 +1058,7 @@ public final class KeyTouchRouter {
     /// Tear down a live accent session, dropping the held key's press so it
     /// doesn't linger-bloom after the bar dismisses.
     private func endAccentSession() {
-        if let id = accentKeyID { clearPress(id) }
+        if let id = accentKeyID { render.clearPress(id) }
         accentKeyID = nil
         accentOptions = []
         accentIndex = 0
@@ -965,7 +1079,7 @@ public final class KeyTouchRouter {
         return min(max(i, 0), count - 1)
     }
 
-    // MARK: - Backspace auto-repeat
+    // MARK: - GestureCore · Backspace auto-repeat
 
     private var repeatTask: Task<Void, Never>?
     /// Backspace word-swipe state: the key being tracked, whether the horizontal
@@ -1059,12 +1173,12 @@ extension View {
 // MARK: - The multitouch UIView
 
 /// A bare `UIView` that captures every touch over the key grid and routes it
-/// through `KeyTouchRouter`. `isMultipleTouchEnabled` is the whole point — it
+/// through `TouchEngine`. `isMultipleTouchEnabled` is the whole point — it
 /// gets independent `touchesBegan`/`Moved`/`Ended` for each finger, which is
 /// what SwiftUI's per-view gestures could not do.
 @MainActor
 final class KeyGridTouchView: UIView {
-    let router: KeyTouchRouter
+    let router: TouchEngine
     /// keyID + start point bound to each live touch, so moves/ends route to the
     /// key the finger originally landed on.
     private var bindings: [ObjectIdentifier: (id: String, start: CGPoint)] = [:]
@@ -1078,7 +1192,7 @@ final class KeyGridTouchView: UIView {
     /// (with its tiny finger wobble) from ever reading as a swipe.
     private let swipeEngageTravel: CGFloat = 22
 
-    init(router: KeyTouchRouter) {
+    init(router: TouchEngine) {
         self.router = router
         super.init(frame: .zero)
         isMultipleTouchEnabled = true
@@ -1193,7 +1307,7 @@ struct SwipeTrailShape: Shape {
 /// SwiftUI bridge for `KeyGridTouchView`. Pushes the live frame registry and
 /// touch callbacks into the router on every layout pass.
 struct MultiTouchSurface: UIViewRepresentable {
-    let router: KeyTouchRouter
+    let router: TouchEngine
     let frames: [String: CGRect]
     let resolveSpec: (String) -> KeySpec?
     let onPressDown: () -> Void

@@ -80,39 +80,36 @@ struct EmojiSettingsView: View {
             ToggleRow("Emoji keyboard",
                       subtitle: "Reach emoji from the panel button or by sliding up on 123. Off removes emoji entirely.",
                       isOn: $model.settings.emojiEnabled)
-            if model.settings.emojiEnabled {
-                Divider()
-                ToggleRow("Emoji key next to 123",
-                          subtitle: "Add a dedicated 🙂 key beside the 123 key. This removes emoji from the panel picker.",
-                          isOn: $model.settings.emojiKeyInRow)
-            }
+            Divider()
+            ToggleRow("Emoji key next to 123",
+                      subtitle: "Add a dedicated 🙂 key beside the 123 key. This removes emoji from the panel picker.",
+                      isOn: $model.settings.emojiKeyInRow)
+            .gated(model.settings.emojiEnabled,
+                   reason: "Turn on the Emoji keyboard to use this.")
         }
-        if model.settings.emojiEnabled {
-            CardSection("Recent") {
-                ToggleRow("Show recent emoji",
-                          subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
-                          isOn: $model.settings.showRecentEmoji)
-                if model.settings.showRecentEmoji {
-                    Divider()
-                    Button(role: .destructive) {
-                        model.settings.recentEmoji.removeAll()
-                    } label: {
-                        HStack {
-                            Text("Clear recent emoji")
-                            Spacer()
-                            Text("\(model.settings.recentEmoji.count)")
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, UX.rowVPadding)
-                        .contentShape(Rectangle())
+        GatedCard("Recent", enabled: model.settings.emojiEnabled,
+                  reason: "Turn on the Emoji keyboard to use recents.") {
+            ToggleRow("Show recent emoji",
+                      subtitle: "Add a tab of your recently used emoji at the start of the emoji keyboard.",
+                      isOn: $model.settings.showRecentEmoji)
+            if model.settings.showRecentEmoji {
+                Divider()
+                Button(role: .destructive) {
+                    model.settings.recentEmoji.removeAll()
+                } label: {
+                    HStack {
+                        Text("Clear recent emoji")
+                        Spacer()
+                        Text("\(model.settings.recentEmoji.count)")
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(model.settings.recentEmoji.isEmpty)
-                    .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
+                    .padding(.vertical, UX.rowVPadding)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .disabled(model.settings.recentEmoji.isEmpty)
+                .opacity(model.settings.recentEmoji.isEmpty ? 0.4 : 1)
             }
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
-            .animation(Motion.settingsReveal.animation, value: model.settings.showRecentEmoji)
         }
     }
 

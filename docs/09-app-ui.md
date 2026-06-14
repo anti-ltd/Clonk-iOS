@@ -181,6 +181,14 @@ User confirms in a sheet before `AppModel` commits.
 
 ## Gotchas
 
+- **Don't hide settings behind an off feature — disable them with a reason.**
+  When a control only does something once a feature toggle is on, show it
+  *disabled + dimmed* with a one-line reason, not hidden, so the page never goes
+  empty and users see what's on offer. Use `GatedCard(title, enabled:, reason:)`
+  for a whole card or `.gated(_ enabled:, reason:)` for an inline block (both in
+  `TuningPresets.swift`). Applies to top-level feature gates; tiny numeric
+  refinements under an adjacent sub-toggle may stay hidden.
+
 - **AppStage seeds theme in `AppModel.init`** without triggering `didSet` — DEBUG
   capture shots get curated themes that don't persist.
 

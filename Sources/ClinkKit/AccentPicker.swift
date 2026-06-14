@@ -1,7 +1,7 @@
 /**
  `AccentPicker`: the accent-variant bar raised while holding a letter key — the
  base glyph plus its diacritic variants, with the `selected` swatch highlighted.
- Purely presentational; `KeyTouchRouter` drives the long-press, slide-to-select,
+ Purely presentational; `TouchEngine` drives the long-press, slide-to-select,
  and release-to-commit (the same interaction model as the emoji skin-tone
  picker), and the canvas positions this bar above the held key. Styled like the
  key popups (glass on glass themes, solid otherwise).

@@ -44,26 +44,27 @@ struct TranslateView: View {
                               isOn: $model.settings.translateEnabled)
                 }
 
-                if model.settings.translateEnabled {
-                    CardSection("Style") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Picker("Style", selection: $model.settings.translateStyle) {
-                                Text("Inline").tag(TranslateStyle.inline)
-                                Text("Panel").tag(TranslateStyle.panel)
-                            }
-                            .pickerStyle(.segmented)
-                            Text(model.settings.translateStyle == .panel
-                                 ? "Panel replaces the keyboard with a full translator — paste text, pick a language, read and insert the result. Big and easy to reach."
-                                 : "Inline composes on the suggestion bar while the keys stay up — type to translate, then the result drops in.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                let translateOn = model.settings.translateEnabled
+                let translateReason = "Turn on the Translate panel to use this."
+
+                GatedCard("Style", enabled: translateOn, reason: translateReason) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Picker("Style", selection: $model.settings.translateStyle) {
+                            Text("Inline").tag(TranslateStyle.inline)
+                            Text("Panel").tag(TranslateStyle.panel)
                         }
-                        .padding(.vertical, UX.rowVPadding)
+                        .pickerStyle(.segmented)
+                        Text(model.settings.translateStyle == .panel
+                             ? "Panel replaces the keyboard with a full translator — paste text, pick a language, read and insert the result. Big and easy to reach."
+                             : "Inline composes on the suggestion bar while the keys stay up — type to translate, then the result drops in.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    .padding(.vertical, UX.rowVPadding)
                 }
 
-                if model.settings.translateEnabled && canChooseEngine {
-                    CardSection("Engine") {
+                if canChooseEngine {
+                    GatedCard("Engine", enabled: translateOn, reason: translateReason) {
                         VStack(alignment: .leading, spacing: 8) {
                             Picker("Engine", selection: $model.settings.aiTranslate) {
                                 Text("Language pack").tag(false)
@@ -80,29 +81,25 @@ struct TranslateView: View {
                     }
                 }
 
-                if model.settings.translateEnabled {
-                    CardSection("Default language") {
-                        HStack {
-                            Text("Translate into")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Picker("Translate into", selection: $translate.targetLanguageID) {
-                                ForEach(TranslateLanguage.common) { lang in
-                                    Text(lang.name).tag(lang.id)
-                                }
+                GatedCard("Default language", enabled: translateOn, reason: translateReason) {
+                    HStack {
+                        Text("Translate into")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Picker("Translate into", selection: $translate.targetLanguageID) {
+                            ForEach(TranslateLanguage.common) { lang in
+                                Text(lang.name).tag(lang.id)
                             }
-                            .labelsHidden()
-                            .pickerStyle(.menu)
                         }
-                        .padding(.vertical, UX.rowVPadding)
+                        .labelsHidden()
+                        .pickerStyle(.menu)
                     }
+                    .padding(.vertical, UX.rowVPadding)
                 }
 
-                if model.settings.translateEnabled {
-                    if #available(iOS 18.0, *) {
-                        CardSection("Language packs") {
-                            LanguagePackList(languages: TranslateLanguage.common)
-                        }
+                if #available(iOS 18.0, *) {
+                    GatedCard("Language packs", enabled: translateOn, reason: translateReason) {
+                        LanguagePackList(languages: TranslateLanguage.common)
                     }
                 }
 

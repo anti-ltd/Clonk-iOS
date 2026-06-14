@@ -63,20 +63,20 @@ struct NotepadView: View {
             ToggleRow("Quick notepad",
                       subtitle: "Jot text from any app, then drop it wherever you type. Adds a notepad to the panel button.",
                       isOn: $model.settings.notepadEnabled)
-            if model.settings.notepadEnabled {
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Style")
-                        .font(.subheadline)
-                        .padding(.top, 4)
-                    OptionChips(
-                        options: NotepadMode.allCases.map { ($0.label, $0) },
-                        selection: $model.settings.notepadMode
-                    )
-                    .tint(themeAccent)
-                    .padding(.bottom, 4)
-                }
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Style")
+                    .font(.subheadline)
+                    .padding(.top, 4)
+                OptionChips(
+                    options: NotepadMode.allCases.map { ($0.label, $0) },
+                    selection: $model.settings.notepadMode
+                )
+                .tint(themeAccent)
+                .padding(.bottom, 4)
             }
+            .gated(model.settings.notepadEnabled,
+                   reason: "Turn on Quick notepad to choose a style.")
         }
     }
 

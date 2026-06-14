@@ -32,7 +32,7 @@ struct KeyPopupKey: PreferenceKey {
 
 /// Publishes the held key's bounds while its accent bar is up, so the canvas can
 /// anchor the `AccentPicker` above it. The bar's contents (options + highlight)
-/// come from the `KeyTouchRouter`; only the anchor travels through preferences.
+/// come from the `TouchEngine`; only the anchor travels through preferences.
 struct AccentPopupKey: PreferenceKey {
     static let defaultValue: Anchor<CGRect>? = nil
     static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {

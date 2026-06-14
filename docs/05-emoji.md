@@ -95,7 +95,7 @@ main keyboard but scoped to the search overlay.
 ### UIKit tap surfaces
 
 Category tabs and the suggestion bar strip use UIKit surfaces for the same
-reason as `KeyTouchRouter` — reliable simultaneous touch handling in dense UI.
+reason as `TouchEngine` — reliable simultaneous touch handling in dense UI.
 
 ### Recents
 

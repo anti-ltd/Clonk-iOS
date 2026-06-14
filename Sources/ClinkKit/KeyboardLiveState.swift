@@ -185,7 +185,7 @@ public final class KeyboardLiveState {
 
     /// Next-letter probability distribution for the word being typed, pushed by
     /// the host after each edit (derived from the lexicon's completion set).
-    /// `KeyTouchRouter` prefers this over its built-in English letter tables
+    /// `TouchEngine` prefers this over its built-in English letter tables
     /// when sizing adaptive hitboxes; nil falls back to those tables. Only the
     /// (debug) hitbox overlay observes it — the router reads it via a closure
     /// at touch time, so per-keystroke updates don't re-render the keyboard.

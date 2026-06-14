@@ -69,85 +69,77 @@ enum TuningPresets {
                detail: "Instant · 8pt per character — the cursor flies."),
     ]
 
-    /// Animation character across key / space bar / popup springs.
+    /// The whole press FEEL in one tap — every spring/bloom/timing knob the
+    /// "Feel" card exposes (key + space bar + popup springs, both blooms, instant,
+    /// press linger, glass return). Deliberately does NOT touch the Effects (tap
+    /// flash, glow, press style, entrance) or the `minPressVisible` accessibility
+    /// floor — those stay the user's own choices, never wiped by a feel swap.
     static let animation: [Preset] = [
         Preset(name: "Default", apply: { s in
             s.keyBloomScale = 1.12; s.keySpringResponse = 0.26; s.keySpringDamping = 0.60
-            s.spaceSpringResponse = 0.28; s.spaceSpringDamping = 0.78
+            s.keyPressInstant = false; s.keyPressLinger = 0.06
+            s.spaceBloomScale = 1.04; s.spaceSpringResponse = 0.28; s.spaceSpringDamping = 0.78
             s.spaceLeanMultiplier = 0.14; s.spaceCursorDragScale = 0.90
             s.popupSpringResponse = 0.32; s.popupSpringDamping = 0.62
+            s.glassReleaseResponse = 0.12
         }, matches: { s in
             aeq(s.keyBloomScale, 1.12) && aeq(s.keySpringResponse, 0.26) && aeq(s.keySpringDamping, 0.60)
-            && aeq(s.spaceSpringResponse, 0.28) && aeq(s.spaceSpringDamping, 0.78)
+            && !s.keyPressInstant && aeq(s.keyPressLinger, 0.06)
+            && aeq(s.spaceBloomScale, 1.04) && aeq(s.spaceSpringResponse, 0.28) && aeq(s.spaceSpringDamping, 0.78)
             && aeq(s.spaceLeanMultiplier, 0.14) && aeq(s.spaceCursorDragScale, 0.90)
             && aeq(s.popupSpringResponse, 0.32) && aeq(s.popupSpringDamping, 0.62)
-        }, detail: "Key 0.26s/0.60 · space 0.28s/0.78 · popup 0.32s · bloom 112%."),
+            && aeq(s.glassReleaseResponse, 0.12)
+        }, detail: "Key 0.26s/0.60 · space 0.28s · popup 0.32s · bloom 112% · linger 60ms."),
         Preset(name: "Snappy", apply: { s in
             s.keyBloomScale = 1.06; s.keySpringResponse = 0.16; s.keySpringDamping = 0.85
-            s.spaceSpringResponse = 0.16; s.spaceSpringDamping = 0.88
+            s.keyPressInstant = false; s.keyPressLinger = 0.04
+            s.spaceBloomScale = 1.02; s.spaceSpringResponse = 0.16; s.spaceSpringDamping = 0.88
             s.spaceLeanMultiplier = 0.08; s.spaceCursorDragScale = 0.95
             s.popupSpringResponse = 0.20; s.popupSpringDamping = 0.85
+            s.glassReleaseResponse = 0.10
         }, matches: { s in
             aeq(s.keyBloomScale, 1.06) && aeq(s.keySpringResponse, 0.16) && aeq(s.keySpringDamping, 0.85)
-            && aeq(s.spaceSpringResponse, 0.16) && aeq(s.spaceSpringDamping, 0.88)
+            && !s.keyPressInstant && aeq(s.keyPressLinger, 0.04)
+            && aeq(s.spaceBloomScale, 1.02) && aeq(s.spaceSpringResponse, 0.16) && aeq(s.spaceSpringDamping, 0.88)
             && aeq(s.spaceLeanMultiplier, 0.08) && aeq(s.spaceCursorDragScale, 0.95)
             && aeq(s.popupSpringResponse, 0.20) && aeq(s.popupSpringDamping, 0.85)
-        }, detail: "Key 0.16s/0.85 · space 0.16s/0.88 · popup 0.20s · bloom 106% — fast & firm."),
+            && aeq(s.glassReleaseResponse, 0.10)
+        }, detail: "Key 0.16s/0.85 · space 0.16s · popup 0.20s · bloom 106% — fast & firm."),
         Preset(name: "Bouncy", apply: { s in
             s.keyBloomScale = 1.20; s.keySpringResponse = 0.34; s.keySpringDamping = 0.45
-            s.spaceSpringResponse = 0.36; s.spaceSpringDamping = 0.55
+            s.keyPressInstant = false; s.keyPressLinger = 0.08
+            s.spaceBloomScale = 1.08; s.spaceSpringResponse = 0.36; s.spaceSpringDamping = 0.55
             s.spaceLeanMultiplier = 0.20; s.spaceCursorDragScale = 0.85
             s.popupSpringResponse = 0.40; s.popupSpringDamping = 0.48
+            s.glassReleaseResponse = 0.16
         }, matches: { s in
             aeq(s.keyBloomScale, 1.20) && aeq(s.keySpringResponse, 0.34) && aeq(s.keySpringDamping, 0.45)
-            && aeq(s.spaceSpringResponse, 0.36) && aeq(s.spaceSpringDamping, 0.55)
+            && !s.keyPressInstant && aeq(s.keyPressLinger, 0.08)
+            && aeq(s.spaceBloomScale, 1.08) && aeq(s.spaceSpringResponse, 0.36) && aeq(s.spaceSpringDamping, 0.55)
             && aeq(s.spaceLeanMultiplier, 0.20) && aeq(s.spaceCursorDragScale, 0.85)
             && aeq(s.popupSpringResponse, 0.40) && aeq(s.popupSpringDamping, 0.48)
-        }, detail: "Key 0.34s/0.45 · space 0.36s/0.55 · popup 0.40s · bloom 120% — loose & playful."),
+            && aeq(s.glassReleaseResponse, 0.16)
+        }, detail: "Key 0.34s/0.45 · space 0.36s · popup 0.40s · bloom 120% — loose & playful."),
         Preset(name: "Minimal", apply: { s in
             s.keyBloomScale = 1.0; s.keySpringResponse = 0.12; s.keySpringDamping = 1.0
-            s.spaceSpringResponse = 0.12; s.spaceSpringDamping = 1.0
+            s.keyPressInstant = false; s.keyPressLinger = 0.0
+            s.spaceBloomScale = 1.0; s.spaceSpringResponse = 0.12; s.spaceSpringDamping = 1.0
             s.spaceLeanMultiplier = 0.0; s.spaceCursorDragScale = 1.0
             s.popupSpringResponse = 0.16; s.popupSpringDamping = 1.0
+            s.glassReleaseResponse = 0.08
         }, matches: { s in
             aeq(s.keyBloomScale, 1.0) && aeq(s.keySpringResponse, 0.12) && aeq(s.keySpringDamping, 1.0)
-            && aeq(s.spaceSpringResponse, 0.12) && aeq(s.spaceSpringDamping, 1.0)
+            && !s.keyPressInstant && aeq(s.keyPressLinger, 0.0)
+            && aeq(s.spaceBloomScale, 1.0) && aeq(s.spaceSpringResponse, 0.12) && aeq(s.spaceSpringDamping, 1.0)
             && aeq(s.spaceLeanMultiplier, 0.0) && aeq(s.spaceCursorDragScale, 1.0)
             && aeq(s.popupSpringResponse, 0.16) && aeq(s.popupSpringDamping, 1.0)
+            && aeq(s.glassReleaseResponse, 0.08)
         }, detail: "No bloom · no lean · firm 0.12s springs — flattest, most static."),
     ]
 
-    /// Space bar spring character — bloom, speed, springiness, lean, cursor shrink.
-    static let spaceBar: [Preset] = [
-        Preset(name: "Default", apply: { s in
-            s.spaceBloomScale = 1.04; s.spaceSpringResponse = 0.28; s.spaceSpringDamping = 0.78
-            s.spaceLeanMultiplier = 0.14; s.spaceCursorDragScale = 0.90
-        }, matches: { s in
-            aeq(s.spaceBloomScale, 1.04) && aeq(s.spaceSpringResponse, 0.28) && aeq(s.spaceSpringDamping, 0.78)
-            && aeq(s.spaceLeanMultiplier, 0.14) && aeq(s.spaceCursorDragScale, 0.90)
-        }, detail: "0.28s · 0.78 · lean 0.14 · bloom 104%."),
-        Preset(name: "Snappy", apply: { s in
-            s.spaceBloomScale = 1.02; s.spaceSpringResponse = 0.16; s.spaceSpringDamping = 0.88
-            s.spaceLeanMultiplier = 0.08; s.spaceCursorDragScale = 0.95
-        }, matches: { s in
-            aeq(s.spaceBloomScale, 1.02) && aeq(s.spaceSpringResponse, 0.16) && aeq(s.spaceSpringDamping, 0.88)
-            && aeq(s.spaceLeanMultiplier, 0.08) && aeq(s.spaceCursorDragScale, 0.95)
-        }, detail: "0.16s · 0.88 · lean 0.08 · bloom 102% — fast & firm."),
-        Preset(name: "Bouncy", apply: { s in
-            s.spaceBloomScale = 1.08; s.spaceSpringResponse = 0.36; s.spaceSpringDamping = 0.55
-            s.spaceLeanMultiplier = 0.20; s.spaceCursorDragScale = 0.85
-        }, matches: { s in
-            aeq(s.spaceBloomScale, 1.08) && aeq(s.spaceSpringResponse, 0.36) && aeq(s.spaceSpringDamping, 0.55)
-            && aeq(s.spaceLeanMultiplier, 0.20) && aeq(s.spaceCursorDragScale, 0.85)
-        }, detail: "0.36s · 0.55 · lean 0.20 · bloom 108% — loose & springy."),
-        Preset(name: "Minimal", apply: { s in
-            s.spaceBloomScale = 1.0; s.spaceSpringResponse = 0.12; s.spaceSpringDamping = 1.0
-            s.spaceLeanMultiplier = 0.0; s.spaceCursorDragScale = 1.0
-        }, matches: { s in
-            aeq(s.spaceBloomScale, 1.0) && aeq(s.spaceSpringResponse, 0.12) && aeq(s.spaceSpringDamping, 1.0)
-            && aeq(s.spaceLeanMultiplier, 0.0) && aeq(s.spaceCursorDragScale, 1.0)
-        }, detail: "0.12s · firm · no lean · no bloom."),
-    ]
+    // (The standalone `spaceBar` preset row was retired when the Animation page
+    // folded the space-bar knobs into the single "Feel" preset + Fine-tune — the
+    // `animation` preset above now sets the space-bar feel too.)
 
     /// Popup emerge spring — speed and springiness only.
     static let popup: [Preset] = [
@@ -405,5 +397,75 @@ struct TunedSection<Content: View>: View {
             .tint(.primary)
             .padding(.vertical, UX.rowVPadding)
         }
+    }
+}
+
+// MARK: - Gating (show-disabled-with-reason)
+//
+// House rule: a setting that depends on a feature being on is shown even when
+// that feature is off — disabled, dimmed, with a one-line reason — rather than
+// hidden. The page never goes empty; users can see what's available before
+// flipping the switch. `GatedCard` gates a whole card (reason at the top);
+// `.gated(_:reason:)` gates an inline block (reason beneath it).
+
+/// A lock glyph + a short reason, explaining why the controls near it are off.
+struct LockedReason: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "lock.fill").font(.caption2)
+            Text(text).font(.caption)
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, UX.rowVPadding)
+    }
+}
+
+/// A `CardSection` that keeps its dependent controls visible when their feature
+/// is off — disabled and dimmed, with a reason at the top — instead of hiding
+/// them. Use for a whole card that only does something once `enabled` is true.
+struct GatedCard<Content: View>: View {
+    let title: String?
+    let enabled: Bool
+    let reason: String
+    @ViewBuilder var content: Content
+
+    init(_ title: String? = nil, enabled: Bool, reason: String,
+         @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.enabled = enabled
+        self.reason = reason
+        self.content = content()
+    }
+
+    var body: some View {
+        CardSection(title) {
+            if !enabled {
+                LockedReason(reason)
+                Divider()
+            }
+            content
+                .disabled(!enabled)
+                .opacity(enabled ? 1 : 0.45)
+        }
+        .animation(.snappy(duration: 0.25), value: enabled)
+    }
+}
+
+extension View {
+    /// Keep this control visible when its feature is off — disabled, dimmed, with
+    /// a reason caption beneath — instead of hiding it. For an inline block that
+    /// lives inside an otherwise-active card.
+    @ViewBuilder
+    func gated(_ enabled: Bool, reason: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            self
+                .disabled(!enabled)
+                .opacity(enabled ? 1 : 0.45)
+            if !enabled { LockedReason(reason) }
+        }
+        .animation(.snappy(duration: 0.25), value: enabled)
     }
 }

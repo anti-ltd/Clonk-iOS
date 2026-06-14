@@ -15,7 +15,7 @@ KeyboardViewController
     └── KeyboardCanvas
             ├── KeyboardController     (plane, shift, emoji flag)
             ├── KeyboardLiveState      (suggestions, active panel)
-            ├── KeyTouchRouter         (multitouch → key IDs)
+            ├── TouchEngine         (multitouch → key IDs)
             ├── KeyView × N            (individual keys)
             ├── KeyGlyphLayer          (unified glyph pass)
             ├── KeyPopup               (press balloon)

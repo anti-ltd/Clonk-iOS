@@ -69,7 +69,7 @@ Two extra gates on `MotionProfile.shared`, checked where the content mounts
    bright phase: the stuck-lit-key bug). Template: `EmojiGlassFlashView`.
 2. **Per-element observable press state** — each key observes only its own
    `KeyPressState`, so a press invalidates one view, not the grid. Never
-   re-introduce a shared "pressed keys" set. Template: `KeyTouchRouter` /
+   re-introduce a shared "pressed keys" set. Template: `TouchEngine` /
    `KeyView`.
 3. **Gesture-live, spring-on-release** — while a finger drags, apply offsets
    un-animated (1:1 tracking, no spring backlog = no stutter); let the spring

@@ -12,13 +12,13 @@ import SwiftUI
 
 /// A one-shot, additive "tap registered" flash, replayed on every press.
 ///
-/// Keyed to `KeyTouchRouter`'s per-key tap tick (which bumps on every
+/// Keyed to `TouchEngine`'s per-key tap tick (which bumps on every
 /// touch-down), so it fires even when the same key is re-pressed while it's
 /// still in the pressed/linger state — the case where the bloom, sprung on
 /// `isPressed`, can't re-animate. It briefly brightens the key over its own
 /// shape and fades out; it changes no geometry, so it layers on top of the
-/// bloom/popup without overriding either. Gated on the same `keyPressWarp`
-/// switch as the bloom, so turning press visuals off silences it too.
+/// bloom/popup without overriding either. Self-gates on `tapFlashStrength`
+/// (0 = off), independent of the bloom — each press effect stands alone.
 struct TapPulse: ViewModifier {
     let trigger: Int
     let shape: RoundedRectangle
@@ -29,6 +29,10 @@ struct TapPulse: ViewModifier {
     var color: Color = .white
     /// Draw the flash as a stroked ring instead of a filled wash.
     var ring: Bool = false
+    /// Additive (`.plusLighter`) compositing — the bright "snap" for the white
+    /// flash. Off → a normal-blend tint, so a coloured (accent) flash actually
+    /// reads as its hue instead of washing out toward white. Set false for accent.
+    var additive: Bool = true
 
     /// Current flash opacity. Driven by explicit writes (bright on trigger,
     /// fade 50ms later) with render-side animations in between — NOT a
@@ -51,13 +55,19 @@ struct TapPulse: ViewModifier {
                 Group {
                     if ring {
                         // Outline burst — reads as a quick ripple around the cap.
-                        shape.strokeBorder(color, lineWidth: 2.5)
+                        // Thicker than a fill needs to be (a thin line has little
+                        // area), and driven at ~2× opacity so the brief stroke
+                        // registers.
+                        shape.strokeBorder(color, lineWidth: 4)
+                            .opacity(min(1, flash * 2))
                     } else {
                         shape.fill(color)
+                            .opacity(flash)
                     }
                 }
-                .opacity(flash)
-                .blendMode(.plusLighter)
+                // White → additive bright pop; accent → normal-blend tint so the
+                // colour is unmistakable (additive accent just reads as "brighter").
+                .blendMode(additive ? .plusLighter : .normal)
                 .allowsHitTesting(false)
             }
             .onChange(of: trigger) { _, _ in
@@ -79,14 +89,12 @@ struct TapPulse: ViewModifier {
 
 /// Renders one key surface (glass or solid) and publishes glyph, popup, accent,
 /// and hit-frame preferences for the canvas overlay layers. Press/warp state is
-/// read from `KeyTouchRouter`; touches are handled by `MultiTouchSurface`, not here.
+/// read from `TouchEngine`; touches are handled by `MultiTouchSurface`, not here.
 struct KeyView: View {
     let spec: KeySpec
     let theme: Theme
     let cornerRadius: CGFloat
     let popupEnabled: Bool
-    /// Bloom/warp the key on press (optional, per `keyPressWarp`).
-    let pressWarp: Bool
     /// Swell the key as a swiping finger passes over it (liquid-glass only, per
     /// `swipeKeyMorph`).
     let swipeMorph: Bool
@@ -104,14 +112,14 @@ struct KeyView: View {
     /// key as pressed even though no finger is on it.
     let simulatedPressed: Bool
     /// Shared multitouch state — this key's press / warp is read out of here,
-    /// written by the single UIKit touch surface (see `KeyTouchRouter`).
-    let router: KeyTouchRouter
+    /// written by the single UIKit touch surface (see `TouchEngine`).
+    let router: TouchEngine
     let physics: KeyPressPhysics
     let longPressHintsEnabled: Bool
 
     /// This key's own observable press state — reading it (rather than a shared
     /// set on the router) means a press invalidates only this key's view, not
-    /// the whole grid. The lookup itself is unobserved (see `KeyTouchRouter`).
+    /// the whole grid. The lookup itself is unobserved (see `TouchEngine`).
     private var state: KeyPressState { router.state(for: keyID) }
 
     /// Pressed for any reason: a real finger (the router) or the simulator.
@@ -172,8 +180,9 @@ struct KeyView: View {
     }
 
     /// Liquid "warp": the space bar stretches toward the finger (and squashes
-    /// vertically) while dragging the cursor; with `pressWarp` on, every key
-    /// blooms a little on press. Both spring back on release.
+    /// vertically) while dragging the cursor; when bloom is on (its scale > 1),
+    /// every key blooms a little on press. Both spring back on release. Each
+    /// effect self-gates on its own strength — there is no master switch.
     private var warp: (scaleX: CGFloat, scaleY: CGFloat, offset: CGFloat) {
         if spec.isSpace, isPressed {
             // The bar leans toward the finger the whole time it's held (tracking
@@ -185,12 +194,13 @@ struct KeyView: View {
             let maxLean: CGFloat = 28
             let offset = max(min(dragX * physics.spaceLeanMultiplier, maxLean), -maxLean)
             let scale: CGFloat = cursorActive ? physics.spaceCursorDragScale
-                                              : (pressWarp && !showsPopup ? physics.spaceBloomScale : 1)
+                                              : (!showsPopup && physics.spaceBloomScale > 1.0001 ? physics.spaceBloomScale : 1)
             return (scale, scale, offset)
         }
-        // Visible bloom on press for the generic keys. The shift key opts out —
-        // it has its own interactive-glass morph (see `glass` / `surface`).
-        if pressWarp, isPressed, !showsPopup, !spec.isShift {
+        // Visible bloom on press for the generic keys — only when bloom is on
+        // (its effective scale grows). The shift key opts out (its own
+        // interactive-glass morph, see `glass` / `surface`).
+        if isPressed, !showsPopup, !spec.isShift, physics.bloomEnabled {
             // Softened on glass (see `effectiveBloomScale`) so the key grows
             // less into its neighbours — cheaper for the container to merge.
             // `pressStyle` reshapes the SAME single scale into different feels:
@@ -250,7 +260,7 @@ struct KeyView: View {
             // of two different ones fighting over the scale (the release stutter).
             .animation(spec.isSpace
                        ? physics.spaceSpringAnimation
-                       : (pressWarp && !spec.isShift && !physics.instant
+                       : (physics.bloomEnabled && !spec.isShift && !physics.instant
                           // Bloom RISES with the tuned (bouncy) spring, RETURNS
                           // with the calmer settle — body re-evaluates when
                           // `isPressed` flips, so the active spring matches the
@@ -272,10 +282,11 @@ struct KeyView: View {
             // landing, so each tap gets its own confirmation. It only flashes a
             // brief highlight over the key — it never touches the bloom geometry,
             // so it adds to the press effect rather than overriding it.
-            .modifier(TapPulse(trigger: state.tapTick, shape: shape, enabled: pressWarp,
+            .modifier(TapPulse(trigger: state.tapTick, shape: shape, enabled: true,
                                strength: physics.tapFlashStrength,
                                color: physics.tapFlashAccent ? pressedTint : .white,
-                               ring: physics.tapFlashRing))
+                               ring: physics.tapFlashRing,
+                               additive: !physics.tapFlashAccent))
             // Publish the glyph for the on-top layer — except shift, which draws
             // its own so it can morph with its interactive glass.
             .anchorPreference(key: KeyGlyphKey.self, value: .bounds) { anchor in
@@ -339,7 +350,7 @@ struct KeyView: View {
     /// when enabled so only its opacity animates — never a structural insert that
     /// would hitch the press. Honours the motion profile's expensive-effects gate.
     @ViewBuilder private var pressGlowLayer: some View {
-        if pressWarp, physics.pressGlow > 0.001, !spec.isSpace {
+        if physics.pressGlow > 0.001, !spec.isSpace {
             shape.fill(pressedTint)
                 .opacity(isPressed && MotionProfile.shared.allowsExpensiveEffects
                          ? Double(physics.pressGlow) : 0)

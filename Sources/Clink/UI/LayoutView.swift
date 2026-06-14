@@ -1,6 +1,8 @@
 /**
- Layout page: two tabs — Layout (key arrangement picker) and Rows (number row / home row inset).
- 
+ Layout page. One scrolling page, no tabs: the key-arrangement picker (grouped by
+ script), then row options (number row / home-row inset), then the custom-keys
+ editor inline.
+
 
  Module: app-ui · Target: Clink
  Learn: docs/09-app-ui.md
@@ -8,14 +10,11 @@
 import SwiftUI
 import iUXiOS
 
-/// Layout settings: arrangement picker, row options, and custom keys tab.
+/// Layout settings: arrangement picker, row options, and custom keys.
 /// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct LayoutView: View {
-    private enum Tab { case layout, rows, custom }
-
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedTab: Tab = .layout
     /// Non-nil while the custom-key editor sheet is up. Hosted here (the screen
     /// root) so the themed sheet presents full-screen.
     @State private var keyEditing: CustomKeysView.KeyEdit?
@@ -42,20 +41,10 @@ struct LayoutView: View {
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings,
-                            bottomBar: AnyView(
-                                ThemedTabPicker(options: [("Layout", Tab.layout), ("Rows", Tab.rows),
-                                                          ("Custom", Tab.custom)],
-                                                selection: $selectedTab)
-                            )) {
-            switch selectedTab {
-            case .layout:
-                layoutTab
-            case .rows:
-                rowsTab(model: model)
-            case .custom:
-                CustomKeysView(editing: $keyEditing)
-            }
+        PinnedPreviewLayout(settings: model.settings) {
+            layoutTab
+            rowsTab(model: model)
+            CustomKeysView(editing: $keyEditing)
         }
         .tint(themeAccent)
         .navigationTitle("Layout")

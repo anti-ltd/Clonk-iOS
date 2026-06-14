@@ -85,7 +85,11 @@ import Testing
         #expect(s.keyboardBottomPadding == 30)
         #expect(s.emojiColumnCount == 8)
         #expect(s.hapticIntensity == 1)
-        #expect(s.glassBloomFactor == 0)
+        // `glassBloomFactor` (was 0 here) and `keyPressWarp` (true) are retired —
+        // the decoder ignores the former and reads the latter only for migration.
+        // With warp true, the press strengths survive unchanged from the blob:
+        #expect(s.keyBloomScale == 1.06)
+        #expect(s.tapFlashStrength == 0.34)
     }
 
     @Test func absentKeysFallBackToDefaults() throws {

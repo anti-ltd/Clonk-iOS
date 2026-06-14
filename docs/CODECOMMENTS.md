@@ -4,7 +4,7 @@ Every Swift file under `Sources/` gets a file header. The goal is orientation â€
 what this file is for, where it sits, where to read more â€” not narration of
 obvious code.
 
-Match the tone already in files like `SharedStore.swift` and `KeyTouchRouter.swift`:
+Match the tone already in files like `SharedStore.swift` and `TouchEngine.swift`:
 direct, constraint-aware, no filler.
 
 ---

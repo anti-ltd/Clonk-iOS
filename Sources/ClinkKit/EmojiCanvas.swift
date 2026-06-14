@@ -623,7 +623,6 @@ public struct EmojiCanvas: View {
             // wired to the same hold-to-repeat behaviour as the letter keyboard.
             DeleteTile(theme: theme,
                        cornerRadius: cornerRadius,
-                       pressWarp: settings.keyPressWarp,
                        onBackspace: onBackspace,
                        onAnyTap: onAnyTap)
         }

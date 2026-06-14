@@ -24,7 +24,6 @@ import UIKit
 struct DeleteTile: View {
     let theme: Theme
     let cornerRadius: CGFloat
-    let pressWarp: Bool
     let onBackspace: () -> Void
     let onAnyTap: () -> Void
 
@@ -54,9 +53,9 @@ struct DeleteTile: View {
                 label.background(tint, in: shape)
             }
         }
-        .scaleEffect(pressWarp && pressed ? 1.12 : 1)
+        .scaleEffect(pressed ? 1.12 : 1)
         .animation(Motion.emojiTabPress.animation, value: pressed)
-        .modifier(EmojiTapPulse(trigger: tapTick, shape: shape, enabled: pressWarp))
+        .modifier(EmojiTapPulse(trigger: tapTick, shape: shape, enabled: true))
         .overlay { HoldRepeatSurface(onDown: down, onUp: up) }
     }
 
@@ -73,7 +72,7 @@ struct DeleteTile: View {
     }
 
     /// Delete once now, wait out the hold delay, then auto-repeat with an
-    /// accelerating cadence — the exact timing of `KeyTouchRouter.startRepeating`.
+    /// accelerating cadence — the exact timing of `TouchEngine.startRepeating`.
     private func startRepeating() {
         stopRepeating()
         repeatTask = Task { @MainActor in

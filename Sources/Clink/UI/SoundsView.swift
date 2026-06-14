@@ -50,13 +50,11 @@ struct SoundsView: View {
             ToggleRow("Key sounds",
                       subtitle: "Play a sound on every keypress.",
                       isOn: $model.settings.soundEnabled)
-            if model.settings.soundEnabled {
-                Divider()
-                SliderRow.percent("Volume", value: $model.settings.soundVolume)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
+            Divider()
+            SliderRow.percent("Volume", value: $model.settings.soundVolume)
+                .gated(model.settings.soundEnabled,
+                       reason: "Turn on Key sounds to set the volume.")
         }
-        .animation(Motion.settingsReveal.animation, value: model.settings.soundEnabled)
     }
 
     @ViewBuilder
@@ -65,14 +63,13 @@ struct SoundsView: View {
         if needsFullAccess && !model.hasFullAccess {
             fullAccessNotice
         }
-        CardSection("Sound pack") {
+        GatedCard("Sound pack", enabled: model.settings.soundEnabled,
+                  reason: "Turn on Key sounds to choose a pack.") {
             ForEach(Array(SoundPack.presets.enumerated()), id: \.element.id) { idx, pack in
                 if idx > 0 { Divider() }
                 packRow(pack)
             }
         }
-        .opacity(model.settings.soundEnabled ? 1 : 0.4)
-        .disabled(!model.settings.soundEnabled)
     }
 
     // MARK: - Helpers

@@ -73,7 +73,7 @@ See [FILE-INDEX](FILE-INDEX.md) for all 153 Swift files.
 ### Keystroke path (extension only)
 
 ```
-UITouch → KeyTouchRouter → KeyboardCanvas.insert/backspace
+UITouch → TouchEngine → KeyboardCanvas.insert/backspace
     → KeyboardViewController.insertMirrored/backspaceMirrored
     → textDocumentProxy
     → scheduleSuggestionUpdate (debounced, quiet-gated)
@@ -123,3 +123,4 @@ The app preview uses the same canvas but passes stub callbacks — no document p
 - [README.md](../README.md) — product features, build commands
 - [11-theming](11-theming.md) — visual layer
 - [12-motion](12-motion.md) — animation layer
+- [15-touch-engine](15-touch-engine.md) — text-first input contract & unification plan

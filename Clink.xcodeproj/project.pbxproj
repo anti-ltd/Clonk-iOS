@@ -56,6 +56,7 @@
 		1E3B3CB33F53763C9A5B4A9B /* ResponseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533CC42392A2CF228BDDA184 /* ResponseView.swift */; };
 		1E6845519A7120B632257C47 /* PanelSwitcherPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56FBF088403DCE7E480B111 /* PanelSwitcherPanel.swift */; };
 		1F061C638B8AE78DFB37640B /* MotionSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8EB2626355E272159E251C /* MotionSequence.swift */; };
+		1FFB3B711CD4F5DFBD6D5320 /* TouchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A744FB305610F842875AA9 /* TouchEngine.swift */; };
 		207B18A65347DFEFC87C2B42 /* CustomKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E84C54BDB032EBA9ACB1E3 /* CustomKey.swift */; };
 		21615F686D5FA42486109BCE /* SuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBBE1A59D34F9725BA5ED16 /* SuggestionEngine.swift */; };
 		22E79AA6FF937FB5B795CF27 /* KeyboardCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B72EA3228E93B5AB824EE0 /* KeyboardCanvas.swift */; };
@@ -183,12 +184,10 @@
 		6A8DFD98B768C4B591019692 /* LayoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAF4700023DDC86E7C9062B /* LayoutPickerView.swift */; };
 		6AC11BBA73FE855F3968E0FB /* Theme+SolarizedDark.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5FE9F8364688968E5539767 /* Theme+SolarizedDark.swift */; };
 		6B529A54484E78DA1CB76B70 /* Theme+Sakura.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0782ECAE008251748D18E1D1 /* Theme+Sakura.swift */; };
-		6BCACE64387F0B4208941CF6 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		6C395DB949B5F8CFE8176570 /* Theme+Nord.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25BD3CF22EC6A03A6C3D603 /* Theme+Nord.swift */; };
 		6D0A167660A88C78F0A51A7C /* ThemePresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6959EF58425EE3D79388290 /* ThemePresets.swift */; };
 		6E061889A928576E2E22698A /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778C0C73D09A5F6EBE94A105 /* FeatureFlags.swift */; };
 		6E3566A0246693563CBA9900 /* Theme+Midnight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E513B9833103D8D833AB3D9 /* Theme+Midnight.swift */; };
-		6E6A3F1B6F3B942372B925CA /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		6F4E4D37810033D3B2D5538E /* ThemePresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6959EF58425EE3D79388290 /* ThemePresets.swift */; };
 		6FA635783FB4FB984DBA0E87 /* Theme+Sakura.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0782ECAE008251748D18E1D1 /* Theme+Sakura.swift */; };
 		716494EE6D11F310FAF5ED15 /* Theme+Royal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F8C91666F857CFD1FDF518 /* Theme+Royal.swift */; };
@@ -255,6 +254,7 @@
 		915C52BC8D9D4EBAB6E62D80 /* Theme+Nord.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25BD3CF22EC6A03A6C3D603 /* Theme+Nord.swift */; };
 		916A04317AED6BEB79F0795A /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688F20D6A1DC28696453D9F9 /* SwipeLexicon.swift */; };
 		92BD3E61CFE2F1E6FEC70CA0 /* CustomKeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F3126F333DF425DDCE4D0A /* CustomKeysView.swift */; };
+		92F0936FD1D447C271408973 /* TouchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A744FB305610F842875AA9 /* TouchEngine.swift */; };
 		93AB200CDD9088135A6BE8BD /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */; };
 		93C7B724742F3EBF59F3C840 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 148AA47AC2638AB397929AF1 /* EmojiData.generated.swift */; };
 		93E2C093B23B3F16535C9840 /* KeySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B46A3DAD23518E0D767C90 /* KeySpec.swift */; };
@@ -270,7 +270,6 @@
 		99D57689D74F2CD743BFCD57 /* it.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 4F288C51F565F452CFA303CE /* it.cngm */; };
 		9A449AEE3DC0530EA281DB64 /* InputViewHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DF12E5A3D107BD26DB173FD /* InputViewHeight.swift */; };
 		9A7D1E22AB879E0471CA0287 /* CorrectionScorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF63FC1969A663BF4C27E964 /* CorrectionScorer.swift */; };
-		9AB592CBAD274F35B8EA2CA8 /* KeyTouchRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */; };
 		9AFCC20BFB79FD72DAFB520C /* EmojiCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D744EEA3405072F1C9A6785 /* EmojiCell.swift */; };
 		9B9CE5F7024592FA79C07B69 /* CustomPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56311ACE4B110E0DF0C4E561 /* CustomPanelView.swift */; };
 		9E429AFA715A231DE7BDA76E /* ru.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 97D9BB95462D81236F451C53 /* ru.cngm */; };
@@ -372,6 +371,7 @@
 		DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
 		DC2D4AC3C3DADE212D4BD320 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778C0C73D09A5F6EBE94A105 /* FeatureFlags.swift */; };
 		DCB8596917DA9FBC7977AFA7 /* fr.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 4305FB529BA07C78DC2C7B68 /* fr.cngm */; };
+		DD8199645FB8E48AE0FEAA29 /* TouchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A744FB305610F842875AA9 /* TouchEngine.swift */; };
 		DE39DFC3C91301364011332B /* KeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E409F1A6F927F0EF03D8CC62 /* KeysView.swift */; };
 		DE8CCE9B5012754C8A6C7877 /* TuningPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91E48B211B55CCF9D4AF918 /* TuningPresets.swift */; };
 		DEFD16DE003B5AAC8387FDAD /* SwipeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05DEEB81EA4974F1D5FD0EB2 /* SwipeDecoder.swift */; };
@@ -485,7 +485,6 @@
 		150813A562B86CE32C633A7E /* ru.clex */ = {isa = PBXFileReference; path = ru.clex; sourceTree = "<group>"; };
 		17E84C54BDB032EBA9ACB1E3 /* CustomKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomKey.swift; sourceTree = "<group>"; };
 		18E0F42F4CC343BA2793B08D /* Theme+Mechanical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Mechanical.swift"; sourceTree = "<group>"; };
-		1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyTouchRouter.swift; sourceTree = "<group>"; };
 		1B5823C5CED386AAD6A324BC /* PyValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PyValue.swift; sourceTree = "<group>"; };
 		1C6E41338498DA588787103C /* TrackpadPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPanel.swift; sourceTree = "<group>"; };
 		1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSkinTone.swift; sourceTree = "<group>"; };
@@ -572,6 +571,7 @@
 		7F101CB1DD74A4CF9831A8D7 /* CalculatorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorSettingsView.swift; sourceTree = "<group>"; };
 		7F35D87B767399D277F77F83 /* PerformanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceView.swift; sourceTree = "<group>"; };
 		8320B7EE9D617EF8DB1CB769 /* LexiconRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexiconRepository.swift; sourceTree = "<group>"; };
+		86A744FB305610F842875AA9 /* TouchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchEngine.swift; sourceTree = "<group>"; };
 		86C7F7F6C5FD24B8789019D7 /* MotionProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionProfile.swift; sourceTree = "<group>"; };
 		8708F85A91AB32614E1C8668 /* FastComputeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FastComputeTests.swift; sourceTree = "<group>"; };
 		87FC6F0B5F4D97B9A46D60C8 /* PanelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelManager.swift; sourceTree = "<group>"; };
@@ -745,7 +745,6 @@
 				B6F506DC457354A4B3A61F95 /* KeyGlyphLayer.swift */,
 				91D10A388F860363D872978F /* KeyPopup.swift */,
 				C1B46A3DAD23518E0D767C90 /* KeySpec.swift */,
-				1A748954CFFCF00AEA9A55DF /* KeyTouchRouter.swift */,
 				13424011E93FB7103500DB64 /* KeyView.swift */,
 				AC0008CF2AE65494BCC583BA /* LanguageHeuristics.swift */,
 				02ADE03EB55D826EE9EEABD0 /* Lexicon.swift */,
@@ -801,6 +800,7 @@
 				948B52077B9A2F5C2149106D /* ThemeBackgroundStore.swift */,
 				C6959EF58425EE3D79388290 /* ThemePresets.swift */,
 				8DCB0B8DCEAB3225DFD69154 /* ThemeTypes.swift */,
+				86A744FB305610F842875AA9 /* TouchEngine.swift */,
 				1C6E41338498DA588787103C /* TrackpadPanel.swift */,
 				1D21C2BC9CB1D7A3F495B9E1 /* TranslateBar.swift */,
 				C198A6D41F45FF22A5F7A478 /* TranslateManager.swift */,
@@ -1257,7 +1257,6 @@
 				D135BFF8F28E71F4CF46DAA0 /* KeyGlyphLayer.swift in Sources */,
 				3F6E867719E08307887A6F1F /* KeyPopup.swift in Sources */,
 				7D0AF909BBD06C1FD52F0E48 /* KeySpec.swift in Sources */,
-				6E6A3F1B6F3B942372B925CA /* KeyTouchRouter.swift in Sources */,
 				7AE61F23AFFBFDA14B25D4D7 /* KeyView.swift in Sources */,
 				22E79AA6FF937FB5B795CF27 /* KeyboardCanvas.swift in Sources */,
 				1DEE840D3FD9000C752A0F1D /* KeyboardController.swift in Sources */,
@@ -1335,6 +1334,7 @@
 				563399C6FEB59A151A78AB1D /* ThemeBackgroundStore.swift in Sources */,
 				F7B5C7A9EDD6D115171DF64D /* ThemePresets.swift in Sources */,
 				64FC4AAC56100E768C4C6606 /* ThemeTypes.swift in Sources */,
+				1FFB3B711CD4F5DFBD6D5320 /* TouchEngine.swift in Sources */,
 				1A14B040F1804F8ACC4F65C8 /* TrackpadPanel.swift in Sources */,
 				8931B29D1FBE15B1C098C5FA /* TranslateBar.swift in Sources */,
 				401FD6010814D7AE517D923F /* TranslateManager.swift in Sources */,
@@ -1398,7 +1398,6 @@
 				ED634FC67C89A063D8376FEC /* KeyGlyphLayer.swift in Sources */,
 				7E57D1D2DB3886AB66C203F1 /* KeyPopup.swift in Sources */,
 				93E2C093B23B3F16535C9840 /* KeySpec.swift in Sources */,
-				9AB592CBAD274F35B8EA2CA8 /* KeyTouchRouter.swift in Sources */,
 				3E8A4482DEADE38D531CC637 /* KeyView.swift in Sources */,
 				B6B4F51D8B37609FAB195703 /* KeyboardCanvas.swift in Sources */,
 				F5647E8390A6C317B97D9CDC /* KeyboardController.swift in Sources */,
@@ -1496,6 +1495,7 @@
 				6D0A167660A88C78F0A51A7C /* ThemePresets.swift in Sources */,
 				853C4D4E5C0D7DC51002BE7F /* ThemeTypes.swift in Sources */,
 				29D702669E97C788EAFD4519 /* ThemedSheet.swift in Sources */,
+				92F0936FD1D447C271408973 /* TouchEngine.swift in Sources */,
 				24A8813A458D296CD6EC7A29 /* TrackpadPanel.swift in Sources */,
 				A9CFAD9D50F98B1F7314D55E /* TranslateBar.swift in Sources */,
 				544B1F06589461ECAF0CE94F /* TranslateManager.swift in Sources */,
@@ -1541,7 +1541,6 @@
 				3EA874741C3C17EF2CEE8D40 /* KeyGlyphLayer.swift in Sources */,
 				C8790542F376C5363EDBBED4 /* KeyPopup.swift in Sources */,
 				F03A4645D75B0FC6BF66CC0F /* KeySpec.swift in Sources */,
-				6BCACE64387F0B4208941CF6 /* KeyTouchRouter.swift in Sources */,
 				29DEBD3A6D81B575CC28D279 /* KeyView.swift in Sources */,
 				F722F207AB108110ABD7E63C /* KeyboardCanvas.swift in Sources */,
 				019582295070CFC2147CCDD1 /* KeyboardController.swift in Sources */,
@@ -1616,6 +1615,7 @@
 				42D1C7EC2F36010E211F6E7B /* ThemeBackgroundStore.swift in Sources */,
 				6F4E4D37810033D3B2D5538E /* ThemePresets.swift in Sources */,
 				ACE717FC6BBE9A5EA7B2B60B /* ThemeTypes.swift in Sources */,
+				DD8199645FB8E48AE0FEAA29 /* TouchEngine.swift in Sources */,
 				79E4BCF7EB1DF9FE3752DF64 /* TrackpadPanel.swift in Sources */,
 				D8120DBD975722E59D6D2274 /* TranslateBar.swift in Sources */,
 				AD459506ABA76BCDA8311B58 /* TranslateManager.swift in Sources */,

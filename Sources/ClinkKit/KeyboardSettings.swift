@@ -82,9 +82,10 @@ public enum TranslateStyle: String, Codable, Sendable, CaseIterable, Identifiabl
     }
 }
 
-/// The geometric character of a key's press animation (when `keyPressWarp` is
-/// on). All are a single `scaleEffect` per key — same cost as the classic bloom,
-/// so the press stays frame-cheap on every device and material.
+/// The geometric character of a key's press animation (applies when the bloom
+/// is on — i.e. `keyBloomScale` > 1). All are a single `scaleEffect` per key —
+/// same cost as the classic bloom, so the press stays frame-cheap on every
+/// device and material.
 public enum KeyPressStyle: String, Codable, Sendable, CaseIterable, Identifiable {
     /// Classic: the key grows uniformly on press.
     case bloom
@@ -297,9 +298,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// How far to indent the middle letter row, as a fraction of the usable row
     /// width applied to each side. Defaults to 0.01 (a subtle nudge).
     public var homeRowInsetAmount: Double
-    /// Bloom/warp every key on press (the liquid deformation the space bar does
-    /// while dragging) — looks best on Liquid Glass themes.
-    public var keyPressWarp: Bool
     /// How long a key stays visually pressed after the finger lifts, in seconds.
     /// A quick tap otherwise flips on→off too fast for the press bloom/colour to
     /// reach full strength (it reads dim); lingering lets it bloom then fade. 0
@@ -618,12 +616,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// speed/damping when on.
     public var keyPressInstant: Bool
     /// Strength of the additive white "tap registered" flash on each press
-    /// (0 = off). The crisp visual snap that confirms a keystroke landed; gated on
-    /// `keyPressWarp` like the bloom.
+    /// (0 = off). The crisp visual snap that confirms a keystroke landed. Fires
+    /// independently — it self-gates on this strength alone, not on the bloom.
     public var tapFlashStrength: Double
     /// The geometric character of the key press warp (bloom / press-in / jelly /
-    /// stretch). Same single-`scaleEffect` cost regardless of choice. Only matters
-    /// when `keyPressWarp` is on.
+    /// stretch). Same single-`scaleEffect` cost regardless of choice. Applies when
+    /// the bloom is on (`keyBloomScale` > 1).
     public var keyPressStyle: KeyPressStyle
     /// Tint the tap-registered flash with the theme accent instead of white.
     public var tapFlashAccent: Bool
@@ -661,12 +659,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     public var popupSpringDamping: Double
 
     // MARK: - Liquid Glass press
-    /// On Liquid Glass themes, how much of the tuned key bloom growth is applied
-    /// (0 = no bloom, 1 = the full `keyBloomScale`). A pressed key scales inside
-    /// a shared `GlassEffectContainer` and liquid-merges with its neighbours — a
-    /// per-frame GPU recomposite — so a gentler bloom is far cheaper to render on
-    /// older devices. Glass themes only; solid themes always use the full bloom.
-    public var glassBloomFactor: Double
     /// On Liquid Glass themes, the spring response (seconds) for a key RETURNING
     /// to rest. Lower = a quicker snap = fewer frames of the expensive glass
     /// merge = less chance of an on-release hitch. The press *rise* still uses
@@ -762,7 +754,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         liquidGlassPopup: Bool = true,
         homeRowInset: Bool = true,
         homeRowInsetAmount: Double = 0.01,
-        keyPressWarp: Bool = true,
         keyPressLinger: Double = 0.0,
         minPressVisible: Double = 0.09,
         keyHeight: Double = 51,
@@ -857,7 +848,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         spaceCursorDragScale: Double = 0.90,
         popupSpringResponse: Double = 0.32,
         popupSpringDamping: Double = 0.62,
-        glassBloomFactor: Double = 0.5,
         glassReleaseResponse: Double = 0.12,
         repeatHoldDelay: Double = 450,
         repeatInitialInterval: Double = 110,
@@ -901,7 +891,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.liquidGlassPopup = liquidGlassPopup
         self.homeRowInset = homeRowInset
         self.homeRowInsetAmount = homeRowInsetAmount
-        self.keyPressWarp = keyPressWarp
         self.keyPressLinger = keyPressLinger
         self.minPressVisible = minPressVisible
         self.keyHeight = keyHeight
@@ -996,7 +985,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.spaceCursorDragScale = spaceCursorDragScale
         self.popupSpringResponse = popupSpringResponse
         self.popupSpringDamping = popupSpringDamping
-        self.glassBloomFactor = glassBloomFactor
         self.glassReleaseResponse = glassReleaseResponse
         self.repeatHoldDelay = repeatHoldDelay
         self.repeatInitialInterval = repeatInitialInterval
@@ -1031,6 +1019,14 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         case keyboardLanguage
         /// Pre-split picker style key — migrated into `iconPickerStyle` + `slideUpPickerStyle`.
         case panelPickerStyle
+        /// Retired master switch for all key-press effects. Effects now self-gate
+        /// on their own strengths; a payload that turned this OFF migrates by
+        /// zeroing bloom / tap-flash / glow (see `init(from:)`).
+        case keyPressWarp
+        /// Retired glass bloom multiplier. The single `keyBloomScale` now applies
+        /// on every theme and auto-softens on glass (`KeyPressPhysics`); old
+        /// values are simply ignored.
+        case glassBloomFactor
     }
 
     public init(from decoder: any Decoder) throws {
@@ -1068,7 +1064,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         liquidGlassPopup = try c.decodeIfPresent(Bool.self, forKey: .liquidGlassPopup) ?? true
         homeRowInset = try c.decodeIfPresent(Bool.self, forKey: .homeRowInset) ?? true
         homeRowInsetAmount = try c.decodeIfPresent(Double.self, forKey: .homeRowInsetAmount) ?? 0.01
-        keyPressWarp = try c.decodeIfPresent(Bool.self, forKey: .keyPressWarp) ?? true
         keyPressLinger = try c.decodeIfPresent(Double.self, forKey: .keyPressLinger) ?? 0.06
         minPressVisible = try c.decodeIfPresent(Double.self, forKey: .minPressVisible) ?? 0.09
         keyHeight = try c.decodeIfPresent(Double.self, forKey: .keyHeight) ?? 46
@@ -1157,6 +1152,16 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         tapFlashAccent = try c.decodeIfPresent(Bool.self, forKey: .tapFlashAccent) ?? false
         tapFlashRing = try c.decodeIfPresent(Bool.self, forKey: .tapFlashRing) ?? false
         keyPressGlow = try c.decodeIfPresent(Double.self, forKey: .keyPressGlow) ?? 0
+        // Migrate the retired master switch: a payload that turned `keyPressWarp`
+        // OFF meant "no key-press effects". Effects now self-gate on their own
+        // strengths, so reproduce that intent by zeroing bloom, tap-flash, and
+        // glow. (Default true → leave the decoded strengths as-is.)
+        if let legacyWarp = try? decoder.container(keyedBy: LegacyKeys.self)
+            .decodeIfPresent(Bool.self, forKey: .keyPressWarp), legacyWarp == false {
+            keyBloomScale = 1.0
+            tapFlashStrength = 0
+            keyPressGlow = 0
+        }
         keyboardEntrance = (try? c.decodeIfPresent(KeyboardEntrance.self, forKey: .keyboardEntrance)) ?? .none
         spaceBloomScale = try c.decodeIfPresent(Double.self, forKey: .spaceBloomScale) ?? 1.04
         spaceSpringResponse = try c.decodeIfPresent(Double.self, forKey: .spaceSpringResponse) ?? 0.28
@@ -1165,7 +1170,6 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         spaceCursorDragScale = try c.decodeIfPresent(Double.self, forKey: .spaceCursorDragScale) ?? 0.90
         popupSpringResponse = try c.decodeIfPresent(Double.self, forKey: .popupSpringResponse) ?? 0.32
         popupSpringDamping = try c.decodeIfPresent(Double.self, forKey: .popupSpringDamping) ?? 0.62
-        glassBloomFactor = try c.decodeIfPresent(Double.self, forKey: .glassBloomFactor) ?? 0.5
         glassReleaseResponse = try c.decodeIfPresent(Double.self, forKey: .glassReleaseResponse) ?? 0.12
         repeatHoldDelay = try c.decodeIfPresent(Double.self, forKey: .repeatHoldDelay) ?? 450
         repeatInitialInterval = try c.decodeIfPresent(Double.self, forKey: .repeatInitialInterval) ?? 110

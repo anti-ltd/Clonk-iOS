@@ -16,7 +16,7 @@ variants, and swipe/glide typing geometry.
 
 ```
 MultiTouchSurface (UIKit)
-    └── KeyTouchRouter
+    └── TouchEngine
             ├── KeyPressState (per key — @Observable)
             ├── KeyView (reads its own state)
             ├── AdaptiveHitbox (sizes targets from lexicon)
@@ -29,7 +29,7 @@ MultiTouchSurface (UIKit)
 
 | File | Role |
 |---|---|
-| `KeyTouchRouter.swift` | Multitouch router; `MultiTouchSurface` UIViewRepresentable; bar hitboxes; swipe trail; backspace repeat |
+| `TouchEngine.swift` | Multitouch router; `MultiTouchSurface` UIViewRepresentable; bar hitboxes; swipe trail; backspace repeat |
 | `KeyView.swift` | Reads `KeyPressState` for pressed/bloom/bulge; space-bar trackpad |
 | `AdaptiveHitbox.swift` | Next-letter hit target sizing from letter bigram model |
 | `AccentMap.swift` | Long-press diacritic variant tables (Latin scripts) |
@@ -54,7 +54,7 @@ App tuning screens:
 
 ### Why UIKit for touches
 
-From the doc comment in `KeyTouchRouter.swift`:
+From the doc comment in `TouchEngine.swift`:
 
 > SwiftUI's gesture system doesn't reliably track two simultaneous touches across
 > sibling views — so when you type *fast* and press the next key before lifting
@@ -143,7 +143,7 @@ Activation delay, scroll sensitivity, line stride all in `KeyboardSettings`.
 
 ## Read order
 
-1. `KeyTouchRouter.swift` — doc comment explains the why; then `MultiTouchSurface`
+1. `TouchEngine.swift` — doc comment explains the why; then `MultiTouchSurface`
 2. `KeyView.swift` — how press state becomes visuals
 3. `AdaptiveHitbox.swift` — if you care about target sizing
 4. `SwipeDecoder.swift` — if you care about glide typing

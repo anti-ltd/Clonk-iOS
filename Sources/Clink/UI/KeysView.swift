@@ -1,7 +1,13 @@
 /**
- Keys settings — Geometry tab (size & shape) and Padding tab.
+ Keys settings. One scrolling page, no tabs:
+
+   • Size & shape — a size preset + every geometry and padding slider in one
+                    collapsed "Fine-tune" disclosure (grouped Keys / Padding).
+   • Long press   — the per-key long-press preview toggle.
+
  Backspace repeat timing lives under Gestures → Backspace.
- 
+ `$model.settings` bindings persist via `AppModel.settings` `didSet`.
+
 
  Module: app-ui · Target: Clink
  Learn: docs/09-app-ui.md
@@ -9,48 +15,44 @@
 import SwiftUI
 import iUXiOS
 
-/// Key geometry, padding, and long-press hint toggles.
-/// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
+/// Key geometry, padding, and long-press hint toggle, as a single calm scroll.
 struct KeysView: View {
-    private enum Tab { case geometry, padding, faces }
-
     @Environment(AppModel.self) private var model
-    @State private var selectedTab: Tab = .geometry
+    @State private var fineTuneExpanded = false
 
     var body: some View {
         @Bindable var model = model
-        PinnedPreviewLayout(settings: model.settings,
-                            bottomBar: AnyView(
-                                ThemedTabPicker(
-                                    options: [("Geometry", Tab.geometry),
-                                              ("Padding", Tab.padding),
-                                              ("Faces", Tab.faces)],
-                                    selection: $selectedTab)
-                            )) {
-            switch selectedTab {
-            case .geometry:
-                geometryTab(model: model)
-            case .padding:
-                paddingTab(model: model)
-            case .faces:
-                facesTab(model: model)
+        PinnedPreviewLayout(settings: model.settings) {
+            CardSection("Size & shape") {
+                PresetChips(presets: TuningPresets.size)
+                    .padding(.vertical, UX.rowVPadding)
+                Divider()
+                DisclosureGroup("Fine-tune", isExpanded: $fineTuneExpanded) {
+                    VStack(spacing: 0) {
+                        geometryFineTune(model: model)
+                        paddingFineTune(model: model)
+                    }
+                    .padding(.top, 6)
+                }
+                .tint(.primary)
+                .padding(.vertical, UX.rowVPadding)
+            }
+
+            CardSection("Long press") {
+                ToggleRow("Long press previews",
+                          subtitle: "Show a small glyph on each key previewing its first long-press alternate.",
+                          isOn: $model.settings.longPressHintsEnabled)
             }
         }
         .navigationTitle("Keys")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Tabs
-
     @ViewBuilder
-    private func geometryTab(model: AppModel) -> some View {
+    private func geometryFineTune(model: AppModel) -> some View {
         @Bindable var model = model
-        CardSection("Presets") {
-            PresetChips(presets: TuningPresets.size)
-                .padding(.vertical, UX.rowVPadding)
-        }
-
-        CardSection("Values") {
+        Group {
+            fineTuneHeader("Keys")
             SliderRow("Key height",
                       tooltip: "Taller keys are easier to tap accurately. Shorter keys give more screen room.",
                       value: $model.settings.keyHeight,
@@ -70,6 +72,8 @@ struct KeysView: View {
                       tooltip: "Width of the space bar in key units. Narrower leaves room for keys on either side.",
                       value: $model.settings.spaceWidth,
                       in: 3...7, step: 0.5) { String(format: "%.1f keys", $0) }
+        }
+        Group {
             Divider()
             SliderRow("Shift & delete width",
                       tooltip: "Width of the shift and backspace keys relative to a standard letter key.",
@@ -89,38 +93,38 @@ struct KeysView: View {
     }
 
     @ViewBuilder
-    private func paddingTab(model: AppModel) -> some View {
+    private func paddingFineTune(model: AppModel) -> some View {
         @Bindable var model = model
-        CardSection("Values") {
-            if model.settings.suggestionsEnabled {
-                SliderRow("Suggestion bar padding",
-                          tooltip: "Extra space above the suggestion bar.",
-                          value: $model.settings.suggestionTopPadding,
-                          in: 0...20, step: 1) {
-                    $0 == 0 ? "None" : "\(Int($0)) pt"
-                }
-                Divider()
-            }
-            SliderRow("Top padding",
-                      tooltip: "Space between the suggestion bar and the top row of keys.",
-                      value: $model.settings.keyboardTopPadding,
-                      in: 0...48, step: 1) { "\(Int($0))pt" }
-            Divider()
-            SliderRow("Bottom padding",
-                      tooltip: "Lifts the entire keyboard up from the bottom edge of the keyboard extension.",
-                      value: $model.settings.keyboardBottomPadding,
-                      in: 0...64, step: 1) { "\(Int($0))pt" }
+        fineTuneHeader("Padding")
+        SliderRow("Suggestion bar padding",
+                  tooltip: "Extra space above the suggestion bar.",
+                  value: $model.settings.suggestionTopPadding,
+                  in: 0...20, step: 1) {
+            $0 == 0 ? "None" : "\(Int($0)) pt"
         }
+        .gated(model.settings.suggestionsEnabled,
+               reason: "Turn on the Suggestion bar to adjust this.")
+        Divider()
+        SliderRow("Top padding",
+                  tooltip: "Space between the suggestion bar and the top row of keys.",
+                  value: $model.settings.keyboardTopPadding,
+                  in: 0...48, step: 1) { "\(Int($0))pt" }
+        Divider()
+        SliderRow("Bottom padding",
+                  tooltip: "Lifts the entire keyboard up from the bottom edge of the keyboard extension.",
+                  value: $model.settings.keyboardBottomPadding,
+                  in: 0...64, step: 1) { "\(Int($0))pt" }
     }
 
+    /// A small group label between blocks inside the Fine-tune disclosure.
     @ViewBuilder
-    private func facesTab(model: AppModel) -> some View {
-        @Bindable var model = model
-        CardSection("Long press") {
-            ToggleRow("Long press previews",
-                      subtitle: "Show a small glyph on each key previewing its first long-press alternate.",
-                      isOn: $model.settings.longPressHintsEnabled)
-        }
+    private func fineTuneHeader(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 14)
+            .padding(.bottom, 2)
     }
 }
 

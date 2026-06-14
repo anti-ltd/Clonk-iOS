@@ -1,6 +1,14 @@
 /**
- Cursor settings screen — Style tab (movement type) and Feel tab (presets + sliders).
- 
+ Cursor settings screen. One scrolling page, no tabs:
+
+   • Cursor — the movement-type choice (presets + an animated diagram + help),
+              the primary decision, always visible.
+   • Feel   — engagement presets (activation eagerness) with the raw value
+              sliders tucked inside one collapsed "Fine-tune" disclosure.
+
+ Preview runs in locked mode so only cursor drags work (`lockedPreviewText`).
+ Settings persist via `AppModel.settings` `didSet`.
+
 
  Module: app-ui · Target: Clink
  Learn: docs/09-app-ui.md
@@ -8,40 +16,28 @@
 import SwiftUI
 import iUXiOS
 
-/// Space-bar cursor mode and feel. Preview runs in locked mode so only cursor
-/// drags work (`lockedPreviewText`). Settings persist via `AppModel.settings` `didSet`.
+/// Space-bar cursor mode and feel, as a single calm scroll.
 struct CursorView: View {
-    private enum Tab { case style, feel }
-
     @Environment(AppModel.self) private var model
     @Environment(\.cardCornerRadius) private var cardCornerRadius
-    @State private var selectedTab: Tab = .style
+    @State private var fineTuneExpanded = false
 
     var body: some View {
         @Bindable var model = model
         PinnedPreviewLayout(settings: model.settings,
                             previewCursorActive: model.settings.cursorMovementType != .spacebar,
-                            lockedPreviewText: "The quick brown fox jumps over the lazy dog",
-                            bottomBar: AnyView(
-                                ThemedTabPicker(
-                                    options: [("Style", Tab.style), ("Feel", Tab.feel)],
-                                    selection: $selectedTab)
-                            )) {
-            switch selectedTab {
-            case .style:
-                styleTab(model: model)
-            case .feel:
-                feelTab(model: model)
-            }
+                            lockedPreviewText: "The quick brown fox jumps over the lazy dog") {
+            cursorCard(model: model)
+            feelCard(model: model)
         }
         .navigationTitle("Cursor")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Tabs
+    // MARK: - Cursor (movement type)
 
     @ViewBuilder
-    private func styleTab(model: AppModel) -> some View {
+    private func cursorCard(model: AppModel) -> some View {
         @Bindable var model = model
         CardSection("Cursor") {
             PresetChips(presets: TuningPresets.cursorMovementType)
@@ -59,37 +55,44 @@ struct CursorView: View {
         }
     }
 
+    // MARK: - Feel
+
     @ViewBuilder
-    private func feelTab(model: AppModel) -> some View {
+    private func feelCard(model: AppModel) -> some View {
         @Bindable var model = model
-        CardSection("Presets") {
+        CardSection("Feel") {
             PresetChips(presets: TuningPresets.cursor)
                 .padding(.vertical, UX.rowVPadding)
-        }
-
-        CardSection("Values") {
-            SliderRow("Activation time",
-                      tooltip: "How long you must hold the space bar before cursor mode engages. Raise it if the cursor triggers accidentally while typing.",
-                      value: $model.settings.spaceCursorActivationDelay,
-                      in: 0...500, step: 25) {
-                $0 < 5 ? "Instant" : "\(Int($0))ms"
-            }
             Divider()
-            SliderRow("Scroll sensitivity",
-                      tooltip: "How far your finger travels to move the cursor one character. If it jumps too fast, lower this.",
-                      value: Binding(
-                        get: { 30 - model.settings.spaceCursorStride },
-                        set: { model.settings.spaceCursorStride = 30 - $0 }),
-                      in: 8...24, step: 2) {
-                $0 == 20 ? "Default" : "\(Int(($0 / 20 * 100).rounded()))%"
+            DisclosureGroup("Fine-tune", isExpanded: $fineTuneExpanded) {
+                VStack(spacing: 0) {
+                    SliderRow("Activation time",
+                              tooltip: "How long you must hold the space bar before cursor mode engages. Raise it if the cursor triggers accidentally while typing.",
+                              value: $model.settings.spaceCursorActivationDelay,
+                              in: 0...500, step: 25) {
+                        $0 < 5 ? "Instant" : "\(Int($0))ms"
+                    }
+                    Divider()
+                    SliderRow("Scroll sensitivity",
+                              tooltip: "How far your finger travels to move the cursor one character. If it jumps too fast, lower this.",
+                              value: Binding(
+                                get: { 30 - model.settings.spaceCursorStride },
+                                set: { model.settings.spaceCursorStride = 30 - $0 }),
+                              in: 8...24, step: 2) {
+                        $0 == 20 ? "Default" : "\(Int(($0 / 20 * 100).rounded()))%"
+                    }
+                    Divider()
+                    SliderRow("Line length",
+                              tooltip: "Characters per line used to calculate vertical cursor jumps when you drag up or down.",
+                              value: $model.settings.cursorLineStride,
+                              in: 5...80, step: 5) {
+                        "\(Int($0)) chars"
+                    }
+                }
+                .padding(.top, 6)
             }
-            Divider()
-            SliderRow("Line length",
-                      tooltip: "Characters per line used to calculate vertical cursor jumps when you drag up or down.",
-                      value: $model.settings.cursorLineStride,
-                      in: 5...80, step: 5) {
-                "\(Int($0)) chars"
-            }
+            .tint(.primary)
+            .padding(.vertical, UX.rowVPadding)
         }
     }
 

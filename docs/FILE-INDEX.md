@@ -149,7 +149,7 @@ for the full story on a module, see the linked doc.
 
 | File | Purpose |
 |---|---|
-| `KeyTouchRouter.swift` | Multitouch UIKit router → [03-touch-and-input](03-touch-and-input.md) |
+| `TouchEngine.swift` | Multitouch UIKit router (text-first commit) → [03-touch-and-input](03-touch-and-input.md), [15-touch-engine](15-touch-engine.md) |
 | `AdaptiveHitbox.swift` | Next-letter hit target sizing |
 | `AccentMap.swift` | Long-press diacritic tables |
 | `AccentPicker.swift` | Accent variant bar UI |

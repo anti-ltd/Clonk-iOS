@@ -53,9 +53,6 @@ struct KeyPressPhysics {
     /// the expensive merged state is on screen for the fewest frames. Solid
     /// themes have no merge and keep the full tuned bloom.
     var onGlass: Bool                = false
-    /// Fraction of the tuned bloom growth applied on glass (see
-    /// `effectiveBloomScale`). User-tunable via `glassBloomFactor`.
-    var glassBloomFactor: Double     = 0.5
     /// Spring response (s) for a glass key's return-to-rest snap (see
     /// `keyReleaseAnimation`). User-tunable via `glassReleaseResponse`.
     var glassReleaseResponse: Double = 0.12
@@ -72,13 +69,29 @@ extension KeyPressPhysics {
     @MainActor var keySpringAnimation: Animation {
         MotionToken.userSpring(response: springResponse, damping: springDamping).animation
     }
-    /// The generic-key bloom scale actually applied. On glass it's softened to
-    /// half the tuned growth (1.12 → 1.06) so the key grows less into its
-    /// neighbours — far cheaper for the `GlassEffectContainer` to merge — while
-    /// still reading as a bloom. Solid themes use the full tuned scale.
+    /// The generic-key bloom scale actually applied. The single `bloomScale`
+    /// slider is the on-screen bloom on every theme — but on glass a pressed key
+    /// liquid-merges with its neighbours every frame, a GPU recomposite A-series
+    /// can't keep up with for a large growth (the key hangs then jerks). So on
+    /// glass the GROWTH is auto-capped to `glassBloomGrowthCeiling`: small blooms
+    /// pass through identically to solid themes, large ones are clamped to a safe
+    /// ceiling. One slider, automatically safe on glass — no separate knob.
     var effectiveBloomScale: CGFloat {
-        onGlass ? 1 + (bloomScale - 1) * CGFloat(glassBloomFactor) : bloomScale
+        guard onGlass else { return bloomScale }
+        let growth = min(bloomScale - 1, Self.glassBloomGrowthCeiling)
+        return 1 + max(0, growth)
     }
+    /// Max bloom GROWTH (scale − 1) allowed on glass before it's clamped — the
+    /// auto-soften ceiling. 0.06 (→ scale 1.06) is the value the old glass path
+    /// proved smooth on A14 (the previous default was bloom 1.12 × factor 0.5 =
+    /// 1.06), so it stays in known-safe territory for the neighbour merge while
+    /// still reading as a clear bloom — now with no user-facing factor.
+    static let glassBloomGrowthCeiling: CGFloat = 0.06
+
+    /// Whether the press bloom is on at all (its applied scale grows). Drives the
+    /// bloom geometry + its spring in `KeyView`; off → the key never warps, but
+    /// tap flash and glow still fire (they self-gate on their own strengths).
+    var bloomEnabled: Bool { effectiveBloomScale > 1.0001 }
 
     /// The press bloom RETURNING to rest. Off glass: same response as the rise,
     /// damping floored so the underdamped ring's long tail collapses (a bouncy
@@ -228,7 +241,7 @@ public struct KeyboardCanvas: View {
     /// letter typed on touch-down so the decoded word can replace it.
     private let onSwipeStart: () -> Void
     /// Fired on lift with the traced path + the live letter-key centres — the host
-    /// decodes a word and inserts it. See `KeyTouchRouter` swipe session.
+    /// decodes a word and inserts it. See `TouchEngine` swipe session.
     private let onSwipeEnd: ([CGPoint], [Character: CGPoint]) -> Void
     /// When true, render a semi-transparent hitbox outline over each key so the
     /// user can see exactly which area maps to each key. Used by the Advanced
@@ -334,9 +347,9 @@ public struct KeyboardCanvas: View {
     @State private var controller: KeyboardController
 
     /// Routes raw multitouch from a single UIKit surface to the keys, so fast
-    /// overlapping presses register independently (see `KeyTouchRouter`). Each
+    /// overlapping presses register independently (see `TouchEngine`). Each
     /// `KeyView` reads its pressed / warp state back out of this.
-    @State private var touch = KeyTouchRouter()
+    @State private var touch = TouchEngine()
 
     /// Memoizes `currentKeySpecs()` so the per-touch hit-test/adaptive/swipe loops
     /// don't rebuild the whole keyboard's specs on every key resolution.
@@ -441,7 +454,6 @@ public struct KeyboardCanvas: View {
             popupSpringResponse: settings.popupSpringResponse,
             popupSpringDamping: settings.popupSpringDamping,
             onGlass: theme.material == .liquidGlass,
-            glassBloomFactor: settings.glassBloomFactor,
             glassReleaseResponse: settings.glassReleaseResponse)
     }
 
@@ -2111,7 +2123,7 @@ public struct KeyboardCanvas: View {
             HStack(spacing: spacing) {
                 ForEach(Array(specs.enumerated()), id: \.offset) { i, spec in
                     KeyView(spec: spec, theme: theme, cornerRadius: CGFloat(settings.keyCornerRadius),
-                            popupEnabled: settings.keyPopupEnabled, pressWarp: settings.keyPressWarp,
+                            popupEnabled: settings.keyPopupEnabled,
                             swipeMorph: settings.swipeTypingEnabled && settings.swipeKeyMorph,
                             swipeMorphStrength: CGFloat(settings.swipeMorphStrength),
                             keyID: "\(rowID)-\(i)",
@@ -2149,7 +2161,7 @@ public struct KeyboardCanvas: View {
 /// keys' ripple is independent of this view: the router pushes per-key bulge
 /// values into each `KeyPressState` as the trail advances.
 private struct SwipeTrailOverlay: View {
-    var touch: KeyTouchRouter
+    var touch: TouchEngine
     let color: Color
     let lineWidth: CGFloat
 

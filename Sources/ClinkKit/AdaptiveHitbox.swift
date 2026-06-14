@@ -2,7 +2,7 @@
  Adaptive hitboxes — a lightweight replication of iOS's native trick of quietly
  resizing each key's touch target to favour the letter you're most likely to type
  next. We never move the *visual* keys; we only grow the likely keys' hit regions
- and shrink the unlikely ones, then let `KeyTouchRouter`'s nearest-key routing do
+ and shrink the unlikely ones, then let `TouchEngine`'s nearest-key routing do
  the rest.
 
  Prediction is a tiny on-device letter bigram model (`LetterPredictor`): given the

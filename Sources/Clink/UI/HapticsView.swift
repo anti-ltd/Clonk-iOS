@@ -31,27 +31,26 @@ struct HapticsView: View {
                           isOn: $model.settings.hapticsEnabled)
             }
 
-            if model.settings.hapticsEnabled {
-                CardSection("Feel") {
-                    HStack {
-                        Text("Style")
-                        Spacer()
-                        Picker("Style", selection: $model.settings.hapticStyle) {
-                            ForEach(HapticStyle.allCases) { style in
-                                Text(style.label).tag(style)
-                            }
+            GatedCard("Feel", enabled: model.settings.hapticsEnabled,
+                      reason: "Turn on Key press haptics to adjust the feel.") {
+                HStack {
+                    Text("Style")
+                    Spacer()
+                    Picker("Style", selection: $model.settings.hapticStyle) {
+                        ForEach(HapticStyle.allCases) { style in
+                            Text(style.label).tag(style)
                         }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
                     }
-                    .padding(.vertical, UX.rowVPadding)
-                    Divider()
-                    SliderRow("Strength",
-                              tooltip: "Higher feels punchier and more mechanical. Lower is a faint tick.",
-                              value: $model.settings.hapticIntensity,
-                              in: 0.1...1.0, step: 0.05) {
-                        "\(Int(($0 * 100).rounded()))%"
-                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                .padding(.vertical, UX.rowVPadding)
+                Divider()
+                SliderRow("Strength",
+                          tooltip: "Higher feels punchier and more mechanical. Lower is a faint tick.",
+                          value: $model.settings.hapticIntensity,
+                          in: 0.1...1.0, step: 0.05) {
+                    "\(Int(($0 * 100).rounded()))%"
                 }
             }
         }
