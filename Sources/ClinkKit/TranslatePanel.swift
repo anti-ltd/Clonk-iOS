@@ -19,7 +19,13 @@
  */
 import SwiftUI
 #if canImport(Translation)
-import Translation
+// @preconcurrency: the Translation framework isn't fully Swift-6 concurrency
+// annotated — `TranslationSession` is a non-Sendable class with a `nonisolated`
+// `translate`, so calling it from the MainActor `.translationTask` closure trips
+// a "sending main-actor-isolated value" error. This downgrades that to the
+// framework's pre-concurrency contract (the session is only ever used on the
+// main actor here anyway).
+@preconcurrency import Translation
 #endif
 
 /// Full-keyboard overlay showing the source text, the target language, the
