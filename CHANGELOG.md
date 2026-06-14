@@ -4,9 +4,25 @@ All notable changes to Clink are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] — 2026-06-12
+## [1.2.0] — Unreleased
 
 ### Added
+- **Translate panel** — a new in-keyboard panel that translates the text you
+  type without leaving the field. Pick a default target language; when Apple
+  Intelligence is on and available you can choose the engine (offline language
+  packs vs Apple Intelligence, the shared `aiTranslate` setting), otherwise it
+  uses Apple's offline `Translation` framework packs. (`TranslateView`,
+  `TranslatePanel`, `TranslateBar`)
+- **Custom dictionary** — a hand-curated word list in *Suggestions → Custom*:
+  add your own words so the keyboard always offers and never "corrects" them.
+  Entries are pinned in the `UserAdaptation` store (App Group file, on-device),
+  alongside the words learning picks up automatically, with per-word delete.
+- **Simple / Advanced settings mode** — a toggle on the home screen that hides
+  every fine-tune control behind *Advanced* and shows just the essentials in
+  *Simple*, across both the container app and the in-extension controls.
+- **In-app changelog** — a *CHANGELOG* button in the home footer opens this
+  changelog as expandable per-version cards. The text is baked into the app at
+  build time from `CHANGELOG.md` (`make changelog`), no network.
 - **Swipe / glide typing** — trace a continuous path across the letter keys and
   it decodes into ranked words. The decoder scores each candidate by symmetric
   key-proximity: a *forward* term (every letter visited in order) so an `h→e→y`
@@ -89,6 +105,10 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   default (`aiEnabled`) and learning is gated by `learningEnabled`. The
   no-network-on-the-typing-path guarantee from 1.0.0 still holds; nothing typed,
   completed, corrected, or learned leaves the device.
+- **Translate stays on-device too** — translation runs through Apple's on-device
+  `Translation` framework (or Apple Intelligence); the only network is Apple's
+  own one-time language-pack download, handled by the system, not by Clink. The
+  custom dictionary is a local App Group file like the rest of `UserAdaptation`.
 
 ## [1.0.0] — 2026-06-04
 
