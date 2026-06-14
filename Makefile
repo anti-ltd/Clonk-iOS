@@ -39,7 +39,7 @@ EXPORT_DIR     := $(BUILD_DIR)/export
 IPA            := $(EXPORT_DIR)/$(APP_NAME).ipa
 EXPORT_OPTIONS := ExportOptions.plist
 
-.PHONY: all project icon emoji lexicons build run sim install clean stop help test \
+.PHONY: all project icon emoji lexicons changelog build run sim install clean stop help test \
         device device-install device-launch build-device \
         device-showcase build-device-showcase \
         archive package validate-asc upload-asc bump
@@ -98,6 +98,19 @@ emoji:
 lexicons:
 	swift Tools/GenerateLexicons.swift
 
+# Bake CHANGELOG.md into Sources/Clink/Changelog.generated.swift so the home
+# screen's footer "CHANGELOG" button can render it in-app. The output depends on
+# the source markdown + the generator, so editing either re-bakes on the next
+# build (the `build*` targets list $(CHANGELOG_OUT) as a prerequisite).
+CHANGELOG_SRC := CHANGELOG.md
+CHANGELOG_GEN := Tools/GenerateChangelog.swift
+CHANGELOG_OUT := Sources/Clink/Changelog.generated.swift
+
+$(CHANGELOG_OUT): $(CHANGELOG_SRC) $(CHANGELOG_GEN)
+	swift Tools/GenerateChangelog.swift
+
+changelog: $(CHANGELOG_OUT)
+
 # Regenerate the xcodeproj from project.yml. XcodeGen is the source of truth.
 project:
 	@command -v xcodegen >/dev/null 2>&1 || { \
@@ -107,7 +120,7 @@ project:
 	@echo "Generated $(PROJECT)"
 
 # Build for the iOS simulator. Generates the project on first run.
-build: $(PROJECT) $(ICON_OUT)
+build: $(PROJECT) $(ICON_OUT) $(CHANGELOG_OUT)
 	@mkdir -p $(BUILD_DIR)
 	xcodebuild \
 		-project $(PROJECT) \
@@ -168,7 +181,7 @@ DEVICE_UDID = $(shell \
 				}'; \
 	fi)
 
-build-device: $(PROJECT) $(ICON_OUT)
+build-device: $(PROJECT) $(ICON_OUT) $(CHANGELOG_OUT)
 	@mkdir -p $(BUILD_DIR)
 	xcodebuild \
 		-project $(PROJECT) \
@@ -216,7 +229,7 @@ device-launch:
 # ShowcaseView. Regenerates the project first so a freshly-added showcase source
 # is always picked up.
 # ============================================================
-build-device-showcase: project $(ICON_OUT)
+build-device-showcase: project $(ICON_OUT) $(CHANGELOG_OUT)
 	@mkdir -p $(BUILD_DIR)
 	xcodebuild \
 		-project $(PROJECT) \

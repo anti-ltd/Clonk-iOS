@@ -1074,6 +1074,7 @@ private struct ClinkContent: View {
     @Environment(\.specialKeyTextColor) private var specialKeyTextColor
     @State private var showExtensionPicker = false
     @State private var showBackupSheet = false
+    @State private var showChangelog = false
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
@@ -1220,14 +1221,24 @@ private struct ClinkContent: View {
                     gridSection("Advanced", cards: advancedCards).id("advanced")
                 }
 
-                // Required attribution for the bundled prediction data
-                // (see Tools/wordlists/README.md for sources + licenses).
-                Text("Dictionaries: FrequencyWords (CC-BY-SA 4.0) · Tatoeba (CC-BY 2.0 FR)")
-                    .font(.caption2).foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
-                    .id("footer")
+                VStack(spacing: 10) {
+                    Button { showChangelog = true } label: {
+                        Text("CHANGELOG")
+                            .font(.caption2.weight(.semibold))
+                            .tracking(1.5)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Required attribution for the bundled prediction data
+                    // (see Tools/wordlists/README.md for sources + licenses).
+                    Text("Dictionaries: FrequencyWords (CC-BY-SA 4.0) · Tatoeba (CC-BY 2.0 FR)")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+                .id("footer")
             }
             .padding(UX.screenPadding)
         }
@@ -1239,6 +1250,7 @@ private struct ClinkContent: View {
         .themePageBackground()
         .themedSheet(isPresented: $showExtensionPicker, title: "Extensions") { ExtensionPickerContent() }
         .themedSheet(isPresented: $showBackupSheet, title: "Backup & Restore") { BackupControls() }
+        .themedSheet(isPresented: $showChangelog, title: "Changelog") { ChangelogContent() }
     }
 
     @ViewBuilder
@@ -1318,5 +1330,70 @@ private struct ClinkContent: View {
         })
     }
 
+}
+
+// MARK: - Changelog sheet
+
+/// Renders the build-time-baked CHANGELOG.md (`ChangelogData.markdown`, generated
+/// by `make changelog`) as a lightweight formatted list. We don't use a full
+/// Markdown engine: `AttributedString(markdown:)` handles inline styling
+/// (**bold**, `code`, [links]) per line, while block structure (headings,
+/// bullets, blank lines) is laid out by hand.
+private struct ChangelogContent: View {
+    private enum Block {
+        case heading(String, level: Int)
+        case bullet(AttributedString)
+        case text(AttributedString)
+        case spacer
+    }
+
+    private var blocks: [Block] {
+        ChangelogData.markdown.split(separator: "\n", omittingEmptySubsequences: false).map { raw in
+            let line = String(raw)
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { return .spacer }
+            if trimmed.hasPrefix("### ") { return .heading(String(trimmed.dropFirst(4)), level: 3) }
+            if trimmed.hasPrefix("## ")  { return .heading(String(trimmed.dropFirst(3)), level: 2) }
+            if trimmed.hasPrefix("# ")   { return .heading(String(trimmed.dropFirst(2)), level: 1) }
+            if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
+                return .bullet(inline(String(trimmed.dropFirst(2))))
+            }
+            return .text(inline(trimmed))
+        }
+    }
+
+    /// Inline-only markdown → AttributedString. `.inlineOnlyPreservingWhitespace`
+    /// keeps a line's text intact while still styling bold/code/links.
+    private func inline(_ s: String) -> AttributedString {
+        (try? AttributedString(
+            markdown: s,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(s)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                switch block {
+                case .heading(let s, let level):
+                    Text(s)
+                        .font(level == 1 ? .title3.bold() : level == 2 ? .headline : .subheadline.weight(.semibold))
+                        .foregroundStyle(level >= 3 ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                        .padding(.top, level <= 2 ? 8 : 2)
+                case .bullet(let a):
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("•").foregroundStyle(.tertiary)
+                        Text(a).font(.callout)
+                    }
+                case .text(let a):
+                    Text(a).font(.callout).foregroundStyle(.secondary)
+                case .spacer:
+                    Color.clear.frame(height: 2)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .tint(.accentColor)
+    }
 }
 
