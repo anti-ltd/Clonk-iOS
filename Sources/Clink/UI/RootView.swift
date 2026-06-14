@@ -1334,27 +1334,82 @@ private struct ClinkContent: View {
 
 // MARK: - Changelog sheet
 
+/// One parsed version section from CHANGELOG.md — its header (`## [1.2.0] — date`)
+/// plus the body lines up to the next version header.
+private struct ChangelogVersion: Identifiable {
+    let id: Int
+    /// Display title with the markdown brackets stripped, e.g. "1.2.0 — 2026-06-12".
+    let title: String
+    let bodyLines: [String]
+}
+
 /// Renders the build-time-baked CHANGELOG.md (`ChangelogData.markdown`, generated
-/// by `make changelog`) as a lightweight formatted list. We don't use a full
-/// Markdown engine: `AttributedString(markdown:)` handles inline styling
-/// (**bold**, `code`, [links]) per line, while block structure (headings,
-/// bullets, blank lines) is laid out by hand.
+/// by `make changelog`) as one expandable card per version. The latest version
+/// (first in the file) starts expanded; older ones start collapsed.
 private struct ChangelogContent: View {
+    private var versions: [ChangelogVersion] {
+        var out: [ChangelogVersion] = []
+        var title: String? = nil
+        var body: [String] = []
+        func flush() {
+            if let title { out.append(.init(id: out.count, title: title, bodyLines: body)) }
+            body = []
+        }
+        for raw in ChangelogData.markdown.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(raw)
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // A version header is a level-2 heading. The top "# Changelog" + intro
+            // paragraph sits before the first one and is intentionally dropped.
+            if trimmed.hasPrefix("## ") {
+                flush()
+                title = String(trimmed.dropFirst(3))
+                    .replacingOccurrences(of: "[", with: "")
+                    .replacingOccurrences(of: "]", with: "")
+            } else if title != nil {
+                body.append(line)
+            }
+        }
+        flush()
+        return out
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ForEach(versions) { v in
+                ChangelogCard(version: v, startExpanded: v.id == 0)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .tint(.accentColor)
+    }
+}
+
+/// A single expandable version card: tappable header with a chevron, animated
+/// body reveal. Body block layout (sub-headings / bullets / paragraphs) is done
+/// by hand; `AttributedString(markdown:)` styles inline **bold** / `code` / links.
+private struct ChangelogCard: View {
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(\.cardTint) private var cardTint
+    let version: ChangelogVersion
+    @State private var expanded: Bool
+
+    init(version: ChangelogVersion, startExpanded: Bool) {
+        self.version = version
+        _expanded = State(initialValue: startExpanded)
+    }
+
     private enum Block {
-        case heading(String, level: Int)
+        case heading(String)
         case bullet(AttributedString)
         case text(AttributedString)
         case spacer
     }
 
     private var blocks: [Block] {
-        ChangelogData.markdown.split(separator: "\n", omittingEmptySubsequences: false).map { raw in
-            let line = String(raw)
+        version.bodyLines.map { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty { return .spacer }
-            if trimmed.hasPrefix("### ") { return .heading(String(trimmed.dropFirst(4)), level: 3) }
-            if trimmed.hasPrefix("## ")  { return .heading(String(trimmed.dropFirst(3)), level: 2) }
-            if trimmed.hasPrefix("# ")   { return .heading(String(trimmed.dropFirst(2)), level: 1) }
+            if trimmed.hasPrefix("### ") { return .heading(String(trimmed.dropFirst(4))) }
             if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
                 return .bullet(inline(String(trimmed.dropFirst(2))))
             }
@@ -1372,28 +1427,61 @@ private struct ChangelogContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                switch block {
-                case .heading(let s, let level):
-                    Text(s)
-                        .font(level == 1 ? .title3.bold() : level == 2 ? .headline : .subheadline.weight(.semibold))
-                        .foregroundStyle(level >= 3 ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
-                        .padding(.top, level <= 2 ? 8 : 2)
-                case .bullet(let a):
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("•").foregroundStyle(.tertiary)
-                        Text(a).font(.callout)
-                    }
-                case .text(let a):
-                    Text(a).font(.callout).foregroundStyle(.secondary)
-                case .spacer:
-                    Color.clear.frame(height: 2)
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.snappy(duration: 0.28)) { expanded.toggle() }
+            } label: {
+                HStack {
+                    Text(version.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(expanded ? 0 : -90))
                 }
+                .padding(12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if expanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                        switch block {
+                        case .heading(let s):
+                            Text(s)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 4)
+                        case .bullet(let a):
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text("•").foregroundStyle(.tertiary)
+                                Text(a).font(.callout)
+                            }
+                        case .text(let a):
+                            Text(a).font(.callout).foregroundStyle(.secondary)
+                        case .spacer:
+                            Color.clear.frame(height: 2)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .transition(.opacity)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .tint(.accentColor)
+        .background {
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .fill(cardTint ?? Color(.secondarySystemBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(Color.primary.opacity(UX.Glass.outlineOpacity), lineWidth: UX.Glass.outlineWidth)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
     }
 }
 
