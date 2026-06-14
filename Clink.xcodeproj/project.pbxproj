@@ -33,6 +33,7 @@
 		0E81EA4B12221DB1ED94AE9B /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6093923E8A1E6FB4377D8BB8 /* ClipboardManager.swift */; };
 		0FEBA1F3F11DFE520782BC84 /* Theme+Snow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BEEC5E0D5D67EB9F4C99EF /* Theme+Snow.swift */; };
 		1007569A1A30A8C62D13AC9A /* SmartPunctuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 247100C266670E093E13EFC1 /* SmartPunctuation.swift */; };
+		10CB1DAC5BC2467F4C21CBC3 /* Changelog.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0DBD6E1BD4DB3650D2E860 /* Changelog.generated.swift */; };
 		1141C6D7936F9A7FE8C9DFF2 /* NgramModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B59FA23FA341B0C3341DDCB /* NgramModel.swift */; };
 		11AEEB1D7DDDB7164EC009A0 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF59E26E52134F6C6A4604F2 /* SharedStore.swift */; };
 		11DE900C1C28EE86BFA477FA /* SettingsBackCompatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30BFCDF2F44D8DA7F7A6A93 /* SettingsBackCompatTests.swift */; };
@@ -487,6 +488,7 @@
 		1B5823C5CED386AAD6A324BC /* PyValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PyValue.swift; sourceTree = "<group>"; };
 		1C6E41338498DA588787103C /* TrackpadPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadPanel.swift; sourceTree = "<group>"; };
 		1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSkinTone.swift; sourceTree = "<group>"; };
+		1D0DBD6E1BD4DB3650D2E860 /* Changelog.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Changelog.generated.swift; sourceTree = "<group>"; };
 		1D21C2BC9CB1D7A3F495B9E1 /* TranslateBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateBar.swift; sourceTree = "<group>"; };
 		1E12DFC4B4EFFA4222046212 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
 		1ECAD58407D805D2F19BE88F /* MotionDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionDiagnostics.swift; sourceTree = "<group>"; };
@@ -925,6 +927,7 @@
 			children = (
 				42B98FFA8432716147A36F0E /* AppModel.swift */,
 				E887A5C7AFA3E881307455F8 /* AppStage.swift */,
+				1D0DBD6E1BD4DB3650D2E860 /* Changelog.generated.swift */,
 				B558BC9C666527C188E5041E /* ClinkApp.swift */,
 				FC365EBFBFEF9A08064445BA /* MotionHUD.swift */,
 				40F266D65DA4F044AA7EF5C2 /* MotionMetrics.swift */,
@@ -1355,6 +1358,7 @@
 				FBDF432C0811C0D4E99CAF8A /* BackupView.swift in Sources */,
 				6729689C255FF2648C9B8FC6 /* CalculatorPanel.swift in Sources */,
 				7EA392CE09942EDB298E76AE /* CalculatorSettingsView.swift in Sources */,
+				10CB1DAC5BC2467F4C21CBC3 /* Changelog.generated.swift in Sources */,
 				3B4276B1682008D117A56528 /* ClinkApp.swift in Sources */,
 				53F786050836DCFB54572967 /* ClinkExtension.swift in Sources */,
 				67F7426426A0CC6005F028E9 /* ClinkPanel.swift in Sources */,
