@@ -64,6 +64,75 @@ public enum NotepadMode: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 }
 
+/// How the Translate panel presents itself. `inline` composes on the suggestion
+/// bar with the keys still visible (type to translate), surfacing the result as a
+/// brief overlay. `panel` takes over the whole keyboard — like the trackpad —
+/// with the source, language, translate action, and result all in one reachable
+/// surface (input via paste, since the keys are hidden).
+public enum TranslateStyle: String, Codable, Sendable, CaseIterable, Identifiable {
+    case inline
+    case panel
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .inline: return "Inline"
+        case .panel:  return "Panel"
+        }
+    }
+}
+
+/// The geometric character of a key's press animation (when `keyPressWarp` is
+/// on). All are a single `scaleEffect` per key — same cost as the classic bloom,
+/// so the press stays frame-cheap on every device and material.
+public enum KeyPressStyle: String, Codable, Sendable, CaseIterable, Identifiable {
+    /// Classic: the key grows uniformly on press.
+    case bloom
+    /// Press-in: the key shrinks slightly, like a physical key going down.
+    case sink
+    /// Squash wide-and-short — a playful jelly wobble.
+    case jelly
+    /// Stretch tall-and-narrow.
+    case stretch
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .bloom:   return "Bloom"
+        case .sink:    return "Press-in"
+        case .jelly:   return "Jelly"
+        case .stretch: return "Stretch"
+        }
+    }
+}
+
+/// A one-shot animation the whole key block plays each time the keyboard appears.
+/// Driven by a single explicit `@State` progress (0→1) keyed to the appearance
+/// counter — not a per-frame animator — so it's a one-time transition with no
+/// steady-state cost. Reduced Motion collapses it to an instant settle.
+public enum KeyboardEntrance: String, Codable, Sendable, CaseIterable, Identifiable {
+    case none
+    /// Fade the keys in.
+    case fade
+    /// Rise up into place while fading in.
+    case rise
+    /// Scale up from slightly small while fading in.
+    case scale
+    /// Drop down from above while fading in.
+    case drop
+
+    public var id: String { rawValue }
+    public var label: String {
+        switch self {
+        case .none:  return "None"
+        case .fade:  return "Fade"
+        case .rise:  return "Rise"
+        case .scale: return "Scale"
+        case .drop:  return "Drop"
+        }
+    }
+}
+
 /// How the top-left button offers a choice when more than one action panel is
 /// enabled. `popover` floats a small menu above the button; `inline` expands the
 /// button into a row of panel icons across the bar; `cards` takes over the whole
@@ -312,6 +381,9 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// `aiEnabled && aiTranslate`. Needs no Full Access (it never reads the
     /// pasteboard unless the user taps Paste).
     public var translateEnabled: Bool
+    /// How the Translate panel presents — inline (compose on the bar) or a
+    /// full-keyboard panel takeover. See `TranslateStyle`.
+    public var translateStyle: TranslateStyle
     /// Whether the notepad is a single scratchpad or a scratchpad + saved-notes
     /// archive.
     public var notepadMode: NotepadMode
@@ -549,6 +621,22 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// (0 = off). The crisp visual snap that confirms a keystroke landed; gated on
     /// `keyPressWarp` like the bloom.
     public var tapFlashStrength: Double
+    /// The geometric character of the key press warp (bloom / press-in / jelly /
+    /// stretch). Same single-`scaleEffect` cost regardless of choice. Only matters
+    /// when `keyPressWarp` is on.
+    public var keyPressStyle: KeyPressStyle
+    /// Tint the tap-registered flash with the theme accent instead of white.
+    public var tapFlashAccent: Bool
+    /// Render the tap flash as an expanding ring outline instead of a filled wash.
+    public var tapFlashRing: Bool
+    /// Soft accent-coloured glow behind a key while it's pressed (0 = off). A
+    /// blurred tinted halo on the few currently-pressed keys; gated on the motion
+    /// profile's expensive-effects tier so it drops under power/thermal pressure.
+    public var keyPressGlow: Double
+    /// A one-shot animation the key block plays when the keyboard appears (none /
+    /// fade / rise / scale / drop). A single explicit transition, no steady-state
+    /// cost; collapses to instant under Reduce Motion.
+    public var keyboardEntrance: KeyboardEntrance
 
     // MARK: - Space bar physics
     /// Scale the space bar blooms to on press (its own knob — letters use
@@ -697,6 +785,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         autoCopyOnClipboardOpen: Bool = false,
         notepadEnabled: Bool = false,
         translateEnabled: Bool = false,
+        translateStyle: TranslateStyle = .inline,
         notepadMode: NotepadMode = .scratchpad,
         emojiEnabled: Bool = true,
         emojiKeyInRow: Bool = false,
@@ -756,6 +845,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keySpringDamping: Double = 0.90,
         keyPressInstant: Bool = false,
         tapFlashStrength: Double = 0.34,
+        keyPressStyle: KeyPressStyle = .bloom,
+        tapFlashAccent: Bool = false,
+        tapFlashRing: Bool = false,
+        keyPressGlow: Double = 0,
+        keyboardEntrance: KeyboardEntrance = .none,
         spaceBloomScale: Double = 1.04,
         spaceSpringResponse: Double = 0.14,
         spaceSpringDamping: Double = 0.90,
@@ -830,6 +924,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.autoCopyOnClipboardOpen = autoCopyOnClipboardOpen
         self.notepadEnabled = notepadEnabled
         self.translateEnabled = translateEnabled
+        self.translateStyle = translateStyle
         self.notepadMode = notepadMode
         self.emojiEnabled = emojiEnabled
         self.emojiKeyInRow = emojiKeyInRow
@@ -889,6 +984,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.keySpringDamping = keySpringDamping
         self.keyPressInstant = keyPressInstant
         self.tapFlashStrength = tapFlashStrength
+        self.keyPressStyle = keyPressStyle
+        self.tapFlashAccent = tapFlashAccent
+        self.tapFlashRing = tapFlashRing
+        self.keyPressGlow = keyPressGlow
+        self.keyboardEntrance = keyboardEntrance
         self.spaceBloomScale = spaceBloomScale
         self.spaceSpringResponse = spaceSpringResponse
         self.spaceSpringDamping = spaceSpringDamping
@@ -991,6 +1091,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         autoCopyOnClipboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnClipboardOpen) ?? false
         notepadEnabled = try c.decodeIfPresent(Bool.self, forKey: .notepadEnabled) ?? false
         translateEnabled = try c.decodeIfPresent(Bool.self, forKey: .translateEnabled) ?? false
+        translateStyle = (try? c.decodeIfPresent(TranslateStyle.self, forKey: .translateStyle)) ?? .inline
         notepadMode = (try? c.decodeIfPresent(NotepadMode.self, forKey: .notepadMode)) ?? .scratchpad
         emojiEnabled = try c.decodeIfPresent(Bool.self, forKey: .emojiEnabled) ?? true
         emojiKeyInRow = try c.decodeIfPresent(Bool.self, forKey: .emojiKeyInRow) ?? false
@@ -1052,6 +1153,11 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         keySpringDamping = try c.decodeIfPresent(Double.self, forKey: .keySpringDamping) ?? 0.60
         keyPressInstant = try c.decodeIfPresent(Bool.self, forKey: .keyPressInstant) ?? false
         tapFlashStrength = try c.decodeIfPresent(Double.self, forKey: .tapFlashStrength) ?? 0.34
+        keyPressStyle = (try? c.decodeIfPresent(KeyPressStyle.self, forKey: .keyPressStyle)) ?? .bloom
+        tapFlashAccent = try c.decodeIfPresent(Bool.self, forKey: .tapFlashAccent) ?? false
+        tapFlashRing = try c.decodeIfPresent(Bool.self, forKey: .tapFlashRing) ?? false
+        keyPressGlow = try c.decodeIfPresent(Double.self, forKey: .keyPressGlow) ?? 0
+        keyboardEntrance = (try? c.decodeIfPresent(KeyboardEntrance.self, forKey: .keyboardEntrance)) ?? .none
         spaceBloomScale = try c.decodeIfPresent(Double.self, forKey: .spaceBloomScale) ?? 1.04
         spaceSpringResponse = try c.decodeIfPresent(Double.self, forKey: .spaceSpringResponse) ?? 0.28
         spaceSpringDamping = try c.decodeIfPresent(Double.self, forKey: .spaceSpringDamping) ?? 0.78

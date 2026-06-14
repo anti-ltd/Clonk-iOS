@@ -1,7 +1,9 @@
 /**
- Animation tuning screen. Two tabs — Spring, Timing. Spring tab shows three
- cards (Keys, Space bar, Popup); the Popup card is hidden when popups are off.
- 
+ Animation tuning screen. Three tabs — Spring, Timing, Effects. Spring tab shows
+ three cards (Keys, Space bar, Popup); the Popup card is hidden when popups are
+ off. Effects holds the optional flair: press style, tap-flash look, key glow,
+ and the keyboard entrance animation.
+
 
  Module: app-ui · Target: Clink
  Learn: docs/09-app-ui.md
@@ -12,7 +14,7 @@ import iUXiOS
 /// Spring physics and press-timing tuning with a pinned live preview.
 /// `$model.settings` bindings persist via `AppModel.settings` `didSet`.
 struct AnimationView: View {
-    private enum Tab { case spring, timing }
+    private enum Tab { case spring, timing, effects }
 
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var colorScheme
@@ -34,7 +36,7 @@ struct AnimationView: View {
                             previewColorScheme: nil,
                             bottomBar: AnyView(
                                 ThemedTabPicker(
-                                    options: [("Spring", Tab.spring), ("Timing", Tab.timing)],
+                                    options: [("Spring", Tab.spring), ("Timing", Tab.timing), ("Effects", Tab.effects)],
                                     selection: $selectedTab)
                             )) {
             switch selectedTab {
@@ -42,6 +44,8 @@ struct AnimationView: View {
                 springTab(model: model)
             case .timing:
                 timingTab(model: model)
+            case .effects:
+                effectsTab(model: model)
             }
         }
         .navigationTitle("Animation")
@@ -206,6 +210,69 @@ struct AnimationView: View {
         }
     }
 
+    @ViewBuilder
+    private func effectsTab(model: AppModel) -> some View {
+        @Bindable var model = model
+        let warpOn = model.settings.keyPressWarp
+
+        CardSection("Press style") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("The shape of the press — grow, press in, or wobble.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                OptionChips(
+                    options: KeyPressStyle.allCases.map { ($0.label, $0) },
+                    selection: $model.settings.keyPressStyle
+                )
+                .tint(themeAccent)
+            }
+            .padding(.vertical, UX.rowVPadding)
+        }
+        .disabled(!warpOn)
+        .opacity(warpOn ? 1 : 0.4)
+
+        CardSection("Tap flash") {
+            ToggleRow("Accent colour",
+                      subtitle: "Flash the key in the theme accent instead of white when you tap.",
+                      isOn: $model.settings.tapFlashAccent)
+            Divider()
+            ToggleRow("Ring",
+                      subtitle: "Burst an outline around the key instead of a filled wash.",
+                      isOn: $model.settings.tapFlashRing)
+        }
+        .disabled(!warpOn || model.settings.tapFlashStrength < 0.005)
+        .opacity(warpOn && model.settings.tapFlashStrength >= 0.005 ? 1 : 0.4)
+
+        CardSection("Glow") {
+            SliderRow("Press glow",
+                      tooltip: "A soft accent-coloured halo behind each key while it's held. Only the keys you're touching glow, and it eases off automatically under low power or heat.",
+                      value: $model.settings.keyPressGlow,
+                      in: 0...1, step: 0.05) {
+                $0 <= 0.001 ? "Off" : "\(Int(($0 * 100).rounded()))%"
+            }
+        }
+        .disabled(!warpOn)
+        .opacity(warpOn ? 1 : 0.4)
+
+        CardSection("Entrance") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("How the keyboard animates in each time it opens.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                OptionChips(
+                    options: KeyboardEntrance.allCases.map { ($0.label, $0) },
+                    selection: $model.settings.keyboardEntrance
+                )
+                .tint(themeAccent)
+            }
+            .padding(.vertical, UX.rowVPadding)
+        }
+
+        Text("All effects are optional and run only on press or appearance — they never sit in the typing hot path, so the keyboard stays as fast as ever. Works on both Liquid Glass and solid themes.")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 4)
+    }
 }
 
 #if DEBUG

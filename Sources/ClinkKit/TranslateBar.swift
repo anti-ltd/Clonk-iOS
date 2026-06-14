@@ -55,7 +55,9 @@ struct TranslateBar: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(text.isEmpty)
+            // Not disabled even when empty: in panel mode this button also returns
+            // to the full panel, so it must stay tappable (the dim colour is hint
+            // enough). The empty case is handled downstream ("Nothing to translate").
             chipDivider
             iconButton("xmark", action: onClear)
         }

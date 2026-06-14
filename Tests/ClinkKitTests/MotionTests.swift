@@ -17,6 +17,7 @@ import Testing
         ("pickerOpen", Motion.pickerOpen, .snappy(duration: 0.22)),
         ("pickerClose", Motion.pickerClose, .snappy(duration: 0.18)),
         ("keyboardHeight", Motion.keyboardHeight, .easeInOut(duration: 0.28)),
+        ("keyboardEntrance", Motion.keyboardEntrance, .spring(response: 0.42, damping: 0.82)),
         // Keyboard — keys
         ("glyphSwap", Motion.glyphSwap, .snappy(duration: 0.25)),
         ("deleteSwipe", Motion.deleteSwipe, .snappy(duration: 0.22)),

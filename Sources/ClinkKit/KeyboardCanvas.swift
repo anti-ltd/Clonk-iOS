@@ -23,6 +23,14 @@ struct KeyPressPhysics {
     var instant: Bool                = false
     /// Strength of the additive tap-flash (0 = off).
     var tapFlashStrength: CGFloat    = 0.34
+    /// Geometric character of the press warp (bloom / press-in / jelly / stretch).
+    var pressStyle: KeyPressStyle    = .bloom
+    /// Tint the tap flash with the accent instead of white.
+    var tapFlashAccent: Bool         = false
+    /// Render the tap flash as a ring outline rather than a fill.
+    var tapFlashRing: Bool           = false
+    /// Accent glow behind a pressed key (0 = off).
+    var pressGlow: CGFloat           = 0
     /// Space-bar press bloom scale (its own knob, not `bloomScale`).
     var spaceBloomScale: CGFloat     = 1.04
     /// Space-bar press/cursor-shrink spring response (seconds).
@@ -103,6 +111,31 @@ extension KeyPressPhysics {
     @MainActor var popupSpringAnimation: Animation {
         MotionToken(curve: .spring(response: popupSpringResponse, damping: popupSpringDamping),
                     role: .essential).animation
+    }
+}
+
+/// The keyboard-appearance entrance animation. A pure visual transform driven by
+/// `progress` (0 = entering, 1 = settled) — applied to the whole keyboard block so
+/// surfaces, glyph overlay, and bar move as one. Bottom-anchored scale so the
+/// keyboard grows up from its docked edge rather than from the middle.
+struct KeyboardEntranceEffect: ViewModifier {
+    let style: KeyboardEntrance
+    let progress: CGFloat
+
+    func body(content: Content) -> some View {
+        let p = progress
+        switch style {
+        case .none:
+            content
+        case .fade:
+            content.opacity(p)
+        case .rise:
+            content.opacity(p).offset(y: (1 - p) * 26)
+        case .drop:
+            content.opacity(p).offset(y: (1 - p) * -34)
+        case .scale:
+            content.opacity(p).scaleEffect(0.92 + p * 0.08, anchor: .bottom)
+        }
     }
 }
 
@@ -326,10 +359,21 @@ public struct KeyboardCanvas: View {
     /// taking over the full keyboard (browsing) versus the inline compose strip.
     @State private var notepadBrowsing = false
 
+    /// Entrance animation progress: 0 = keys entering, 1 = settled. Driven once
+    /// per keyboard appearance (a single explicit transition, see `playEntrance`).
+    @State private var entranceProgress: CGFloat = 1
+
     /// While the Translate panel is open, whether it's showing the result overlay
     /// (full keyboard) versus the inline compose strip. Set when the user taps
     /// Translate; cleared on Back / dismiss.
     @State private var translateShowingResult = false
+
+    /// Panel-mode only: the user tapped the source to type, so the keys come back
+    /// with the inline compose strip. While true the full panel steps aside.
+    @State private var translateComposing = false
+    /// Panel-mode only: set when the user taps Translate from the compose strip,
+    /// so the full panel runs the translation as soon as it reappears.
+    @State private var translateAutoRun = false
 
     // Press-hold-drag-release support for the popover picker. The button's drag
     // gesture opens the menu on press, highlights the row under the finger, and
@@ -385,6 +429,10 @@ public struct KeyboardCanvas: View {
             springDamping: settings.keySpringDamping,
             instant: settings.keyPressInstant,
             tapFlashStrength: CGFloat(settings.tapFlashStrength),
+            pressStyle: settings.keyPressStyle,
+            tapFlashAccent: settings.tapFlashAccent,
+            tapFlashRing: settings.tapFlashRing,
+            pressGlow: CGFloat(settings.keyPressGlow),
             spaceBloomScale: CGFloat(settings.spaceBloomScale),
             spaceSpringResponse: settings.spaceSpringResponse,
             spaceSpringDamping: settings.spaceSpringDamping,
@@ -534,7 +582,9 @@ public struct KeyboardCanvas: View {
         switch panel.kind {
         case .clipboard:   return settings.clipboardStyle != .bar
         case .notepad:     return settings.notepadMode == .notes && notepadBrowsing
-        case .translate:   return translateShowingResult
+        // Panel mode is a full overlay — except while composing, when the keys
+        // come back so the user can type into the source.
+        case .translate:   return settings.translateStyle == .panel ? !translateComposing : translateShowingResult
         case .emoji:       return false
         case .calculator, .extensions, .customPanels, .customPanel: return true
         }
@@ -677,6 +727,8 @@ public struct KeyboardCanvas: View {
         pickerOpen = false
         notepadBrowsing = false
         translateShowingResult = false
+        translateComposing = false
+        translateAutoRun = false
     }
 
     /// The top-left "back" action while a panel is open. Returns to the cards
@@ -803,7 +855,15 @@ public struct KeyboardCanvas: View {
                 theme: theme,
                 onPaste: { if let s = UIPasteboard.general.string { translate.compose = s } },
                 onPickLanguage: { translate.targetLanguageID = $0.id },
-                onTranslate: { translateShowingResult = true },
+                onTranslate: {
+                    if settings.translateStyle == .panel {
+                        // Return to the full panel and run the translation there.
+                        translateAutoRun = true
+                        translateComposing = false
+                    } else {
+                        translateShowingResult = true
+                    }
+                },
                 onClear: { translate.compose = "" }
             )
         } else if settings.suggestionsEnabled {
@@ -1031,17 +1091,37 @@ public struct KeyboardCanvas: View {
                         onBack: { notepadBrowsing = false }
                     )
                 case .translate:
-                    TranslatePanel(
-                        source: translate.compose,
-                        language: translate.targetLanguage,
-                        useAI: translateUsesAI,
-                        theme: theme,
-                        cornerRadius: CGFloat(settings.keyCornerRadius),
-                        onInsert: { text in onTranslateInsert(text); translateShowingResult = false },
-                        onCopy: { text in UIPasteboard.general.string = text },
-                        onDismiss: { closePanel() },
-                        onBack: { translateShowingResult = false }
-                    )
+                    if settings.translateStyle == .panel {
+                        // Full-keyboard takeover (like the trackpad): compose,
+                        // language, translate, and result all in one surface.
+                        TranslateFullPanel(
+                            manager: translate,
+                            languages: TranslateLanguage.common,
+                            useAI: translateUsesAI,
+                            canPaste: hasFullAccess,
+                            theme: theme,
+                            cornerRadius: CGFloat(settings.keyCornerRadius),
+                            onInsert: { text in onTranslateInsert(text) },
+                            onCopy: { text in UIPasteboard.general.string = text },
+                            onDismiss: { closePanel() },
+                            onEditSource: { translateComposing = true },
+                            autoTranslate: translateAutoRun,
+                            onConsumeAutoTranslate: { translateAutoRun = false }
+                        )
+                    } else {
+                        // Inline: the result overlay shown after the bar's Translate.
+                        TranslatePanel(
+                            source: translate.compose,
+                            language: translate.targetLanguage,
+                            useAI: translateUsesAI,
+                            theme: theme,
+                            cornerRadius: CGFloat(settings.keyCornerRadius),
+                            onInsert: { text in onTranslateInsert(text); translateShowingResult = false },
+                            onCopy: { text in UIPasteboard.general.string = text },
+                            onDismiss: { closePanel() },
+                            onBack: { translateShowingResult = false }
+                        )
+                    }
                 case .calculator:
                     CalculatorPanel(
                         theme: theme,
@@ -1421,6 +1501,7 @@ public struct KeyboardCanvas: View {
                 pickerOrigin = .auto
                 pickerOpen = true
             }
+            playEntrance()
         }
         .onChange(of: pickerOpen) { _, open in
             // When bar space wasn't pre-allocated in preferredHeight (no suggestions,
@@ -1435,6 +1516,20 @@ public struct KeyboardCanvas: View {
                 ? Metrics.suggestionBarHeight + CGFloat(settings.suggestionTopPadding)
                 : 0
         }
+        // One-shot appearance animation for the whole keyboard block. A visual
+        // transform only (opacity/offset/scale) — it never changes the reported
+        // height, and it's idle after the first ~0.4s, so there's no typing cost.
+        .modifier(KeyboardEntranceEffect(style: settings.keyboardEntrance, progress: entranceProgress))
+    }
+
+    /// Kick the entrance animation on a fresh keyboard appearance. A single
+    /// explicit 0→1 spring (not a per-frame animator); Reduce Motion skips
+    /// straight to settled, and `.none` is a no-op.
+    private func playEntrance() {
+        guard settings.keyboardEntrance != .none else { return }
+        guard MotionProfile.shared.tier != .reduced else { entranceProgress = 1; return }
+        entranceProgress = 0
+        withAnimation(Motion.keyboardEntrance.animation) { entranceProgress = 1 }
     }
 
     /// A cheap Equatable fingerprint of the non-plane/shift inputs to the keyspecs

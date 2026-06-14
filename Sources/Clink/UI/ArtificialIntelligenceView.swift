@@ -118,7 +118,7 @@ struct ArtificialIntelligenceView: View {
         switch availability {
         case .available:                    "Apple Intelligence is ready on this device."
         case .osBelowMinimum:               "Requires iOS 26 or later."
-        case .deviceNotEligible:            "This device doesn't support Apple Intelligence."
+        case .deviceNotEligible:            "Apple Intelligence not supported"
         case .appleIntelligenceNotEnabled:  "Turn on Apple Intelligence in Settings → Apple Intelligence & Siri."
         case .modelNotReady:                "The model is downloading or preparing. Try again shortly."
         case .unavailableOther:             "Apple Intelligence is currently unavailable."

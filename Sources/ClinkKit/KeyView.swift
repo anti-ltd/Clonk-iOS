@@ -25,6 +25,10 @@ struct TapPulse: ViewModifier {
     let enabled: Bool
     /// Peak opacity of the flash (0 = off). Tunable via `tapFlashStrength`.
     var strength: CGFloat = 0.34
+    /// Flash colour — white by default, accent when `tapFlashAccent`.
+    var color: Color = .white
+    /// Draw the flash as a stroked ring instead of a filled wash.
+    var ring: Bool = false
 
     /// Current flash opacity. Driven by explicit writes (bright on trigger,
     /// fade 50ms later) with render-side animations in between — NOT a
@@ -44,10 +48,17 @@ struct TapPulse: ViewModifier {
         // this view to tier changes, so flashes resume when pressure lifts.
         if enabled, strength > 0.001, MotionProfile.shared.allowsExpensiveEffects {
             content.overlay {
-                shape.fill(.white)
-                    .opacity(flash)
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
+                Group {
+                    if ring {
+                        // Outline burst — reads as a quick ripple around the cap.
+                        shape.strokeBorder(color, lineWidth: 2.5)
+                    } else {
+                        shape.fill(color)
+                    }
+                }
+                .opacity(flash)
+                .blendMode(.plusLighter)
+                .allowsHitTesting(false)
             }
             .onChange(of: trigger) { _, _ in
                 fadeTask?.cancel()
@@ -182,7 +193,17 @@ struct KeyView: View {
         if pressWarp, isPressed, !showsPopup, !spec.isShift {
             // Softened on glass (see `effectiveBloomScale`) so the key grows
             // less into its neighbours — cheaper for the container to merge.
-            return (physics.effectiveBloomScale, physics.effectiveBloomScale, 0)
+            // `pressStyle` reshapes the SAME single scale into different feels:
+            // grow uniformly (bloom), shrink (press-in), or squash on one axis
+            // (jelly / stretch). Same one-`scaleEffect` cost for every style.
+            let s = physics.effectiveBloomScale          // e.g. 1.06–1.12
+            let inv = max(0.5, 2 - s)                     // mirrored "shrink"
+            switch physics.pressStyle {
+            case .bloom:   return (s, s, 0)
+            case .sink:    return (inv, inv, 0)
+            case .jelly:   return (s, inv, 0)            // wide + short
+            case .stretch: return (inv, s, 0)            // narrow + tall
+            }
         }
         return (1, 1, 0)
     }
@@ -204,6 +225,11 @@ struct KeyView: View {
         // glass can animate the glyph along with it (the caps-lock morph).
         let swipeScale = swipeBulgeScale
         return surface
+            // Accent glow behind a pressed key — a blurred tinted halo on the few
+            // keys held at once. Only the opacity animates (the layer is always
+            // present when enabled, so no structural insert mid-press); gated on
+            // the expensive-effects tier so it drops under power/thermal pressure.
+            .background { pressGlowLayer }
             // Swipe ripple: a passing glide finger swells the key. Lightly sprung so
             // it flows rather than snaps, and keyed only to its own value so it never
             // disturbs the press bloom below. Multiplies with the press scale.
@@ -246,7 +272,10 @@ struct KeyView: View {
             // landing, so each tap gets its own confirmation. It only flashes a
             // brief highlight over the key — it never touches the bloom geometry,
             // so it adds to the press effect rather than overriding it.
-            .modifier(TapPulse(trigger: state.tapTick, shape: shape, enabled: pressWarp, strength: physics.tapFlashStrength))
+            .modifier(TapPulse(trigger: state.tapTick, shape: shape, enabled: pressWarp,
+                               strength: physics.tapFlashStrength,
+                               color: physics.tapFlashAccent ? pressedTint : .white,
+                               ring: physics.tapFlashRing))
             // Publish the glyph for the on-top layer — except shift, which draws
             // its own so it can morph with its interactive glass.
             .anchorPreference(key: KeyGlyphKey.self, value: .bounds) { anchor in
@@ -304,6 +333,21 @@ struct KeyView: View {
                 let v = spec.accents[1]
                 return v.count == 1 ? v : nil
             }())
+    }
+
+    /// Soft accent halo behind a pressed key (the "glow" effect). Always present
+    /// when enabled so only its opacity animates — never a structural insert that
+    /// would hitch the press. Honours the motion profile's expensive-effects gate.
+    @ViewBuilder private var pressGlowLayer: some View {
+        if pressWarp, physics.pressGlow > 0.001, !spec.isSpace {
+            shape.fill(pressedTint)
+                .opacity(isPressed && MotionProfile.shared.allowsExpensiveEffects
+                         ? Double(physics.pressGlow) : 0)
+                .blur(radius: 9)
+                .scaleEffect(1.18)
+                .allowsHitTesting(false)
+                .animation(Motion.tapFlashOut.animation, value: isPressed)
+        }
     }
 
     // MARK: - Surface rendering

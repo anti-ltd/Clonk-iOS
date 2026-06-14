@@ -127,6 +127,9 @@ enum Motion {
     static let pickerClose = MotionToken(curve: .snappy(duration: 0.18), role: .transition)
     /// Keyboard height resize (emoji search grows taller) — UIKit, use `uiDuration`.
     static let keyboardHeight = MotionToken(curve: .easeInOut(duration: 0.28), role: .transition)
+    /// One-shot key-block entrance on each keyboard appearance (see
+    /// `KeyboardEntranceEffect`). A gentle spring with a little settle.
+    static let keyboardEntrance = MotionToken(curve: .spring(response: 0.42, damping: 0.82), role: .transition)
 
     // MARK: Keyboard — keys
 
