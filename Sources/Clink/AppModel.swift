@@ -34,6 +34,7 @@ final class AppModel {
 
     let clipboard = ClipboardManager()
     let notepad = NotepadManager()
+    let translate = TranslateManager()
     let extensions = ExtensionManager()
     let panels = PanelManager()
     /// App Group store — every `settings` mutation goes through `save`.

@@ -1,9 +1,14 @@
 /**
  Artificial Intelligence — opt-in, on-device Apple Intelligence. Houses the
- master switch future AI features (predictive typing, translation, suggestions,
- adaptive hitboxes) will gate on, plus a live availability readout. Requires
- iOS 26+ on Apple Intelligence-capable hardware; inference runs entirely on
- device via a system process, so nothing ever leaves the phone.
+ master switch AI features gate on, the per-feature assist toggles (Suggestions,
+ Auto-correction, Prediction), and a live availability readout. Requires iOS 26+
+ on Apple Intelligence-capable hardware; inference runs entirely on device via a
+ system process, so nothing ever leaves the phone.
+
+ The assists are deliberately additive: the keyboard's fast offline engine still
+ drives suggestions/correction/prediction instantly, and AI only runs async to
+ raise result quality — it never sits in the keystroke hot path (see the
+ `aiSuggestions` / `aiAutocorrect` / `aiPrediction` settings docs).
 
  No keyboard preview: enabling AI has no visible on-screen effect yet, so this
  is a plain scrolled page (like `AdaptationView`) rather than `PinnedPreviewLayout`.
@@ -34,6 +39,35 @@ struct ArtificialIntelligenceView: View {
                         .opacity(availability == .available ? 1 : 0.5)
                 }
 
+                CardSection("Assists") {
+                    ToggleRow("Suggestions",
+                              subtitle: "AI sharpens the suggestion bar for what you're typing — more accurate, context-aware picks.",
+                              isOn: $model.settings.aiSuggestions)
+                    Divider()
+                    ToggleRow("Auto-correction",
+                              subtitle: "AI helps resolve the corrections the keyboard is least sure about.",
+                              isOn: $model.settings.aiAutocorrect)
+                    Divider()
+                    ToggleRow("Prediction",
+                              subtitle: "AI improves next-word prediction and adaptive key hitboxes.",
+                              isOn: $model.settings.aiPrediction)
+                }
+                .disabled(!assistsActive)
+                .opacity(assistsActive ? 1 : 0.5)
+
+                CardSection("Translation") {
+                    ToggleRow("Use AI for translation",
+                              subtitle: "Translation works offline without AI. Turn this on to use Apple Intelligence instead for higher-quality results on this device.",
+                              isOn: $model.settings.aiTranslate)
+                }
+                .disabled(!assistsActive)
+                .opacity(assistsActive ? 1 : 0.5)
+
+                Text("Assists are additive — the keyboard's fast offline suggestions, corrections, and prediction keep working instantly. AI runs in the background and only upgrades the result when it's ready, so nothing slows down your typing.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 4)
+
                 CardSection("Status") {
                     HStack(spacing: 12) {
                         Image(systemName: statusIcon)
@@ -61,6 +95,12 @@ struct ArtificialIntelligenceView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { availability = AIAvailability.current() }
         }
+    }
+
+    /// The per-feature assist toggles only matter when AI is both available and
+    /// switched on; otherwise they're shown dimmed and disabled.
+    private var assistsActive: Bool {
+        availability == .available && model.settings.aiEnabled
     }
 
     private var statusIcon: String {

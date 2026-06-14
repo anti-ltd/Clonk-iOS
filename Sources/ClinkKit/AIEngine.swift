@@ -148,6 +148,37 @@ public actor AIEngine {
         #endif
     }
 
+    /// Translate `text` into `targetLanguage` (a human language name, e.g.
+    /// "Spanish", or a BCP-47 tag). A thin, low-temperature wrapper over
+    /// `generate` with a translation persona. This is the *optional* AI backend
+    /// for translation — the default is Apple's offline `Translation` framework;
+    /// callers route here only when `aiEnabled && aiTranslate` and the model is
+    /// available. Throws `AIEngineError.unavailable` if the model can't run, so
+    /// callers can fall back to the offline framework.
+    public func translate(_ text: String,
+                          to targetLanguage: String,
+                          from sourceLanguage: String? = nil) async throws -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        let source = sourceLanguage.map { "from \($0) " } ?? ""
+        let instructions = """
+        You are a translation engine. Translate the user's text \(source)into \
+        \(targetLanguage). Output ONLY the translation — no quotes, no notes, no \
+        explanation, no transliteration. Preserve meaning, tone, punctuation, and \
+        any formatting. If the text is already in \(targetLanguage), return it \
+        unchanged.
+        """
+        // Low temperature for fidelity; token budget scales with input so long
+        // passages aren't truncated, but stays bounded for keyboard use.
+        let request = GenerationRequest(
+            prompt: trimmed,
+            instructions: instructions,
+            temperature: 0.2,
+            maximumResponseTokens: min(1024, max(96, trimmed.count * 2))
+        )
+        return try await generate(request)
+    }
+
     /// Streamed generation for future live-typing features. Yields *deltas*
     /// (newly generated text only), not cumulative snapshots. `nonisolated`:
     /// it only spawns a task that hops onto the actor, so callers get the

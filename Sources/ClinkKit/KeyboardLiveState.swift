@@ -21,7 +21,7 @@ public struct ActionPanel: Hashable, Identifiable, Sendable {
     /// panels can appear as their own top-level picker entries; `.customPanels`
     /// is the single grouped "Panels" entry.
     public enum Kind: String, Sendable, Hashable {
-        case clipboard, notepad, emoji, calculator, extensions, customPanels, customPanel
+        case clipboard, notepad, translate, emoji, calculator, extensions, customPanels, customPanel
     }
 
     public let kind: Kind
@@ -39,6 +39,7 @@ public struct ActionPanel: Hashable, Identifiable, Sendable {
 
     public static let clipboard = ActionPanel(kind: .clipboard)
     public static let notepad = ActionPanel(kind: .notepad)
+    public static let translate = ActionPanel(kind: .translate)
     /// The emoji keyboard. Unlike the others it doesn't render inside
     /// `KeyboardCanvas` — selecting it flips the controller's `showEmoji` to swap
     /// in the separate `EmojiCanvas` — but it shares the same activation UI.
@@ -59,6 +60,7 @@ public struct ActionPanel: Hashable, Identifiable, Sendable {
         switch rawValue {
         case "clipboard":  self = .clipboard
         case "notepad":    self = .notepad
+        case "translate":  self = .translate
         case "emoji":      self = .emoji
         case "calculator": self = .calculator
         case "extensions": self = .extensions
@@ -78,6 +80,7 @@ public struct ActionPanel: Hashable, Identifiable, Sendable {
         switch kind {
         case .clipboard:    return "Clipboard"
         case .notepad:      return "Notepad"
+        case .translate:    return "Translate"
         case .emoji:        return "Emoji"
         case .calculator:   return "Calculator"
         case .extensions:   return "Actions"
@@ -91,6 +94,7 @@ public struct ActionPanel: Hashable, Identifiable, Sendable {
         switch kind {
         case .clipboard:    return "Recent copied text"
         case .notepad:      return "Quick jotted notes"
+        case .translate:    return "Translate text"
         case .emoji:        return "Emoji keyboard"
         case .calculator:   return "Arithmetic calculator"
         case .extensions:   return "Your custom actions"
@@ -105,6 +109,7 @@ public struct ActionPanel: Hashable, Identifiable, Sendable {
         switch kind {
         case .clipboard:    return active ? "doc.on.clipboard.fill" : "doc.on.clipboard"
         case .notepad:      return active ? "note.text.badge.plus" : "note.text"
+        case .translate:    return active ? "character.bubble.fill" : "character.bubble"
         case .emoji:        return active ? "face.smiling.fill" : "face.smiling"
         case .calculator:   return active ? "numbers.rectangle.fill" : "numbers.rectangle"
         case .extensions:   return active ? "puzzlepiece.extension.fill" : "puzzlepiece.extension"
@@ -137,6 +142,12 @@ public struct Autocorrection: Equatable, Sendable {
 public final class KeyboardLiveState {
     /// Up to three autocomplete candidates for the word being typed.
     public var suggestions: [String] = []
+
+    /// AI-sourced suggestions (when the AI assist is enabled). Kept separate from
+    /// `suggestions` so the bar can render them distinctly — they're produced
+    /// async by `AIEngine` and only *augment* the instant offline `suggestions`,
+    /// never replace or delay them. Empty whenever AI is off or hasn't responded.
+    public var aiSuggestions: [String] = []
 
     /// The fix that "space completes" — shown as a highlighted preview chip.
     /// nil when the current word looks fine (or correction is off).

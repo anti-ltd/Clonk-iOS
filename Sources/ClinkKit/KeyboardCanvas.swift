@@ -181,6 +181,9 @@ public struct KeyboardCanvas: View {
     /// Fired when the user dumps the notepad buffer (or taps a saved note) into
     /// the host document. Distinct from `onClipboardInsert` only for clarity.
     private let onNotepadInsert: (String) -> Void
+    /// Fired when the user taps Insert in the translate panel — inserts the
+    /// translated text into the host document.
+    private let onTranslateInsert: (String) -> Void
     /// Fired when the user taps the insert button in the calculator panel.
     private let onCalculatorInsert: (String) -> Void
     /// Fired when the user taps a custom action in the extensions panel — the
@@ -217,6 +220,9 @@ public struct KeyboardCanvas: View {
     /// Quick-notepad store — observed so the compose buffer / notes list update.
     private var notepad: NotepadManager
 
+    /// Translate store — observed so the compose buffer / target language update.
+    private var translate: TranslateManager
+
     /// User-authored custom actions — observed so the panel reflects edits.
     private var extensions: ExtensionManager
 
@@ -231,6 +237,7 @@ public struct KeyboardCanvas: View {
         controller: KeyboardController? = nil,
         clipboard: ClipboardManager = ClipboardManager(),
         notepad: NotepadManager = NotepadManager(),
+        translate: TranslateManager = TranslateManager(),
         extensions: ExtensionManager = ExtensionManager(),
         panels: PanelManager = PanelManager(),
         hasFullAccess: Bool = false,
@@ -247,6 +254,7 @@ public struct KeyboardCanvas: View {
         onCursorMove: @escaping (Int) -> Void = { _ in },
         onClipboardInsert: @escaping (String) -> Void = { _ in },
         onNotepadInsert: @escaping (String) -> Void = { _ in },
+        onTranslateInsert: @escaping (String) -> Void = { _ in },
         onCalculatorInsert: @escaping (String) -> Void = { _ in },
         onRunExtension: @escaping (ClinkExtension) -> Void = { _ in },
         onPanelInsert: @escaping (String) -> Void = { _ in },
@@ -260,6 +268,7 @@ public struct KeyboardCanvas: View {
         _controller = State(initialValue: controller ?? KeyboardController())
         self.clipboard = clipboard
         self.notepad = notepad
+        self.translate = translate
         self.extensions = extensions
         self.panels = panels
         self.hasFullAccess = hasFullAccess
@@ -276,6 +285,7 @@ public struct KeyboardCanvas: View {
         self.onCursorMove = onCursorMove
         self.onClipboardInsert = onClipboardInsert
         self.onNotepadInsert = onNotepadInsert
+        self.onTranslateInsert = onTranslateInsert
         self.onCalculatorInsert = onCalculatorInsert
         self.onRunExtension = onRunExtension
         self.onPanelInsert = onPanelInsert
@@ -315,6 +325,11 @@ public struct KeyboardCanvas: View {
     /// While the notepad is in `notes` mode, whether the saved-notes archive is
     /// taking over the full keyboard (browsing) versus the inline compose strip.
     @State private var notepadBrowsing = false
+
+    /// While the Translate panel is open, whether it's showing the result overlay
+    /// (full keyboard) versus the inline compose strip. Set when the user taps
+    /// Translate; cleared on Back / dismiss.
+    @State private var translateShowingResult = false
 
     // Press-hold-drag-release support for the popover picker. The button's drag
     // gesture opens the menu on press, highlights the row under the finger, and
@@ -434,8 +449,8 @@ public struct KeyboardCanvas: View {
         // activation is on and at least one panel is enabled. (Slide-up-only
         // activation adds no permanent bar — the picker is transient.)
         let anyPanel = (settings.clipboardEnabled && hasFullAccess)
-            || settings.notepadEnabled || settings.emojiEnabled
-            || settings.calculatorEnabled
+            || settings.notepadEnabled || settings.translateEnabled
+            || settings.emojiEnabled || settings.calculatorEnabled
         // The pinned icons row also occupies the bar (only when suggestions are
         // off — it stands in for them), so reserve the height up front.
         let pinnedIcons = settings.pinPanelIcons && !settings.suggestionsEnabled && anyPanel
@@ -475,6 +490,7 @@ public struct KeyboardCanvas: View {
             switch panel.kind {
             case .clipboard:  return (settings.clipboardEnabled && hasFullAccess) ? panel : nil
             case .notepad:    return settings.notepadEnabled    ? panel : nil
+            case .translate:  return settings.translateEnabled  ? panel : nil
             // Emoji leaves the picker when it has its own dedicated key by 123.
             case .emoji:      return (settings.emojiEnabled && !settings.emojiKeyInRow) ? panel : nil
             case .calculator: return settings.calculatorEnabled ? panel : nil
@@ -518,9 +534,18 @@ public struct KeyboardCanvas: View {
         switch panel.kind {
         case .clipboard:   return settings.clipboardStyle != .bar
         case .notepad:     return settings.notepadMode == .notes && notepadBrowsing
+        case .translate:   return translateShowingResult
         case .emoji:       return false
         case .calculator, .extensions, .customPanels, .customPanel: return true
         }
+    }
+
+    /// Whether translation should route through Apple Intelligence rather than
+    /// the offline `Translation` framework: requires the AI master switch, the
+    /// per-feature translate option, and an available on-device model. Off ⇒ the
+    /// offline framework handles it (the default, wider device support).
+    private var translateUsesAI: Bool {
+        settings.aiEnabled && settings.aiTranslate && AIAvailability.current() == .available
     }
 
     /// The panel currently rendered as a full-keyboard overlay, if any.
@@ -642,7 +667,7 @@ public struct KeyboardCanvas: View {
         case .emoji:
             MotionDiagnostics.event("panel.emojiOpen")
             withAnimation(Motion.pickerOpen.animation) { controller.showEmoji = true }
-        case .clipboard, .notepad, .calculator, .extensions, .customPanels, .customPanel:
+        case .clipboard, .notepad, .translate, .calculator, .extensions, .customPanels, .customPanel:
             live.activePanel = panel
         }
     }
@@ -651,6 +676,7 @@ public struct KeyboardCanvas: View {
         live.activePanel = nil
         pickerOpen = false
         notepadBrowsing = false
+        translateShowingResult = false
     }
 
     /// The top-left "back" action while a panel is open. Returns to the cards
@@ -767,6 +793,18 @@ public struct KeyboardCanvas: View {
                 onSave: { notepad.addNote(notepad.scratch); notepad.scratch = "" },
                 onBrowse: { notepadBrowsing = true },
                 onClear: { notepad.scratch = "" }
+            )
+        } else if live.activePanel == .translate {
+            TranslateBar(
+                text: translate.compose,
+                language: translate.targetLanguage,
+                languages: TranslateLanguage.common,
+                canPaste: hasFullAccess,
+                theme: theme,
+                onPaste: { if let s = UIPasteboard.general.string { translate.compose = s } },
+                onPickLanguage: { translate.targetLanguageID = $0.id },
+                onTranslate: { translateShowingResult = true },
+                onClear: { translate.compose = "" }
             )
         } else if settings.suggestionsEnabled {
             // The live suggestions are read inside this CHILD view, not here —
@@ -991,6 +1029,18 @@ public struct KeyboardCanvas: View {
                         onClear: { notepad.clearNotes() },
                         onDismiss: { notepadBrowsing = false },
                         onBack: { notepadBrowsing = false }
+                    )
+                case .translate:
+                    TranslatePanel(
+                        source: translate.compose,
+                        language: translate.targetLanguage,
+                        useAI: translateUsesAI,
+                        theme: theme,
+                        cornerRadius: CGFloat(settings.keyCornerRadius),
+                        onInsert: { text in onTranslateInsert(text); translateShowingResult = false },
+                        onCopy: { text in UIPasteboard.general.string = text },
+                        onDismiss: { closePanel() },
+                        onBack: { translateShowingResult = false }
                     )
                 case .calculator:
                     CalculatorPanel(
@@ -1917,6 +1967,8 @@ public struct KeyboardCanvas: View {
     private func insert(_ s: String) {
         if live.activePanel == .notepad {
             notepad.scratch += s
+        } else if live.activePanel == .translate && !translateShowingResult {
+            translate.compose += s
         } else {
             onInsert(s)
         }
@@ -1926,6 +1978,8 @@ public struct KeyboardCanvas: View {
     private func backspace() {
         if live.activePanel == .notepad {
             if !notepad.scratch.isEmpty { notepad.scratch.removeLast() }
+        } else if live.activePanel == .translate && !translateShowingResult {
+            if !translate.compose.isEmpty { translate.compose.removeLast() }
         } else {
             onBackspace()
         }
@@ -1940,6 +1994,11 @@ public struct KeyboardCanvas: View {
             while let last = s.last, last == " " || last == "\n" || last == "\t" { s.removeLast() }
             while let last = s.last, !(last == " " || last == "\n" || last == "\t") { s.removeLast() }
             notepad.scratch = s
+        } else if live.activePanel == .translate && !translateShowingResult {
+            var s = translate.compose
+            while let last = s.last, last == " " || last == "\n" || last == "\t" { s.removeLast() }
+            while let last = s.last, !(last == " " || last == "\n" || last == "\t") { s.removeLast() }
+            translate.compose = s
         } else {
             onDeleteWord()
         }
@@ -2024,6 +2083,7 @@ private struct LiveSuggestionBar: View {
 
     var body: some View {
         SuggestionBar(suggestions: live.suggestions,
+                      aiSuggestions: live.aiSuggestions,
                       autocorrection: live.autocorrection,
                       emoji: live.emojiSuggestions, theme: theme,
                       onTap: onTap, onKeepTyped: onKeepTyped,

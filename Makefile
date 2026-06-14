@@ -22,10 +22,12 @@ CONFIG         ?= Debug
 SIM_NAME       ?= iPhone 17 Pro
 SIM_DEST       := "platform=iOS Simulator,name=$(SIM_NAME)"
 
-# Device selection. If exactly one iPhone is paired we use it automatically;
-# pass DEVICE=<udid> or DEVICE_NAME="My iPhone" to force a specific one.
+# Device selection. Defaults to the lambda-ios phone (this project's test
+# device); other paired iPhones — e.g. the SW-IOS-US remote unit — would
+# otherwise win the name-less pick just by sorting first. Override with
+# DEVICE=<udid> or DEVICE_NAME="My iPhone" (DEVICE_NAME= to pick any).
 DEVICE         ?=
-DEVICE_NAME    ?=
+DEVICE_NAME    ?= lambda-ios
 
 # App Store Connect distribution. Same API key clonk uses for notarytool; the
 # .p8 lives outside the repo. memory: KZ765P9ZHP / issuer 66eec4bc-...

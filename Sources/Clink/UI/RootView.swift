@@ -120,7 +120,7 @@ struct RootView: View {
         case animation, automation, cursor, keys, sounds, haptics, suggestions, popups, gestures, adaptation
         // Advanced placeholders.
         case hitboxes, overlays, response, performance
-        case clipboard, notepad, emoji, calculator
+        case clipboard, notepad, translate, emoji, calculator
         /// Full-page extension manager (same content as the gear-icon sheet).
         case manageExtensions
         /// The Python extension SDK — author / manage custom keyboard actions.
@@ -375,6 +375,7 @@ private struct DetailHost: View {
         case .artificialIntelligence: ArtificialIntelligenceView()
         case .clipboard:  ClipboardHistoryView()
         case .notepad:    NotepadView()
+        case .translate:  TranslateView()
         case .emoji:      EmojiSettingsView()
         case .calculator: CalculatorSettingsView()
         case .manageExtensions: ExtensionManagerPage()
@@ -494,6 +495,7 @@ private struct SidebarPanel: View {
         case .clipboard:  return model.settings.clipboardEnabled
         case .emoji:      return model.settings.emojiEnabled
         case .notepad:    return model.settings.notepadEnabled
+        case .translate:  return model.settings.translateEnabled
         default:          return false
         }
     }
@@ -801,6 +803,7 @@ private let allExtensions: [ExtEntry] = [
     ExtEntry(id: .clipboard,  name: "Clipboard",  icon: "clipboard"),
     ExtEntry(id: .emoji,      name: "Emoji",      icon: "face.smiling"),
     ExtEntry(id: .notepad,    name: "Notepad",    icon: "note.text"),
+    ExtEntry(id: .translate,  name: "Translate",  icon: "character.bubble"),
 ]
 
 // MARK: - Extension picker sheet
@@ -1001,6 +1004,7 @@ private struct ExtensionReorderList: View {
             case "clipboard":  return s.clipboardEnabled
             case "emoji":      return s.emojiEnabled
             case "notepad":    return s.notepadEnabled
+            case "translate":  return s.translateEnabled
             default:           return .constant(false)
             }
         }()
@@ -1116,6 +1120,7 @@ private struct ClinkContent: View {
             case "clipboard":  return s.clipboardEnabled  ? DestCard(title: "Clipboard",  icon: "clipboard",         description: "Recent clipboard history",        dest: .clipboard)  : nil
             case "emoji":      return s.emojiEnabled      ? DestCard(title: "Emoji",      icon: "face.smiling",      description: "Emoji picker and skin tones",     dest: .emoji)      : nil
             case "notepad":    return s.notepadEnabled    ? DestCard(title: "Notepad",    icon: "note.text",         description: "Scratch pad inside the keyboard", dest: .notepad)    : nil
+            case "translate":  return s.translateEnabled  ? DestCard(title: "Translate",  icon: "character.bubble",   description: "Translate text in the keyboard",   dest: .translate)  : nil
             default:           return nil
             }
         }

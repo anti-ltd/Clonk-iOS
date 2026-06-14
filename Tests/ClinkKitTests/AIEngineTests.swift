@@ -46,6 +46,22 @@ import FoundationModels
         #expect(yielded.isEmpty)
     }
 
+    /// Empty / whitespace input short-circuits to "" before touching the model,
+    /// so it's safe (and free) on any device.
+    @Test func translateEmptyIsNoOp() async throws {
+        let out = try await AIEngine().translate("   \n ", to: "Spanish")
+        #expect(out.isEmpty)
+    }
+
+    /// Real input routes through `generate`, so it honours the same
+    /// unavailable-throw contract when the model can't run.
+    @Test func translateThrowsWhenUnavailable() async {
+        guard AIAvailability.current() != .available else { return }
+        await #expect(throws: AIEngineError.self) {
+            _ = try await AIEngine().translate("hello", to: "Spanish")
+        }
+    }
+
     /// Prewarm and reset are unconditionally safe no-ops when unavailable.
     @Test func prewarmAndResetAreSafe() async {
         let engine = AIEngine()

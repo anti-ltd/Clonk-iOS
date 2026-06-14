@@ -26,6 +26,7 @@ final class KeyboardViewController: UIInputViewController {
     private let live = KeyboardLiveState()
     private let clipboard = ClipboardManager()
     private let notepad = NotepadManager()
+    private let translate = TranslateManager()
     private let extensions = ExtensionManager()
     private let panels = PanelManager()
     /// Shared transient UI state (plane/shift/emoji-mode). Held by the controller
@@ -498,6 +499,7 @@ final class KeyboardViewController: UIInputViewController {
             controller: keyboard,
             clipboard: clipboard,
             notepad: notepad,
+            translate: translate,
             extensions: extensions,
             panels: panels,
             hasFullAccess: hasFullAccess,
@@ -596,6 +598,14 @@ final class KeyboardViewController: UIInputViewController {
             onNotepadInsert: { [weak self] text in
                 guard let self else { return }
                 guard !text.isEmpty else { return }
+                self.isApplyingEdit = true
+                self.insertMirrored(text)
+                self.isApplyingEdit = false
+                self.live.activePanel = nil
+                self.scheduleSuggestionUpdate()
+            },
+            onTranslateInsert: { [weak self] text in
+                guard let self, !text.isEmpty else { return }
                 self.isApplyingEdit = true
                 self.insertMirrored(text)
                 self.isApplyingEdit = false

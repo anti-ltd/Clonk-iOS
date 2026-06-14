@@ -17,6 +17,11 @@ import SwiftUI
 /// always fills the top of the keyboard.
 struct SuggestionBar: View {
     let suggestions: [String]
+    /// AI-sourced predictions, rendered as distinct chips (accent-tinted, sparkle
+    /// glyph) so the user can tell an AI suggestion from a normal offline one.
+    /// They lead the predictions — they're the higher-quality picks — but the
+    /// offline `suggestions` already populated the bar; AI only augments it.
+    var aiSuggestions: [String] = []
     let autocorrection: Autocorrection?
     /// Emoji matching the word being typed — rendered as plain chips on the right
     /// and inserted (replacing the word) only when tapped. Never space-applied.
@@ -30,8 +35,9 @@ struct SuggestionBar: View {
 
     // MARK: - Candidate layout
 
-    /// Chip role: quoted literal, highlighted correction, plain prediction, or emoji.
-    private enum Kind { case keep, primary, normal, emoji }
+    /// Chip role: quoted literal, highlighted correction, AI prediction, plain
+    /// prediction, or emoji.
+    private enum Kind { case keep, primary, ai, normal, emoji }
     private struct Candidate: Identifiable {
         let id = UUID()
         let text: String
@@ -41,16 +47,21 @@ struct SuggestionBar: View {
     /// Up to three word chips plus up to two emoji chips on the right.
     private var candidates: [Candidate] {
         var words: [Candidate] = []
+        // Track words already placed (case-insensitive) so AI and offline
+        // suggestions don't double up, and neither repeats the correction.
+        var seen = Set<String>()
         if let c = autocorrection {
             words.append(Candidate(text: c.from, kind: .keep))
             words.append(Candidate(text: c.to, kind: .primary))
-            for s in suggestions
-            where s.caseInsensitiveCompare(c.to) != .orderedSame
-                && s.caseInsensitiveCompare(c.from) != .orderedSame {
-                words.append(Candidate(text: s, kind: .normal))
-            }
-        } else {
-            for s in suggestions { words.append(Candidate(text: s, kind: .normal)) }
+            seen.insert(c.from.lowercased())
+            seen.insert(c.to.lowercased())
+        }
+        // AI picks lead the predictions and render distinct.
+        for s in aiSuggestions where seen.insert(s.lowercased()).inserted {
+            words.append(Candidate(text: s, kind: .ai))
+        }
+        for s in suggestions where seen.insert(s.lowercased()).inserted {
+            words.append(Candidate(text: s, kind: .normal))
         }
         // Reserve the right end for emoji chips when there are any, so they're
         // never crowded out — always leaving at least one word slot.
@@ -117,6 +128,15 @@ struct SuggestionBar: View {
             } else {
                 pill.background(theme.accent.color.opacity(0.22), in: Capsule())
             }
+        case .ai:
+            // Distinct from a normal prediction: a leading ✨ glyph and the accent
+            // tint mark this as an AI-sourced suggestion at a glance.
+            HStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(c.text)
+            }
+            .foregroundStyle(theme.accent.color)
         case .normal:
             Text(c.text).foregroundStyle(theme.keyText.color)
         case .emoji:

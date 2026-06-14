@@ -306,6 +306,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// Show the quick-notepad action panel behind the top-left button. Unlike
     /// clipboard it needs no Full Access (it never reads the pasteboard).
     public var notepadEnabled: Bool
+    /// Show the Translate action panel behind the top-left button. Translates the
+    /// typed/pasted text into a chosen language — offline via Apple's
+    /// `Translation` framework by default, or via Apple Intelligence when
+    /// `aiEnabled && aiTranslate`. Needs no Full Access (it never reads the
+    /// pasteboard unless the user taps Paste).
+    public var translateEnabled: Bool
     /// Whether the notepad is a single scratchpad or a scratchpad + saved-notes
     /// archive.
     public var notepadMode: NotepadMode
@@ -355,7 +361,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// How the slide-up on the 123 key offers a panel choice when 2+ panels are enabled.
     public var slideUpPickerStyle: PanelPickerStyle
     /// User-chosen display order for extension panels. Stored as lowercase
-    /// destination IDs ("calculator", "clipboard", "emoji", "notepad").
+    /// destination IDs ("calculator", "clipboard", "emoji", "notepad", "translate").
     public var extensionOrder: [String]
 
     // MARK: - Suggestions & autocorrect
@@ -378,6 +384,33 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// (predictive typing, translation, suggestions) all gate on this.
     /// Off by default.
     public var aiEnabled: Bool
+    /// AI-assisted suggestion bar. When on (and `aiEnabled`), the on-device
+    /// model refines the bar's candidates for higher-quality, more context-aware
+    /// suggestions. Strictly additive: the fast offline engine still produces the
+    /// bar instantly; any AI pass runs async off the keystroke path and only
+    /// upgrades results once ready — it never blocks or delays a keypress.
+    /// On by default, but inert unless `aiEnabled`.
+    public var aiSuggestions: Bool
+    /// AI-assisted auto-correction. When on (and `aiEnabled`), the model helps
+    /// resolve ambiguous corrections the deterministic scorer is unsure about.
+    /// The existing fast autocorrect path is unchanged and authoritative for the
+    /// common case; AI only weighs in async on low-confidence cases, never
+    /// gating the keystroke. On by default, but inert unless `aiEnabled`.
+    public var aiAutocorrect: Bool
+    /// AI-assisted prediction — next-word prediction in the bar and smarter
+    /// adaptive-hitbox biasing. When on (and `aiEnabled`), the model sharpens
+    /// what the keyboard expects next. Runs entirely async and only feeds hints
+    /// into the existing predictors; the per-keystroke hitbox/prediction math
+    /// stays as fast as today with no AI in its hot path. On by default, but
+    /// inert unless `aiEnabled`.
+    public var aiPrediction: Bool
+    /// Use Apple Intelligence for translation instead of the default offline
+    /// `Translation` framework. Translation always works offline without AI (the
+    /// system framework, wider device support); when on (and `aiEnabled`), the
+    /// on-device model handles it instead for higher-quality, more idiomatic
+    /// output on capable hardware. On by default, but inert unless `aiEnabled` —
+    /// with it off, translation silently falls back to the offline framework.
+    public var aiTranslate: Bool
     /// How long (ms) after the last keystroke before the suggestion engine runs.
     /// Higher = fewer UITextChecker invocations during fast bursts (saves CPU/battery);
     /// lower = snappier bar updates. Default 80ms matches the historical hardcoded value.
@@ -663,6 +696,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         autoCopyOnKeyboardOpen: Bool = false,
         autoCopyOnClipboardOpen: Bool = false,
         notepadEnabled: Bool = false,
+        translateEnabled: Bool = false,
         notepadMode: NotepadMode = .scratchpad,
         emojiEnabled: Bool = true,
         emojiKeyInRow: Bool = false,
@@ -677,12 +711,16 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         pinPanelIcons: Bool = false,
         iconPickerStyle: PanelPickerStyle = .popover,
         slideUpPickerStyle: PanelPickerStyle = .popover,
-        extensionOrder: [String] = ["calculator", "clipboard", "emoji", "notepad"],
+        extensionOrder: [String] = ["calculator", "clipboard", "emoji", "notepad", "translate"],
         suggestionsEnabled: Bool = true,
         autocorrectEnabled: Bool = true,
         revertAutocorrectOnDelete: Bool = true,
         learningEnabled: Bool = false,
         aiEnabled: Bool = false,
+        aiSuggestions: Bool = true,
+        aiAutocorrect: Bool = true,
+        aiPrediction: Bool = true,
+        aiTranslate: Bool = true,
         suggestionDebounceDelay: Double = 80.0,
         autoPunctuationEnabled: Bool = true,
         autoReturnToLetters: Bool = true,
@@ -791,6 +829,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.autoCopyOnKeyboardOpen = autoCopyOnKeyboardOpen
         self.autoCopyOnClipboardOpen = autoCopyOnClipboardOpen
         self.notepadEnabled = notepadEnabled
+        self.translateEnabled = translateEnabled
         self.notepadMode = notepadMode
         self.emojiEnabled = emojiEnabled
         self.emojiKeyInRow = emojiKeyInRow
@@ -811,6 +850,10 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.revertAutocorrectOnDelete = revertAutocorrectOnDelete
         self.learningEnabled = learningEnabled
         self.aiEnabled = aiEnabled
+        self.aiSuggestions = aiSuggestions
+        self.aiAutocorrect = aiAutocorrect
+        self.aiPrediction = aiPrediction
+        self.aiTranslate = aiTranslate
         self.suggestionDebounceDelay = suggestionDebounceDelay
         self.autoPunctuationEnabled = autoPunctuationEnabled
         self.autoReturnToLetters = autoReturnToLetters
@@ -947,6 +990,7 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         autoCopyOnKeyboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnKeyboardOpen) ?? false
         autoCopyOnClipboardOpen = try c.decodeIfPresent(Bool.self, forKey: .autoCopyOnClipboardOpen) ?? false
         notepadEnabled = try c.decodeIfPresent(Bool.self, forKey: .notepadEnabled) ?? false
+        translateEnabled = try c.decodeIfPresent(Bool.self, forKey: .translateEnabled) ?? false
         notepadMode = (try? c.decodeIfPresent(NotepadMode.self, forKey: .notepadMode)) ?? .scratchpad
         emojiEnabled = try c.decodeIfPresent(Bool.self, forKey: .emojiEnabled) ?? true
         emojiKeyInRow = try c.decodeIfPresent(Bool.self, forKey: .emojiKeyInRow) ?? false
@@ -963,12 +1007,16 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
             .decodeIfPresent(PanelPickerStyle.self, forKey: .panelPickerStyle)) ?? .popover
         iconPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .iconPickerStyle)) ?? legacyPickerStyle
         slideUpPickerStyle = (try? c.decodeIfPresent(PanelPickerStyle.self, forKey: .slideUpPickerStyle)) ?? legacyPickerStyle
-        extensionOrder = try c.decodeIfPresent([String].self, forKey: .extensionOrder) ?? ["calculator", "clipboard", "emoji", "notepad"]
+        extensionOrder = try c.decodeIfPresent([String].self, forKey: .extensionOrder) ?? ["calculator", "clipboard", "emoji", "notepad", "translate"]
         suggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .suggestionsEnabled) ?? true
         autocorrectEnabled = try c.decodeIfPresent(Bool.self, forKey: .autocorrectEnabled) ?? true
         revertAutocorrectOnDelete = try c.decodeIfPresent(Bool.self, forKey: .revertAutocorrectOnDelete) ?? true
         learningEnabled = try c.decodeIfPresent(Bool.self, forKey: .learningEnabled) ?? false
         aiEnabled = try c.decodeIfPresent(Bool.self, forKey: .aiEnabled) ?? false
+        aiSuggestions = try c.decodeIfPresent(Bool.self, forKey: .aiSuggestions) ?? true
+        aiAutocorrect = try c.decodeIfPresent(Bool.self, forKey: .aiAutocorrect) ?? true
+        aiPrediction = try c.decodeIfPresent(Bool.self, forKey: .aiPrediction) ?? true
+        aiTranslate = try c.decodeIfPresent(Bool.self, forKey: .aiTranslate) ?? true
         suggestionDebounceDelay = try c.decodeIfPresent(Double.self, forKey: .suggestionDebounceDelay) ?? 80.0
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true
         autoReturnToLetters = try c.decodeIfPresent(Bool.self, forKey: .autoReturnToLetters) ?? true

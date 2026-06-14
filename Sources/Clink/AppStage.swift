@@ -121,6 +121,11 @@ enum AppStage {
                 themeID: "liquid-dark", matchSystemAppearance: false,
                 notepadEnabled: true)
 
+        case "translate":
+            return KeyboardSettings(
+                themeID: "liquid-dark", matchSystemAppearance: false,
+                translateEnabled: true)
+
         case "calculator":
             return KeyboardSettings(
                 themeID: "liquid-dark", matchSystemAppearance: false,
@@ -211,6 +216,7 @@ struct StagedRoot: View {
         case "clipboard":   NavigationStack { ClipboardHistoryView() }
         case "emoji":       NavigationStack { EmojiSettingsView() }
         case "notepad":     NavigationStack { NotepadView() }
+        case "translate":   NavigationStack { TranslateView() }
         case "calculator":  NavigationStack { CalculatorSettingsView() }
 
         // Advanced
