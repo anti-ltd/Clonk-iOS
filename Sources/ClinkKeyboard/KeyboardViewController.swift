@@ -331,11 +331,11 @@ final class KeyboardViewController: UIInputViewController {
         // Warm the AI model ahead of the first keystroke so the first suggestion
         // isn't gated on cold model-load latency. No-op when AI is off or the
         // device can't run it (the actor guards internally).
-        if new.aiEnabled && (new.aiSuggestions || new.aiAutocorrect || new.aiPrediction || new.aiTranslate) {
-            // Warm with the SAME instructions the suggestion path uses, so the
+        if new.aiEnabled && (new.aiCompletions || new.aiAutocorrect || new.aiTranslate) {
+            // Warm with the SAME instructions the completion path uses, so the
             // first real call doesn't rebuild the session cold (the dominant
-            // first-suggestion latency). Other AI features can re-warm as needed.
-            let warmInstructions = new.aiSuggestions ? AIEngine.suggestionInstructions : nil
+            // first-completion latency). Other AI features can re-warm as needed.
+            let warmInstructions = new.aiCompletions ? AIEngine.suggestionInstructions : nil
             Task { await AIEngine.shared.prewarm(instructions: warmInstructions) }
         }
 
@@ -918,35 +918,32 @@ final class KeyboardViewController: UIInputViewController {
     /// response can't clobber newer text.
     private func aiComputeSuggestions() {
         aiSuggestionTask?.cancel()
-        guard settings.suggestionsEnabled, settings.aiEnabled, settings.aiSuggestions,
+        guard settings.suggestionsEnabled, settings.aiEnabled, settings.aiCompletions,
               AIAvailability.current() == .available else {
             if !live.aiSuggestions.isEmpty { live.aiSuggestions = [] }
             return
         }
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
         let partial = SmartPunctuation.trailingPartialWord(in: before)
-        guard !before.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !partial.isEmpty else {
+        // AI does COMPLETIONS ONLY — it finishes the word being typed. With no
+        // partial (at a word boundary) there's nothing to complete; next-word
+        // prediction is the offline lexicon's job (the on-device model is weak at
+        // it and tended to echo/mash typed words). Clear any stale AI chips.
+        guard !partial.isEmpty else {
             if !live.aiSuggestions.isEmpty { live.aiSuggestions = [] }
             return
         }
         aiSuggestionSeq += 1
         let seq = aiSuggestionSeq
-        // Recently-typed words (≥4 letters) — used to reject next-word AI output
-        // that just echoes or stitches together what was already typed (e.g.
-        // "superteam team star " → "superstar"). Only applied to next-word mode;
-        // completing a partial legitimately extends it.
-        let recent: Set<String> = partial.isEmpty
-            ? Set(before.lowercased().split { !$0.isLetter }.map(String.init).filter { $0.count >= 4 }.suffix(6))
-            : []
         aiSuggestionTask = Task { [weak self] in
-            let words = try? await AIEngine.shared.suggestions(context: before, partial: partial)
+            let words = try? await AIEngine.shared.completions(context: before, partial: partial)
             guard let words, !Task.isCancelled else { return }
+            // Keep only real extensions of what's being typed — the completion
+            // must start with the partial (case-insensitive) and add to it.
+            let lp = partial.lowercased()
             let cleaned = words.filter { w in
                 let lw = w.lowercased()
-                guard lw.count >= 2 else { return false }
-                // Drop echoes / mashups: shares a whole typed word as a substring
-                // (either direction).
-                return !recent.contains { r in lw.contains(r) || r.contains(lw) }
+                return lw.hasPrefix(lp) && lw.count > lp.count
             }
             await MainActor.run {
                 guard let self, seq == self.aiSuggestionSeq else { return }

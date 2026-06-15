@@ -464,8 +464,8 @@ struct KeyboardPreview: View {
             suggestEngine.setAdaptation(UserAdaptation.shared)
             // Warm the model so the first AI suggestion isn't slow. No-op when AI
             // is off / unavailable (the actor guards internally).
-            if settings.aiEnabled && settings.aiSuggestions {
-                Task { await AIEngine.shared.prewarm() }
+            if settings.aiEnabled && settings.aiCompletions {
+                Task { await AIEngine.shared.prewarm(instructions: AIEngine.suggestionInstructions) }
             }
             refreshSuggestions()
             refreshAISuggestions()
@@ -528,23 +528,25 @@ struct KeyboardPreview: View {
     /// just clears any stale AI words.
     private func refreshAISuggestions() {
         aiTask?.cancel()
-        guard settings.suggestionsEnabled, settings.aiEnabled, settings.aiSuggestions,
+        guard settings.suggestionsEnabled, settings.aiEnabled, settings.aiCompletions,
               AIAvailability.current() == .available else {
             if !live.aiSuggestions.isEmpty { live.aiSuggestions = [] }
             return
         }
         let before = String(typed.prefix(min(cursorPos, typed.count)))
         let partial = SmartPunctuation.trailingPartialWord(in: before)
-        guard !before.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !partial.isEmpty else {
+        // Completions only — nothing to complete at a word boundary.
+        guard !partial.isEmpty else {
             if !live.aiSuggestions.isEmpty { live.aiSuggestions = [] }
             return
         }
         aiSeq += 1
         let seq = aiSeq
         aiTask = Task {
-            let words = try? await AIEngine.shared.suggestions(context: before, partial: partial)
+            let words = try? await AIEngine.shared.completions(context: before, partial: partial)
             guard let words, !Task.isCancelled, seq == aiSeq else { return }
-            live.aiSuggestions = words
+            let lp = partial.lowercased()
+            live.aiSuggestions = words.filter { $0.lowercased().hasPrefix(lp) && $0.count > lp.count }
         }
     }
 }

@@ -459,26 +459,20 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
     /// (predictive typing, translation, suggestions) all gate on this.
     /// Off by default.
     public var aiEnabled: Bool
-    /// AI-assisted suggestion bar. When on (and `aiEnabled`), the on-device
-    /// model refines the bar's candidates for higher-quality, more context-aware
-    /// suggestions. Strictly additive: the fast offline engine still produces the
-    /// bar instantly; any AI pass runs async off the keystroke path and only
-    /// upgrades results once ready — it never blocks or delays a keypress.
-    /// On by default, but inert unless `aiEnabled`.
-    public var aiSuggestions: Bool
+    /// AI-assisted word completions. When on (and `aiEnabled`), the on-device
+    /// model finishes the word you're typing — context-aware completions of the
+    /// current partial word only (never next-word; the offline lexicon owns that).
+    /// Strictly additive: the fast offline engine still produces the bar
+    /// instantly; the AI completion pass runs async off the keystroke path and
+    /// only adds chips once ready. On by default, but inert unless `aiEnabled`.
+    /// (Was `aiSuggestions` — migrated; see `init(from:)`.)
+    public var aiCompletions: Bool
     /// AI-assisted auto-correction. When on (and `aiEnabled`), the model helps
     /// resolve ambiguous corrections the deterministic scorer is unsure about.
     /// The existing fast autocorrect path is unchanged and authoritative for the
     /// common case; AI only weighs in async on low-confidence cases, never
     /// gating the keystroke. On by default, but inert unless `aiEnabled`.
     public var aiAutocorrect: Bool
-    /// AI-assisted prediction — next-word prediction in the bar and smarter
-    /// adaptive-hitbox biasing. When on (and `aiEnabled`), the model sharpens
-    /// what the keyboard expects next. Runs entirely async and only feeds hints
-    /// into the existing predictors; the per-keystroke hitbox/prediction math
-    /// stays as fast as today with no AI in its hot path. On by default, but
-    /// inert unless `aiEnabled`.
-    public var aiPrediction: Bool
     /// Use Apple Intelligence for translation instead of the default offline
     /// `Translation` framework. Translation always works offline without AI (the
     /// system framework, wider device support); when on (and `aiEnabled`), the
@@ -795,9 +789,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         revertAutocorrectOnDelete: Bool = true,
         learningEnabled: Bool = false,
         aiEnabled: Bool = false,
-        aiSuggestions: Bool = true,
+        aiCompletions: Bool = true,
         aiAutocorrect: Bool = true,
-        aiPrediction: Bool = true,
         aiTranslate: Bool = true,
         suggestionDebounceDelay: Double = 80.0,
         autoPunctuationEnabled: Bool = true,
@@ -930,9 +923,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         self.revertAutocorrectOnDelete = revertAutocorrectOnDelete
         self.learningEnabled = learningEnabled
         self.aiEnabled = aiEnabled
-        self.aiSuggestions = aiSuggestions
+        self.aiCompletions = aiCompletions
         self.aiAutocorrect = aiAutocorrect
-        self.aiPrediction = aiPrediction
         self.aiTranslate = aiTranslate
         self.suggestionDebounceDelay = suggestionDebounceDelay
         self.autoPunctuationEnabled = autoPunctuationEnabled
@@ -1020,6 +1012,8 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         /// on every theme and auto-softens on glass (`KeyPressPhysics`); old
         /// values are simply ignored.
         case glassBloomFactor
+        /// Renamed to `aiCompletions` (AI is completions-only now). Migrated.
+        case aiSuggestions
     }
 
     public init(from decoder: any Decoder) throws {
@@ -1103,9 +1097,12 @@ public struct KeyboardSettings: Codable, Equatable, Sendable {
         revertAutocorrectOnDelete = try c.decodeIfPresent(Bool.self, forKey: .revertAutocorrectOnDelete) ?? true
         learningEnabled = try c.decodeIfPresent(Bool.self, forKey: .learningEnabled) ?? false
         aiEnabled = try c.decodeIfPresent(Bool.self, forKey: .aiEnabled) ?? false
-        aiSuggestions = try c.decodeIfPresent(Bool.self, forKey: .aiSuggestions) ?? true
+        // `aiCompletions` was `aiSuggestions` (now completions-only); migrate the
+        // old key. `aiPrediction` (AI next-word) is retired — ignored on decode.
+        let legacyAISuggestions = (try? decoder.container(keyedBy: LegacyKeys.self)
+            .decodeIfPresent(Bool.self, forKey: .aiSuggestions)) ?? nil
+        aiCompletions = try c.decodeIfPresent(Bool.self, forKey: .aiCompletions) ?? legacyAISuggestions ?? true
         aiAutocorrect = try c.decodeIfPresent(Bool.self, forKey: .aiAutocorrect) ?? true
-        aiPrediction = try c.decodeIfPresent(Bool.self, forKey: .aiPrediction) ?? true
         aiTranslate = try c.decodeIfPresent(Bool.self, forKey: .aiTranslate) ?? true
         suggestionDebounceDelay = try c.decodeIfPresent(Double.self, forKey: .suggestionDebounceDelay) ?? 80.0
         autoPunctuationEnabled = try c.decodeIfPresent(Bool.self, forKey: .autoPunctuationEnabled) ?? true

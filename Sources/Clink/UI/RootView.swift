@@ -1251,12 +1251,15 @@ private struct ClinkContent: View {
     /// A small, subtle circular icon button for the home footer (changelog /
     /// dictionaries). Tertiary so it stays quiet under the cards.
     private func footerIconButton(_ icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        // Clamp the card corner radius to the button's half-height so a square
+        // button still reads correctly on very-round themes (it caps at a circle).
+        let shape = RoundedRectangle(cornerRadius: min(cardCornerRadius, 18), style: .continuous)
+        return Button(action: action) {
             Image(systemName: icon)
                 .font(.callout)
                 .foregroundStyle(.tertiary)
                 .frame(width: 36, height: 36)
-                .background(Circle().fill(.primary.opacity(0.06)))
+                .background(shape.fill(.primary.opacity(0.06)))
         }
         .buttonStyle(.plain)
     }
@@ -1438,6 +1441,12 @@ private struct DictionariesContent: View {
     @Environment(\.cardCornerRadius) private var cardCornerRadius
     @Environment(\.cardTint) private var cardTint
 
+    /// License pill shape — theme rounding, clamped to a capsule at most so a
+    /// square theme reads as a rounded tag, not a hard rectangle.
+    private var pillShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: min(cardCornerRadius, 11), style: .continuous)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             ForEach(dictionarySources) { src in
@@ -1462,9 +1471,9 @@ private struct DictionariesContent: View {
                 Text(src.license)
                     .font(.caption2.weight(.bold))
                     .tracking(0.3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tint)
                     .padding(.horizontal, 7).padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                    .background(pillShape.fill(.tint.opacity(0.15)))
             }
             Text(src.role)
                 .font(.callout)
@@ -1478,7 +1487,7 @@ private struct DictionariesContent: View {
                             .lineLimit(1).truncationMode(.middle)
                     }
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tint)
                 }
             }
         }
@@ -1642,7 +1651,7 @@ private struct ChangelogCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                 .strokeBorder(
-                    isLatest ? Color.accentColor.opacity(0.45) : Color.primary.opacity(UX.Glass.outlineOpacity),
+                    isLatest ? AnyShapeStyle(.tint.opacity(0.45)) : AnyShapeStyle(.primary.opacity(UX.Glass.outlineOpacity)),
                     lineWidth: isLatest ? 1 : UX.Glass.outlineWidth
                 )
         }
@@ -1666,9 +1675,10 @@ private struct ChangelogCard: View {
                     Text("LATEST")
                         .font(.caption2.weight(.bold))
                         .tracking(0.5)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(.tint)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                        .background(RoundedRectangle(cornerRadius: min(cardCornerRadius, 10), style: .continuous)
+                            .fill(.tint.opacity(0.15)))
                 }
                 Spacer()
                 Image(systemName: "chevron.down")

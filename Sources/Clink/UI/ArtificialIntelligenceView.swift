@@ -1,14 +1,15 @@
 /**
  Artificial Intelligence — opt-in, on-device Apple Intelligence. Houses the
- master switch AI features gate on, the per-feature assist toggles (Suggestions,
- Auto-correction, Prediction), and a live availability readout. Requires iOS 26+
- on Apple Intelligence-capable hardware; inference runs entirely on device via a
- system process, so nothing ever leaves the phone.
+ master switch AI features gate on, the per-feature assist toggles (Completions,
+ Auto-correction) and AI translation, and a live availability readout. Requires
+ iOS 26+ on Apple Intelligence-capable hardware; inference runs entirely on device
+ via a system process, so nothing ever leaves the phone.
 
- The assists are deliberately additive: the keyboard's fast offline engine still
- drives suggestions/correction/prediction instantly, and AI only runs async to
- raise result quality — it never sits in the keystroke hot path (see the
- `aiSuggestions` / `aiAutocorrect` / `aiPrediction` settings docs).
+ The assists are deliberately additive and narrow: AI only *completes the current
+ word* (next-word prediction stays on the fast offline lexicon — the on-device
+ model is weak at it) and helps with low-confidence corrections. It always runs
+ async, never in the keystroke hot path (see the `aiCompletions` / `aiAutocorrect`
+ settings docs).
 
  No keyboard preview: enabling AI has no visible on-screen effect yet, so this
  is a plain scrolled page rather than `PinnedPreviewLayout`.
@@ -40,17 +41,13 @@ struct ArtificialIntelligenceView: View {
                 }
 
                 CardSection("Assists") {
-                    ToggleRow("Suggestions",
-                              subtitle: "AI sharpens the suggestion bar for what you're typing — more accurate, context-aware picks.",
-                              isOn: $model.settings.aiSuggestions)
+                    ToggleRow("Completions",
+                              subtitle: "AI finishes the word you're typing — context-aware completions of the current word. Next-word prediction stays on the fast offline engine.",
+                              isOn: $model.settings.aiCompletions)
                     Divider()
                     ToggleRow("Auto-correction",
                               subtitle: "AI helps resolve the corrections the keyboard is least sure about.",
                               isOn: $model.settings.aiAutocorrect)
-                    Divider()
-                    ToggleRow("Prediction",
-                              subtitle: "AI improves next-word prediction and adaptive key hitboxes.",
-                              isOn: $model.settings.aiPrediction)
                 }
                 .disabled(!assistsActive)
                 .opacity(assistsActive ? 1 : 0.5)
