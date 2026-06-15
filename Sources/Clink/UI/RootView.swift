@@ -1472,11 +1472,22 @@ private struct DictionariesContent: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 2)
-            Text("The CC-BY-SA lexicons are also published DRM-free at [github.com/anti-ltd/Clink-iOS](https://github.com/anti-ltd/Clink-iOS/tree/main/Resources/Lexicons), so the App Store's DRM never restricts your rights to that data.")
+            Text("The CC-BY-SA lexicons are also published DRM-free, so the App Store's DRM never restricts your rights to that data:")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .tint(cardTint)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            if let repo = URL(string: "https://github.com/anti-ltd/Clink-iOS/tree/main/Resources/Lexicons") {
+                Link(destination: repo) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right.square")
+                        Text("github.com/anti-ltd/Clink-iOS")
+                            .lineLimit(1).truncationMode(.middle)
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.tint)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
