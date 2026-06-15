@@ -83,12 +83,43 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   delete brings back `Dawg`), and that word is left un-corrected on the next space.
   Matches the native keyboard. New toggle in both *Suggestions* and *Automation*,
   on by default.
+- **German (QWERTZ) layout.** A dedicated German keyboard with ü on the top row
+  and ö ä on the home row, matching the native layout. Selectable under *Layout →
+  Latin*, and auto-paired when you add German as a language. (`KeyboardLayout`)
 
 ### Changed
+- **Emoji set updated to Unicode 17.0.** The emoji picker now includes the
+  latest base emoji (distorted face, orca, treasure chest, trombone, ballet
+  dancer, landslide, hairy creature, fight cloud). Regenerated from the vendored
+  `Tools/emoji-test.txt` via `make emoji`. New glyphs render on OS versions that
+  ship the Unicode 17.0 emoji font; older versions show a placeholder.
 - Settings that don't apply to the current configuration are now hidden instead
   of shown disabled, in both the container app and the in-extension controls.
 
 ### Fixed
+- **Smoother Liquid Glass key presses.** The press bloom keeps its full glass
+  lens deformation, but no longer wakes the ~6 surrounding keys so the bulge
+  liquid-bleeds into them — that meant ~7 lens re-rasters per spring frame and
+  was the press lag, even on a full-power device. The bloom is now isolated to
+  the pressed key (one lens re-raster per frame, ~6× cheaper); only the brief
+  inter-key bleed on a tap is gone. The swipe ripple keeps its cross-key swell.
+  (`KeyView`, `TouchEngine.recomputePressed`)
+- **Smoother typing under memory pressure.** The keyboard extension runs in a
+  tiny memory sandbox where Liquid Glass — the heaviest layer it composites — is
+  the first thing to drop frames, so animations felt less fluid than the same
+  views in the app. The extension now watches system memory pressure (a GCD
+  memory-pressure source plus `didReceiveMemoryWarning`) and temporarily falls
+  back from glass to a solid key render while starved, restoring glass once
+  pressure clears. The fallback routes through `MotionProfile` (new
+  `setMemoryPressure` / `prefersSolidSurfaces`, applied via `Theme.effective`)
+  and is scoped to the extension — the app showcase keeps full-fidelity glass.
+- **Dropped keystrokes when typing fast.** A finger that landed during a
+  plane/shift layout swap could be silently lost: SwiftUI briefly publishes an
+  empty key-frame set while the old key views are torn down and the new ones are
+  not yet measured, and the touch router resolved that frame to "no key" and
+  discarded the press. The router now double-buffers — it ignores a transient
+  empty frame set and keeps the last good layout until a real one arrives — so a
+  tap mid-transition still routes to the correct key. (`TouchEngine.update`)
 - **Function-key flash.** Fixed a flash on the function keys during plane switches,
   plus App Store compliance for ITMS-90737 / ITMS-90788.
 - Settings schema is backward-compatible across upgrades. Older saved configs

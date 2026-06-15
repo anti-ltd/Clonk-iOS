@@ -427,7 +427,11 @@ public struct KeyboardCanvas: View {
     /// host app's appearance; in the app preview it tracks the app's.
     @Environment(\.colorScheme) private var colorScheme
 
-    private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark) }
+    // `.effective` drops glass → solid while the motion profile is conserving
+    // (Low Power / thermal / keyboard memory pressure), so the whole tree below
+    // flips materials together. Reads `MotionProfile.tier`, so a pressure change
+    // re-renders the canvas.
+    private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark).effective }
 
     private var physics: KeyPressPhysics {
         KeyPressPhysics(

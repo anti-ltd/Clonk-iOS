@@ -133,7 +133,9 @@ public struct EmojiCanvas: View {
         self.onRecordRecent = onRecordRecent
     }
 
-    private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark) }
+    // See `KeyboardCanvas.theme`: `.effective` sheds glass under memory/thermal
+    // pressure so the emoji plane matches the letter plane's fallback.
+    private var theme: Theme { settings.resolvedTheme(dark: colorScheme == .dark).effective }
 
     /// The tint for an emoji cell's press flash — a liquid-glass droplet that
     /// morphs in behind the tapped glyph as "which one fired" feedback. Nil off

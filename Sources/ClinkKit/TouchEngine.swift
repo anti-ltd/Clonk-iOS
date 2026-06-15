@@ -200,10 +200,14 @@ final class RenderDriver {
         let changed = next.symmetricDifference(pressed)
         for id in changed {
             state(for: id).isPressed = next.contains(id)
-            // Nudge the neighbours so glass keys adjacent to the press
-            // re-evaluate too — the liquid merge needs both sides of the blend
-            // refreshed. Solid keys never read the tick, so this is free there.
-            for n in neighbors[id] ?? [] { state(for: n).neighborTick &+= 1 }
+            // NOTE: we no longer nudge neighbours on press. Waking the ~6
+            // adjacent glass keys so the bloom liquid-bleeds into them meant ~7
+            // lens re-rasters per spring frame — the press lag. The bloom is now
+            // isolated to the pressed key (see `KeyView.body`), so neighbours
+            // stay put: ~6× cheaper, at the cost of the brief inter-key bleed on
+            // a tap. `neighborTick` / the `neighbors` map are retained (built once
+            // per layout, not on the hot path) for a future interactive-glass
+            // route, but nothing reads `neighborTick` now.
         }
         pressed = next
     }
@@ -462,7 +466,17 @@ public final class TouchEngine {
         // Frames change only on real layout changes (resize, plane padding, …);
         // skipping the no-op write keeps the neighbour map rebuild off the
         // common per-render update path.
-        if frames != self.frames {
+        //
+        // Double-buffer: ignore a transient *empty* push. SwiftUI can publish an
+        // empty KeyFrame preference for a single layout pass mid plane/shift swap
+        // (old key views torn down, new ones not yet measured). Overwriting with
+        // [:] makes `key(at:)` return nil for any finger that lands in that window
+        // → the keystroke is silently dropped at `KeyGridTouchView.touchesBegan`'s
+        // `guard let id …`. That is the "keys don't register when typing fast"
+        // report: not a gutter miss (routing is nearest-rect, gutters can't miss),
+        // but a touch arriving while the registry is momentarily empty. Keep the
+        // last good frames until a real, non-empty layout arrives.
+        if !frames.isEmpty, frames != self.frames {
             self.frames = frames
             render.setFrames(frames)   // RenderDriver rebuilds its neighbour map
         }

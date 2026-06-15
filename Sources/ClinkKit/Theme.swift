@@ -126,3 +126,21 @@ public struct Theme: Identifiable, Codable, Equatable, Sendable, Hashable {
     }
 }
 
+public extension Theme {
+    /// The theme to actually *render* with. Identical to `self` except that a
+    /// Liquid Glass material is forced to `.solid` while the motion profile is
+    /// shedding GPU load (Low Power, thermal pressure, or — in the keyboard
+    /// extension — memory pressure; see `MotionProfile.prefersSolidSurfaces`).
+    /// Glass is the heaviest layer the keyboard composites and the first thing to
+    /// drop frames when the extension is memory-starved, so it gives way to keep
+    /// typing fluid, then restores itself once pressure clears. Resolve this ONCE
+    /// where the canvas derives its theme — every downstream `material ==
+    /// .liquidGlass` check then flips together, so glass never ends up half-on.
+    @MainActor var effective: Theme {
+        guard material == .liquidGlass, MotionProfile.shared.prefersSolidSurfaces else { return self }
+        var t = self
+        t.material = .solid
+        return t
+    }
+}
+

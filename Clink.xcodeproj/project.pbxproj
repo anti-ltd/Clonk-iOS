@@ -253,6 +253,7 @@
 		907F871AF20177C804FB9740 /* PyInterpreter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D9D325281247E7BAFEEF3C /* PyInterpreter.swift */; };
 		915C52BC8D9D4EBAB6E62D80 /* Theme+Nord.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25BD3CF22EC6A03A6C3D603 /* Theme+Nord.swift */; };
 		916A04317AED6BEB79F0795A /* SwipeLexicon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688F20D6A1DC28696453D9F9 /* SwipeLexicon.swift */; };
+		9219A26805869F76AB9E2937 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 0B50087F98413FE93ACC443D /* LICENSE */; };
 		92BD3E61CFE2F1E6FEC70CA0 /* CustomKeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F3126F333DF425DDCE4D0A /* CustomKeysView.swift */; };
 		92F0936FD1D447C271408973 /* TouchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A744FB305610F842875AA9 /* TouchEngine.swift */; };
 		93AB200CDD9088135A6BE8BD /* EmojiSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8FABA08CD27ABE8965A352 /* EmojiSkinTone.swift */; };
@@ -324,6 +325,7 @@
 		BC7CEF2AA7FA5FDA7933CDD5 /* PanelRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59AF20386CFF07A42EF7487C /* PanelRuntime.swift */; };
 		BCF68F820E2230EC03B2383E /* Theme+Crimson.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C00D1D75534E13782BF5FFA /* Theme+Crimson.swift */; };
 		BDB509E96B5FD9A8A4F24898 /* PyProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385CB38B2FE8AFFC8C586AAE /* PyProgram.swift */; };
+		BE27D869ED07FD64A09EE660 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 0B50087F98413FE93ACC443D /* LICENSE */; };
 		BEBEE45831B4043FF6A88AE4 /* CustomKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E84C54BDB032EBA9ACB1E3 /* CustomKey.swift */; };
 		BF04F250EE72481C7443F0A8 /* ClipboardBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A61D8AEA35863190C24F72 /* ClipboardBar.swift */; };
 		BFFED082916BD336DF9BA939 /* TextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B4B2141C4D2038B72B83EF /* TextView.swift */; };
@@ -369,6 +371,7 @@
 		D9FC557C711D3D686A906B22 /* PopupsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313DD89FF2119DDFF4996979 /* PopupsView.swift */; };
 		DAFFA655083B8B84661AD2EC /* PyAST.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C49EC9094961E6154402EA5 /* PyAST.swift */; };
 		DB84BAB4CDE3273780537F18 /* EmojiCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904EC1B1C1F79C503738CECD /* EmojiCanvas.swift */; };
+		DBA5D3B2D4C1BAA8F9B38521 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 0B50087F98413FE93ACC443D /* LICENSE */; };
 		DC2D4AC3C3DADE212D4BD320 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778C0C73D09A5F6EBE94A105 /* FeatureFlags.swift */; };
 		DCB8596917DA9FBC7977AFA7 /* fr.cngm in Resources */ = {isa = PBXBuildFile; fileRef = 4305FB529BA07C78DC2C7B68 /* fr.cngm */; };
 		DD8199645FB8E48AE0FEAA29 /* TouchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A744FB305610F842875AA9 /* TouchEngine.swift */; };
@@ -476,6 +479,7 @@
 		0761F936B8A6B937C0ECD46C /* CalculatorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorPanel.swift; sourceTree = "<group>"; };
 		0782ECAE008251748D18E1D1 /* Theme+Sakura.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Sakura.swift"; sourceTree = "<group>"; };
 		07CA903F575F647CCA010CD1 /* EnableFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnableFlowView.swift; sourceTree = "<group>"; };
+		0B50087F98413FE93ACC443D /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 		0BAFE2A3EE0CAFE4F4E44E11 /* OverlaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlaysView.swift; sourceTree = "<group>"; };
 		0C2601A5B41BF718DD05CA39 /* Theme+Graphite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme+Graphite.swift"; sourceTree = "<group>"; };
 		0CA35E80AF975521E462AB2B /* AnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationView.swift; sourceTree = "<group>"; };
@@ -905,6 +909,7 @@
 				4305FB529BA07C78DC2C7B68 /* fr.cngm */,
 				69E065A585C640BCC9E256E5 /* it.clex */,
 				4F288C51F565F452CFA303CE /* it.cngm */,
+				0B50087F98413FE93ACC443D /* LICENSE */,
 				EBFB79504798ECAC2E385501 /* pt.clex */,
 				9907C910E96BD744FB60034B /* pt.cngm */,
 				150813A562B86CE32C633A7E /* ru.clex */,
@@ -1152,6 +1157,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				819662BE3E7814C19F18A12E /* Assets.xcassets in Resources */,
+				BE27D869ED07FD64A09EE660 /* LICENSE in Resources */,
 				0BFA467574BE7B9D7C2F9A41 /* PrivacyInfo.xcprivacy in Resources */,
 				3DB63CD7E7F3F6787E3FCC5E /* de.clex in Resources */,
 				29A7ED4AA2183A064FC4949B /* de.cngm in Resources */,
@@ -1174,6 +1180,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9219A26805869F76AB9E2937 /* LICENSE in Resources */,
 				F539BD1D384D304CC462A3C0 /* de.clex in Resources */,
 				79D7416255D9751F5816F6F6 /* de.cngm in Resources */,
 				076716723D5ED7F3D40DA89D /* en.clex in Resources */,
@@ -1195,6 +1202,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DBA5D3B2D4C1BAA8F9B38521 /* LICENSE in Resources */,
 				68627A6C8F349503A1764BC9 /* PrivacyInfo.xcprivacy in Resources */,
 				3CE5523A732801B3E2F22965 /* de.clex in Resources */,
 				26922852107CC53E7E682482 /* de.cngm in Resources */,

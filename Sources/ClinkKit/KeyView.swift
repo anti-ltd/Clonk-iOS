@@ -123,8 +123,13 @@ struct KeyView: View {
         }
         // Visible bloom on press for the generic keys — only when bloom is on
         // (its effective scale grows). The shift key opts out (its own
-        // interactive-glass morph, see `glass` / `surface`).
-        if isPressed, !showsPopup, !spec.isShift, physics.bloomEnabled {
+        // interactive-glass morph, see `glass` / `surface`). Skipped entirely
+        // during a typing burst: a sprung scale re-rasters the glass lens every
+        // frame, and that frame work lands on the next key's touch delivery —
+        // felt as haptic lag. In a burst the key tint-flips instead (one raster),
+        // and the bloom returns the instant typing slows (see MotionProfile).
+        if isPressed, !showsPopup, !spec.isShift, physics.bloomEnabled,
+           !MotionProfile.shared.prefersInstantKeyPress {
             // Softened on glass (see `effectiveBloomScale`) so the key grows
             // less into its neighbours — cheaper for the container to merge.
             // `pressStyle` reshapes the SAME single scale into different feels:
@@ -143,20 +148,21 @@ struct KeyView: View {
     }
 
     var body: some View {
-        // Liquid glass only: register a dependency on the neighbours' press
-        // activity. The container's liquid merge between adjacent keys only
-        // refreshes when the views on BOTH sides of the blend re-evaluate, so
-        // each glass key re-renders when a neighbour is pressed/released (the
-        // router bumps this tick — see `recomputePressed`). That's ~6 keys per
-        // press instead of the whole grid, which is what keeps the press bloom
-        // landing on the very next frame. Solid themes have no cross-key
-        // blending and skip the read entirely.
-        if theme.material == .liquidGlass { _ = state.neighborTick }
+        // NOTE: glass keys deliberately do NOT register a dependency on a
+        // neighbour's press here. The pressed key still blooms and its own lens
+        // re-rasterizes, but waking the ~6 surrounding keys so the bulge
+        // liquid-*bleeds* into them meant ~7 lens re-rasters per frame for the
+        // whole spring — the press lag, even on a full-power device. Isolating
+        // the bloom to the pressed key alone (one lens per frame) is the ~6× win;
+        // the only thing lost is the brief inter-key bleed on a tap, which is
+        // barely perceptible at tap speed. The SWIPE ripple keeps its cross-key
+        // swell — it pushes per-key `bulge` directly, no neighbour wake needed.
         let w = warp
-        // Generic keys: only the SURFACE blooms here (and morphs in the
-        // container); the glyph is drawn on top by the canvas glyph layer.
-        // The shift key draws its OWN glyph as glass content, so its interactive
-        // glass can animate the glyph along with it (the caps-lock morph).
+        // The press bloom is applied to the SURFACE (the glass lens deforms) AND
+        // republished to the glyph layer, so key and letter morph together. On
+        // glass the bloom GROWTH is auto-clamped (see `effectiveBloomScale`) so a
+        // single lens re-raster per frame stays cheap; the shift key draws its own
+        // glyph as glass content for the caps-lock morph.
         let swipeScale = swipeBulgeScale
         return surface
             // Accent glow behind a pressed key — a blurred tinted halo on the few
@@ -182,7 +188,12 @@ struct KeyView: View {
             // the cursor shrink below, so a drag-release — where `isPressed` and
             // `cursorActive` clear in the same frame — settles on ONE spring instead
             // of two different ones fighting over the scale (the release stutter).
-            .animation(spec.isSpace
+            // During a typing burst, snap (no animation): a spring would
+            // interpolate the tint/scale over many frames, each one re-rastering
+            // the glass lens and stealing time from the next key's touch
+            // delivery. One raster down, one up — nothing per-frame.
+            .animation(MotionProfile.shared.prefersInstantKeyPress ? nil
+                       : spec.isSpace
                        ? physics.spaceSpringAnimation
                        : (physics.bloomEnabled && !spec.isShift && !physics.instant
                           // Bloom RISES with the tuned (bouncy) spring, RETURNS
@@ -190,6 +201,10 @@ struct KeyView: View {
                           // `isPressed` flips, so the active spring matches the
                           // direction. The return's collapsed ring is what stops
                           // the glass lens re-compositing through a long bounce.
+                          // Now that the bloom is isolated to this one key (no
+                          // neighbour re-blend, see `body`), the per-frame lens
+                          // re-raster is a single key — cheap enough to keep the
+                          // full sprung deformation + tint.
                           ? (isPressed ? physics.keySpringAnimation : physics.keyReleaseAnimation) : nil),
                        value: isPressed)
             // The space bar's trackpad shrink in/out — a one-shot at engage/release,

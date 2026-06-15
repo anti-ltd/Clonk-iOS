@@ -80,6 +80,13 @@ public extension KeyboardLayout {
             ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
             ["y", "x", "c", "v", "b", "n", "m"],
         ]),
+        // German QWERTZ — dedicated ü on the top row, ö ä on the home row,
+        // matching the native German keyboard.
+        KeyboardLayout(id: "german", name: "German (QWERTZ)", rows: [
+            ["q", "w", "e", "r", "t", "z", "u", "i", "o", "p", "ü"],
+            ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ö", "ä"],
+            ["y", "x", "c", "v", "b", "n", "m"],
+        ]),
         KeyboardLayout(id: "dvorak", name: "Dvorak", rows: [
             ["p", "y", "f", "g", "c", "r", "l"],
             ["a", "o", "e", "u", "i", "d", "h", "t", "n", "s"],
@@ -119,7 +126,7 @@ public extension KeyboardLayout {
         case "sv", "fi":               return "swedish"
         case "nb", "nn", "no", "da":   return "norwegian"
         case "fr":                     return "azerty"
-        case "de":                     return "qwertz"
+        case "de":                     return "german"
         case "uk":                     return "ukrainian"
         case "ru", "be", "bg":         return "russian"
         case "el":                     return "greek"

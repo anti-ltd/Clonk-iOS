@@ -26,7 +26,7 @@ struct LayoutControls: View {
     private var groups: [(title: String, layouts: [KeyboardLayout])] {
         let order: [(String, [String])] = [
             ("Latin", ["qwerty", "spanish", "portuguese", "swedish", "norwegian",
-                       "turkish", "azerty", "qwertz", "dvorak"]),
+                       "turkish", "azerty", "qwertz", "german", "dvorak"]),
             ("Cyrillic", ["russian", "ukrainian"]),
             ("Greek", ["greek"]),
         ]

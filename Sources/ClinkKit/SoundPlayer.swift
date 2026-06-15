@@ -38,6 +38,17 @@ final class SoundPlayer {
     private var haptics = UIImpactFeedbackGenerator(style: .light)
     private var haptchStyle: HapticStyle = .light
 
+    /// Heartbeat that re-primes the Taptic Engine while the keyboard is on screen.
+    /// `impactOccurred`'s re-prime (in `play`) only keeps the engine warm for the
+    /// ~1–2s *between keys in a burst*; once typing pauses past that, the engine
+    /// spins down and the FIRST key after the pause lands its haptic tens of ms
+    /// late. A low-rate prepare keeps it perpetually warm so no press ever hits a
+    /// cold engine. Lives only while the keyboard is visible (see start/stop).
+    private var keepWarm: Timer?
+    /// Latest play/prepare context, so the heartbeat knows whether to fire.
+    private var lastSettings: KeyboardSettings?
+    private var lastFullAccess = false
+
     private static func uiStyle(_ s: HapticStyle) -> UIImpactFeedbackGenerator.FeedbackStyle {
         switch s {
         case .light:  return .light
@@ -60,6 +71,8 @@ final class SoundPlayer {
 
     /// Play feedback for one keypress.
     func play(settings: KeyboardSettings, hasFullAccess: Bool) {
+        lastSettings = settings
+        lastFullAccess = hasFullAccess
         guard settings.soundEnabled || settings.hapticsEnabled else { return }
 
         if settings.hapticsEnabled, hasFullAccess {
@@ -89,6 +102,8 @@ final class SoundPlayer {
 
     /// Warm the haptic engine and decode the pack's samples ahead of typing.
     func prepare(for settings: KeyboardSettings, hasFullAccess: Bool) {
+        lastSettings = settings
+        lastFullAccess = hasFullAccess
         if settings.hapticsEnabled, hasFullAccess { generator(for: settings.hapticStyle).prepare() }
         guard settings.soundEnabled, hasFullAccess, settings.soundPack.needsFullAccess else { return }
         // Activate the audio session NOW, at keyboard load — `setActive` is a
@@ -104,6 +119,32 @@ final class SoundPlayer {
             players[name] = try? AVAudioPlayer(contentsOf: url)
             players[name]?.prepareToPlay()
         }
+    }
+
+    /// Start the keep-warm heartbeat. Call when the keyboard appears. Idempotent.
+    /// The interval is shorter than the Taptic Engine's ~1–2s spin-down so the
+    /// engine is always primed; it's a no-op tick when haptics are off or Full
+    /// Access is absent, so it costs nothing in those cases.
+    func startKeepWarm() {
+        keepWarm?.invalidate()
+        let timer = Timer(timeInterval: 1.2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rePrime() }
+        }
+        // .common so it keeps firing while the user scrolls/holds a key.
+        RunLoop.main.add(timer, forMode: .common)
+        keepWarm = timer
+    }
+
+    /// Stop the heartbeat. Call when the keyboard disappears — no point heating
+    /// the engine (or holding a Timer) while we're off screen.
+    func stopKeepWarm() {
+        keepWarm?.invalidate()
+        keepWarm = nil
+    }
+
+    private func rePrime() {
+        guard let s = lastSettings, s.hapticsEnabled, lastFullAccess else { return }
+        generator(for: s.hapticStyle).prepare()
     }
 
     private func nextPlayer(for pack: SoundPack) -> AVAudioPlayer? {

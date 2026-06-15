@@ -62,6 +62,21 @@ final class KeyboardViewController: UIInputViewController {
     /// guards against a slow response overwriting newer text.
     private var aiSuggestionTask: Task<Void, Never>?
     private var aiSuggestionSeq = 0
+    /// Watches the extension's (tiny) memory budget so the renderer can shed its
+    /// heaviest layer — Liquid Glass — before the sandbox jetsams or starts
+    /// dropping compositing frames. Memory, not thermal/battery, is the binding
+    /// constraint in here, and it fires long before `thermalState` climbs, so it
+    /// drives `MotionProfile` directly (see `armMemoryPressureSource`). `.warn`
+    /// lands earlier than UIKit's `didReceiveMemoryWarning`, which we keep as a
+    /// backstop.
+    private var memoryPressureSource: DispatchSourceMemoryPressure?
+    /// Clears the conserving flag once the keyboard has gone `memoryPressureCooldown`
+    /// without another warning — pressure signals come in bursts, so we hold the
+    /// solid fallback briefly rather than flipping glass back on mid-burst (which
+    /// would re-spend the memory we just reclaimed and likely re-trip the warning).
+    private var memoryPressureRelease: DispatchWorkItem?
+    private static let memoryPressureCooldown: TimeInterval = 8
+
     /// A correction the user explicitly rejected (tapped "keep") — suppressed
     /// until they move on to a different word.
     private var rejectedCorrection: String?
@@ -147,6 +162,7 @@ final class KeyboardViewController: UIInputViewController {
         store.reportFullAccess(hasFullAccess)
         reloadSettings()
         observeExtraBarHeight()
+        armMemoryPressureSource()
         loadLexicon()
         updateSuggestions()
         updateReturnKey()
@@ -192,7 +208,63 @@ final class KeyboardViewController: UIInputViewController {
         // so the appearance animation starts from our real height, not the balloon.
         tameSystemHeightConstraint()
         view.layoutIfNeeded()
+        // Keep the Taptic Engine warm the whole time we're on screen, so the first
+        // key after a typing pause doesn't land its haptic late (cold-engine spin-up).
+        sound.startKeepWarm()
         logHeightState("viewWillAppear")
+    }
+
+    // MARK: - Memory pressure
+
+    deinit {
+        // Cancel the GCD source (Sendable, safe from a nonisolated deinit). The
+        // pending release work item is left alone — `DispatchWorkItem` isn't
+        // Sendable so it can't be touched here, and it's harmless: it captures no
+        // `self`, only hops to the MainActor to clear a global flag.
+        memoryPressureSource?.cancel()
+    }
+
+    /// Start a GCD memory-pressure source on the main queue. `.warn` fires
+    /// earlier than UIKit's `didReceiveMemoryWarning`; both route to
+    /// `noteMemoryPressure`, which drops Liquid Glass to a solid render via
+    /// `MotionProfile`. Idempotent — re-arming (re-used VC) replaces the source.
+    private func armMemoryPressureSource() {
+        // Extension-only ceiling: memory-forced glass-shedding belongs to the
+        // keyboard sandbox, not the host app's showcase (which has the whole
+        // device and is where the user judges full-fidelity glass). The bundle
+        // check makes that scope explicit even though this VC only ships in the
+        // extension target.
+        guard MotionProfile.isAppExtension else { return }
+        memoryPressureSource?.cancel()
+        let source = DispatchSource.makeMemoryPressureSource(
+            eventMask: [.warning, .critical], queue: .main)
+        // The handler is a nonisolated `@Sendable` closure (the type system can't
+        // see it lands on `.main`), so hop to the MainActor for the isolated call.
+        source.setEventHandler { [weak self] in
+            Task { @MainActor in self?.noteMemoryPressure() }
+        }
+        memoryPressureSource = source
+        source.resume()
+    }
+
+    /// UIKit's coarser backstop to the GCD source above.
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        noteMemoryPressure()
+    }
+
+    /// Force the conserving tier (sheds glass + expensive layers) and arm the
+    /// cooldown that lifts it once warnings stop. Re-fires extend the hold rather
+    /// than bounce glass back on mid-burst.
+    private func noteMemoryPressure() {
+        MotionProfile.shared.setMemoryPressure(true)
+        memoryPressureRelease?.cancel()
+        let release = DispatchWorkItem {
+            Task { @MainActor in MotionProfile.shared.setMemoryPressure(false) }
+        }
+        memoryPressureRelease = release
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + Self.memoryPressureCooldown, execute: release)
     }
 
     /// `viewWillAppear` is often too early on a keyboard *switch*: iOS hasn't yet
@@ -215,6 +287,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         hosting?.view.isHidden = true
+        // Stop heating the Taptic Engine while we're off screen.
+        sound.stopKeepWarm()
         // Learning writes are coalesced; persist whatever's pending on the way out.
         adaptation.flush()
     }
@@ -574,6 +648,9 @@ final class KeyboardViewController: UIInputViewController {
             onAnyTap: { [weak self] in
                 guard let self else { return }
                 self.lastKeyActivity = Date()
+                // Drive the typing-burst tier: fast keys shed the per-frame glass
+                // bloom/glow so render frames stop crowding out touch delivery.
+                MotionProfile.shared.noteKeystroke()
                 self.sound.play(settings: self.settings, hasFullAccess: self.hasFullAccess)
             },
             // The globe key — only the extension can advance input modes.
@@ -706,6 +783,9 @@ final class KeyboardViewController: UIInputViewController {
             onAnyTap: { [weak self] in
                 guard let self else { return }
                 self.lastKeyActivity = Date()
+                // Drive the typing-burst tier: fast keys shed the per-frame glass
+                // bloom/glow so render frames stop crowding out touch delivery.
+                MotionProfile.shared.noteKeystroke()
                 self.sound.play(settings: self.settings, hasFullAccess: self.hasFullAccess)
             },
             onNextKeyboard: needsInputModeSwitchKey
