@@ -270,9 +270,18 @@ struct KeyboardPreview: View {
     var lockedText: String? = nil
     @State private var typed: String = ""
     @State private var cursorPos: Int = 0
-    // Sample suggestions so the preview shows the autocomplete bar populated.
-    // Cleared when the field is locked so tapping a chip can't mutate the text.
-    @State private var live = KeyboardLiveState(suggestions: ["clink", "keyboard", "hello"])
+    // The bar starts empty and fills from the real engine as the user types —
+    // same `KeyboardLiveState` the extension drives. Locked previews pass a
+    // throwaway state so tapping a chip can't mutate the sample text.
+    @State private var live = KeyboardLiveState()
+    /// The real suggestion engine, so the in-app preview produces the exact same
+    /// predictions / completions / emoji the keyboard extension does — including
+    /// learned and custom-dictionary words via `UserAdaptation`.
+    private let suggestEngine = SuggestionEngine()
+    /// In-flight Apple Intelligence prediction + a seq guard, mirroring the
+    /// extension so a slow response can't overwrite newer preview text.
+    @State private var aiTask: Task<Void, Never>?
+    @State private var aiSeq = 0
 
     /// Triadic gradient derived from the theme accent — vibrant enough to give
     /// glass something to refract, distinct enough not to blend with the keyboard.
@@ -448,12 +457,95 @@ struct KeyboardPreview: View {
                 typed = lockedText
                 cursorPos = lockedText.count / 2
             }
+            // Locked previews are for cursor tuning and pass an empty live state,
+            // so there's nothing to compute. Otherwise prime the engine.
+            guard lockedText == nil else { return }
+            suggestEngine.setLanguages(settings.keyboardLanguages)
+            suggestEngine.setAdaptation(UserAdaptation.shared)
+            // Warm the model so the first AI suggestion isn't slow. No-op when AI
+            // is off / unavailable (the actor guards internally).
+            if settings.aiEnabled && settings.aiSuggestions {
+                Task { await AIEngine.shared.prewarm() }
+            }
+            refreshSuggestions()
+            refreshAISuggestions()
+        }
+        .onChange(of: typed) { _, _ in
+            guard lockedText == nil else { return }
+            refreshSuggestions()
+            refreshAISuggestions()
         }
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
                 .strokeBorder(.separator, lineWidth: 0.5)
         )
+    }
+
+    // MARK: - Live suggestions
+
+    /// Recompute the bar from the text typed so far, exactly like the extension's
+    /// `fastComputeSuggestions`. Auto-correction is left off — the preview is for
+    /// trying predictions, not for silently rewriting what the user types.
+    private func refreshSuggestions() {
+        guard settings.suggestionsEnabled else {
+            if !live.suggestions.isEmpty { live.suggestions = [] }
+            if !live.emojiSuggestions.isEmpty { live.emojiSuggestions = [] }
+            return
+        }
+        let before = String(typed.prefix(min(cursorPos, typed.count)))
+        let partial = SmartPunctuation.trailingPartialWord(in: before)
+        let result = suggestEngine.compute(
+            partial: partial,
+            previousWord: previousWord(before: before, partial: partial),
+            sentenceStart: isSentenceStart(before: before, partial: partial),
+            autocorrect: false,
+            autoPunctuation: false,
+            rejected: nil)
+        live.suggestions = result.predictions
+        live.emojiSuggestions = result.emoji
+    }
+
+    private func previousWord(before: String, partial: String) -> String? {
+        guard partial.isEmpty else { return nil }
+        let trimmed = before.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let last = trimmed.last, !".!?".contains(last) else { return nil }
+        let word = SmartPunctuation.trailingPartialWord(in: trimmed)
+        return word.isEmpty ? nil : word
+    }
+
+    private func isSentenceStart(before: String, partial: String) -> Bool {
+        guard partial.isEmpty else { return false }
+        let trimmed = before.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        if let last = trimmed.last, ".!?".contains(last) { return true }
+        return false
+    }
+
+    /// Augment the bar with Apple Intelligence predictions, exactly like the
+    /// extension's `aiComputeSuggestions`. On the simulator this uses the host
+    /// Mac's Apple Intelligence; on a non-eligible setup the availability guard
+    /// just clears any stale AI words.
+    private func refreshAISuggestions() {
+        aiTask?.cancel()
+        guard settings.suggestionsEnabled, settings.aiEnabled, settings.aiSuggestions,
+              AIAvailability.current() == .available else {
+            if !live.aiSuggestions.isEmpty { live.aiSuggestions = [] }
+            return
+        }
+        let before = String(typed.prefix(min(cursorPos, typed.count)))
+        let partial = SmartPunctuation.trailingPartialWord(in: before)
+        guard !before.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !partial.isEmpty else {
+            if !live.aiSuggestions.isEmpty { live.aiSuggestions = [] }
+            return
+        }
+        aiSeq += 1
+        let seq = aiSeq
+        aiTask = Task {
+            let words = try? await AIEngine.shared.suggestions(context: before, partial: partial)
+            guard let words, !Task.isCancelled, seq == aiSeq else { return }
+            live.aiSuggestions = words
+        }
     }
 }
 

@@ -39,14 +39,14 @@ struct EnableFlowView: View {
                 CardSection("2 · Switch to Clink") {
                     step("In any app, tap the 🌐 globe key to switch to Clink.")
                     Divider()
-                    step("Tap the emoji key (or swipe up from 123) to browse emoji right inside Clink — no extra keyboard needed.")
+                    step("Tap the emoji key, or swipe up on 123, to open emoji inside Clink. No second keyboard.")
                 }
 
                 CardSection("3 · Full Access (optional)") {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Clink works fully without Full Access — you get the standard system click. Turn it on only if you want custom **clink** sound packs and haptics.")
+                        Text("Clink works fully without Full Access. You still get the standard system click. Flip it on if you want custom **clink** sound packs and haptics.")
                             .font(.callout)
-                        Text("Clink is offline and has no accounts. It never sends your keystrokes anywhere — Full Access just lets the keyboard play audio and vibrate.")
+                        Text("Clink is offline with no accounts. Your keystrokes never leave the device. Full Access only lets the keyboard play audio and vibrate.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     .padding(.vertical, UX.rowVPadding)

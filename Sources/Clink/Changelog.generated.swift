@@ -50,11 +50,14 @@ and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   vocabulary. One JSON file in the App Group; nothing leaves the device, gated
   by the `learningEnabled` setting. (`UserAdaptation`)
 - **Apple Intelligence backend** — optional on-device AI via the
-  `FoundationModels` framework (iOS 26+, A17 Pro / M-series), used for the
-  auto-shown inline suggestion picker. Inference runs in an Apple system process
-  so it works inside the extension without counting against its memory cap. Off
-  by default (`aiEnabled`), with full availability probing for older OS /
-  ineligible hardware / Apple Intelligence disabled. (`AIEngine`)
+  `FoundationModels` framework (iOS 26+, A17 Pro / M-series). It augments the
+  suggestion bar with next-word and completion predictions (gated on `aiEnabled`
+  + `aiSuggestions`) and powers AI translation in the Translate panel. The AI
+  words *augment* the instant offline bar asynchronously — they never replace or
+  delay it. Inference runs in an Apple system process so it works inside the
+  extension without counting against its memory cap. Off by default (`aiEnabled`),
+  with full availability probing for older OS / ineligible hardware / Apple
+  Intelligence disabled. (`AIEngine`)
 - **Custom keys** — build your own keys in *Layout → Custom*: insert text (with
   optional Gboard-style long-press alternates) or act as a function key (cursor
   nudge, plane switch, emoji, backspace), placed beside the space bar or in

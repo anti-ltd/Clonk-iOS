@@ -91,9 +91,15 @@ struct ThemedSheetOverlay<Content: View>: View {
     @State private var isExpanded = false
 
     private let headerHeight: CGFloat = 56
-    /// Max sheet height: leaves room for the 44pt nav button bar + safe area + 8pt gap.
+    /// Floor for the top inset. The overlay ignores the safe area, so
+    /// `geo.safeAreaInsets.top` can report 0 — without this floor an expanded
+    /// sheet grows tall enough to slide under the floating nav buttons in the top
+    /// corners. 59 clears the Dynamic-Island status bar; the +52 below clears the
+    /// 44pt button row plus an 8pt gap.
+    private var topInset: CGFloat { max(safeAreaTop, 59) }
+    /// Max sheet height: leaves room for the status bar + nav button row + gap.
     private var maxSheetHeight: CGFloat {
-        screenHeight - safeAreaTop - 44 - 8
+        screenHeight - topInset - 44 - 8
     }
 
     var body: some View {
@@ -173,7 +179,7 @@ struct ThemedSheetOverlay<Content: View>: View {
                 guard h > 0, !isIn else { return }
                 // Use UIScreen as fallback when preference fires before onAppear sets screenHeight.
                 let sh = screenHeight > 0 ? screenHeight : UIScreen.main.bounds.height
-                let sat = safeAreaTop > 0 ? safeAreaTop : 0
+                let sat = max(safeAreaTop, 59)
                 let maxH = (sh - sat - 44 - 8) * maxHeightFraction
                 let computed = min(h + headerHeight + 40, maxH)
                 naturalHeight = computed

@@ -179,6 +179,56 @@ public actor AIEngine {
         return try await generate(request)
     }
 
+    /// Predict the next word(s) — or completions of the final partial word —
+    /// from the text typed so far. A thin wrapper over `generate` with a
+    /// predictive-keyboard persona that returns a parsed, de-duplicated,
+    /// single-word list (≤ `limit`). These *augment* the instant offline
+    /// suggestions; callers gate on `aiEnabled && aiSuggestions` and the model
+    /// being available, and merge the result into `live.aiSuggestions`. Throws
+    /// `AIEngineError.unavailable` if the model can't run.
+    /// Instructions for the predictive-text session. A `static` constant so the
+    /// keyboard can `prewarm(instructions:)` with the EXACT same string — the
+    /// session is rebuilt whenever instructions change, so warming with anything
+    /// else would still pay a cold rebuild on the first real `suggestions` call.
+    public static let suggestionInstructions = """
+    You are a phone keyboard's predictive-text engine. Given the text typed \
+    so far, output the most likely next words — or completions of the final \
+    partial word. Output ONLY the words, one per line: no numbering, no \
+    punctuation, no quotes, no commentary. Each line is exactly one word, \
+    lowercase unless it's a proper noun. Never output a word that just stitches \
+    together or repeats words already typed.
+    """
+
+    public func suggestions(context: String, partial: String, limit: Int = 3) async throws -> [String] {
+        let trimmed = context.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty || !partial.isEmpty else { return [] }
+        let instructions = Self.suggestionInstructions
+        let prompt: String
+        if partial.isEmpty {
+            prompt = "Text so far: \"\(trimmed)\"\nThe \(limit) most likely next words:"
+        } else {
+            prompt = "Text so far: \"\(trimmed)\"\nComplete the final word \"\(partial)\" — \(limit) most likely full words:"
+        }
+        let raw = try await generate(GenerationRequest(
+            prompt: prompt,
+            instructions: instructions,
+            temperature: 0.4,
+            maximumResponseTokens: 24))
+        // Parse a tolerant set of separators (the model occasionally commas or
+        // bullets despite the persona), keep single words only, de-dupe.
+        let strip = CharacterSet(charactersIn: " \t.-•*\"'`0123456789)")
+        var out: [String] = []
+        var seen = Set<String>()
+        for piece in raw.split(whereSeparator: { $0 == "\n" || $0 == "," }) {
+            let word = piece.trimmingCharacters(in: strip)
+            guard !word.isEmpty, !word.contains(" "),
+                  seen.insert(word.lowercased()).inserted else { continue }
+            out.append(word)
+            if out.count >= limit { break }
+        }
+        return out
+    }
+
     /// Streamed generation for future live-typing features. Yields *deltas*
     /// (newly generated text only), not cumulative snapshots. `nonisolated`:
     /// it only spawns a task that hops onto the actor, so callers get the

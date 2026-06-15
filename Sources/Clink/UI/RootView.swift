@@ -1075,9 +1075,16 @@ private struct ClinkContent: View {
     @State private var showExtensionPicker = false
     @State private var showBackupSheet = false
     @State private var showChangelog = false
+    @State private var showDictionaries = false
 
     private var themeAccent: Color {
         model.settings.resolvedTheme(dark: colorScheme == .dark).accent.color
+    }
+
+    /// True once setup is complete: the keyboard is enabled in Settings and Full
+    /// Access is granted. Drives the Permissions card's done-state checkmark.
+    private var allPermissionsGranted: Bool {
+        model.isKeyboardEnabled && model.hasFullAccess
     }
 
     private var appVersion: String {
@@ -1190,8 +1197,6 @@ private struct ClinkContent: View {
                         .frame(width: 72, height: 72)
                     Text("Clink")
                         .font(.title.weight(.bold))
-                    Text(appVersion)
-                        .font(.caption).foregroundStyle(specialKeyTextColor)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
@@ -1199,16 +1204,9 @@ private struct ClinkContent: View {
 
                 CardSection {
                     VStack(alignment: .leading, spacing: 8) {
-                        Picker("Settings mode", selection: $model.settings.advancedSettings) {
-                            Text("Simple").tag(false)
-                            Text("Advanced").tag(true)
-                        }
-                        .pickerStyle(.segmented)
-                        Text(model.settings.advancedSettings
-                             ? "Advanced: every fine-tune control is shown."
-                             : "Simple: just the essentials. Switch to Advanced for fine-tune controls throughout the app.")
-                            .font(.caption)
-                            .foregroundStyle(specialKeyTextColor)
+                        ThemedTabPicker(
+                            options: [("Simple", false), ("Advanced", true)],
+                            selection: $model.settings.advancedSettings)
                     }
                     .padding(.vertical, UX.rowVPadding)
                 }
@@ -1222,19 +1220,15 @@ private struct ClinkContent: View {
                 }
 
                 VStack(spacing: 10) {
-                    Button { showChangelog = true } label: {
-                        Text("CHANGELOG")
-                            .font(.caption2.weight(.semibold))
-                            .tracking(1.5)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
+                    Text(appVersion)
+                        .font(.caption).foregroundStyle(specialKeyTextColor)
 
-                    // Required attribution for the bundled prediction data
-                    // (see Tools/wordlists/README.md for sources + licenses).
-                    Text("Dictionaries: FrequencyWords (CC-BY-SA 4.0) · Tatoeba (CC-BY 2.0 FR)")
-                        .font(.caption2).foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
+                    HStack(spacing: 14) {
+                        footerIconButton("list.bullet.rectangle") { showChangelog = true }
+                        // Attribution for the bundled prediction data, behind a
+                        // button (full sources + licenses in the sheet).
+                        footerIconButton("character.book.closed") { showDictionaries = true }
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
@@ -1251,6 +1245,20 @@ private struct ClinkContent: View {
         .themedSheet(isPresented: $showExtensionPicker, title: "Extensions") { ExtensionPickerContent() }
         .themedSheet(isPresented: $showBackupSheet, title: "Backup & Restore") { BackupControls() }
         .themedSheet(isPresented: $showChangelog, title: "Changelog") { ChangelogContent() }
+        .themedSheet(isPresented: $showDictionaries, title: "Dictionaries") { DictionariesContent() }
+    }
+
+    /// A small, subtle circular icon button for the home footer (changelog /
+    /// dictionaries). Tertiary so it stays quiet under the cards.
+    private func footerIconButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.callout)
+                .foregroundStyle(.tertiary)
+                .frame(width: 36, height: 36)
+                .background(Circle().fill(.primary.opacity(0.06)))
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -1271,24 +1279,87 @@ private struct ClinkContent: View {
                 }
             }
 
-            // Non-lazy pairs so every card is always rendered and measured,
-            // which lets DestCardHeightKey capture the true global maximum
-            // on the very first layout pass — LazyVGrid would miss off-screen rows.
-            VStack(spacing: 10) {
-                ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { i in
-                    HStack(spacing: 10) {
-                        destCard(cards[i])
-                        if i + 1 < cards.count {
-                            destCard(cards[i + 1])
-                        } else {
-                            // Odd-count section: phantom cell keeps the real card
-                            // at the correct 50 % width instead of stretching full.
-                            Color.clear.frame(maxWidth: .infinity)
+            if model.settings.advancedSettings {
+                // Advanced: dense 2-column grid. Non-lazy pairs so every card is
+                // always rendered and measured, which lets DestCardHeightKey
+                // capture the true global maximum on the first layout pass —
+                // LazyVGrid would miss off-screen rows.
+                VStack(spacing: 10) {
+                    ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { i in
+                        HStack(spacing: 10) {
+                            destCard(cards[i])
+                            if i + 1 < cards.count {
+                                destCard(cards[i + 1])
+                            } else {
+                                // Odd-count section: phantom cell keeps the real card
+                                // at the correct 50 % width instead of stretching full.
+                                Color.clear.frame(maxWidth: .infinity)
+                            }
                         }
+                    }
+                }
+            } else {
+                // Simple: one wide, short card per row — icon and label side by side.
+                VStack(spacing: 10) {
+                    ForEach(Array(cards.enumerated()), id: \.offset) { _, card in
+                        rowCard(card)
                     }
                 }
             }
         }
+    }
+
+    /// Simple-mode card: full-width horizontal row (icon · title + description ·
+    /// chevron), intrinsic short height — no `cardHeight` equalization.
+    private func rowCard(_ card: DestCard) -> some View {
+        let isGhost = card.ghost
+        return Button { card.action?() ?? sidebar.navigate?(card.dest) } label: {
+            HStack(spacing: 14) {
+                Image(systemName: card.icon)
+                    .font(.title2)
+                    .foregroundStyle(isGhost ? AnyShapeStyle(.secondary) : AnyShapeStyle(themeAccent))
+                    .frame(width: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(card.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(isGhost ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                        .lineLimit(1)
+                    Text(card.description)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                // Permissions row: once the keyboard is enabled and Full Access
+                // is granted, swap the chevron for an accent checkmark so the
+                // whole setup reads as "done" at a glance.
+                if card.dest == .permissions && allPermissionsGranted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(themeAccent)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background {
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                    .fill(isGhost ? Color.clear : (cardTint ?? Color(.secondarySystemBackground)))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                    .strokeBorder(
+                        isGhost ? Color.primary.opacity(0.18) : Color.primary.opacity(UX.Glass.outlineOpacity),
+                        style: isGhost ? StrokeStyle(lineWidth: 1, dash: [5, 3]) : StrokeStyle(lineWidth: UX.Glass.outlineWidth)
+                    )
+            }
+            .contentShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func destCard(_ card: DestCard) -> some View {
@@ -1330,6 +1401,99 @@ private struct ClinkContent: View {
         })
     }
 
+}
+
+// MARK: - Dictionaries sheet
+
+/// The open-data sources behind the prediction engine, shown in the home-footer
+/// "DICTIONARIES" sheet. Mirrors `Tools/wordlists/README.md` — keep in sync when
+/// a corpus is added or swapped.
+private struct DictionarySource: Identifiable {
+    let id = UUID()
+    let name: String
+    let role: String
+    let license: String
+    let url: String
+}
+
+private let dictionarySources: [DictionarySource] = [
+    .init(name: "hermitdave / FrequencyWords",
+          role: "Word frequency lists (OpenSubtitles 2018) behind completions and ranking.",
+          license: "CC-BY-SA 4.0",
+          url: "https://github.com/hermitdave/FrequencyWords"),
+    .init(name: "Norvig / Google trillion-word corpus",
+          role: "English word-pair counts behind next-word prediction.",
+          license: "Free to use",
+          url: "https://norvig.com/ngrams/"),
+    .init(name: "Tatoeba sentence exports",
+          role: "Non-English word-pair counts behind next-word prediction.",
+          license: "CC-BY 2.0 FR",
+          url: "https://tatoeba.org/en/downloads"),
+]
+
+/// Lists the bundled dictionaries as cards (name · what it powers · license ·
+/// link), styled like the changelog sheet. All data ships in the app; the links
+/// are attribution only.
+private struct DictionariesContent: View {
+    @Environment(\.cardCornerRadius) private var cardCornerRadius
+    @Environment(\.cardTint) private var cardTint
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(dictionarySources) { src in
+                card(src)
+            }
+            Text("Every dictionary is bundled in the app and runs on-device. Nothing you type is sent anywhere; the links are credit to the source projects.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func card(_ src: DictionarySource) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(src.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(src.license)
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.3)
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+            }
+            Text(src.role)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let link = URL(string: src.url) {
+                Link(destination: link) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right.square")
+                        Text(src.url.replacingOccurrences(of: "https://", with: ""))
+                            .lineLimit(1).truncationMode(.middle)
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background {
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .fill(cardTint ?? Color(.secondarySystemBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+                .strokeBorder(Color.primary.opacity(UX.Glass.outlineOpacity), lineWidth: UX.Glass.outlineWidth)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+    }
 }
 
 // MARK: - Changelog sheet
@@ -1374,47 +1538,66 @@ private struct ChangelogContent: View {
     }
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             ForEach(versions) { v in
-                ChangelogCard(version: v, startExpanded: v.id == 0)
+                ChangelogCard(version: v, isLatest: v.id == 0)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .tint(.accentColor)
     }
 }
 
-/// A single expandable version card: tappable header with a chevron, animated
-/// body reveal. Body block layout (sub-headings / bullets / paragraphs) is done
-/// by hand; `AttributedString(markdown:)` styles inline **bold** / `code` / links.
+/// A single expandable version card: tappable header with version + date and a
+/// chevron, animated body reveal. CHANGELOG.md hard-wraps its bullets across
+/// several source lines, so the parser *reflows* continuation lines back into
+/// their bullet/paragraph before rendering; `AttributedString(markdown:)` styles
+/// inline **bold** / `code` / links.
 private struct ChangelogCard: View {
     @Environment(\.cardCornerRadius) private var cardCornerRadius
     @Environment(\.cardTint) private var cardTint
+    @Environment(\.colorScheme) private var colorScheme
     let version: ChangelogVersion
+    let isLatest: Bool
     @State private var expanded: Bool
 
-    init(version: ChangelogVersion, startExpanded: Bool) {
+    init(version: ChangelogVersion, isLatest: Bool) {
         self.version = version
-        _expanded = State(initialValue: startExpanded)
+        self.isLatest = isLatest
+        _expanded = State(initialValue: isLatest)
     }
 
     private enum Block {
-        case heading(String)
+        case section(String)              // "Added" / "Fixed" / …
         case bullet(AttributedString)
-        case text(AttributedString)
-        case spacer
+        case paragraph(AttributedString)
     }
 
+    /// Reflow the hard-wrapped markdown body into logical blocks. A line that is
+    /// neither blank, a `###` section, nor a new `- ` bullet is a wrapped
+    /// continuation and gets appended to whatever block is open.
     private var blocks: [Block] {
-        version.bodyLines.map { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { return .spacer }
-            if trimmed.hasPrefix("### ") { return .heading(String(trimmed.dropFirst(4))) }
-            if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
-                return .bullet(inline(String(trimmed.dropFirst(2))))
-            }
-            return .text(inline(trimmed))
+        var out: [Block] = []
+        var buf: String? = nil
+        var bufIsBullet = false
+        func flush() {
+            guard let t = buf else { return }
+            out.append(bufIsBullet ? .bullet(inline(t)) : .paragraph(inline(t)))
+            buf = nil
         }
+        for line in version.bodyLines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { flush(); continue }
+            if trimmed.hasPrefix("### ") {
+                flush(); out.append(.section(String(trimmed.dropFirst(4)))); continue
+            }
+            if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
+                flush(); buf = String(trimmed.dropFirst(2)); bufIsBullet = true; continue
+            }
+            if buf != nil { buf! += " " + trimmed }
+            else { buf = trimmed; bufIsBullet = false }
+        }
+        flush()
+        return out
     }
 
     /// Inline-only markdown → AttributedString. `.inlineOnlyPreservingWhitespace`
@@ -1426,51 +1609,30 @@ private struct ChangelogCard: View {
         )) ?? AttributedString(s)
     }
 
+    /// "1.2.0 — Unreleased" → ("1.2.0", "Unreleased").
+    private var versionParts: (number: String, date: String?) {
+        let parts = version.title.components(separatedBy: " — ")
+        return (parts.first ?? version.title, parts.count > 1 ? parts[1] : nil)
+    }
+
+    /// Section accent — a subtle semantic colour per Keep-a-Changelog group.
+    private func sectionColor(_ name: String) -> Color {
+        switch name.lowercased() {
+        case "added":            return .green
+        case "changed":          return .blue
+        case "fixed":            return .orange
+        case let s where s.hasPrefix("security"): return .purple
+        case "removed", "deprecated": return .red
+        default:                 return .secondary
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button {
-                withAnimation(.snappy(duration: 0.28)) { expanded.toggle() }
-            } label: {
-                HStack {
-                    Text(version.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(expanded ? 0 : -90))
-                }
-                .padding(12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
+            header
             if expanded {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                        switch block {
-                        case .heading(let s):
-                            Text(s)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 4)
-                        case .bullet(let a):
-                            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                Text("•").foregroundStyle(.tertiary)
-                                Text(a).font(.callout)
-                            }
-                        case .text(let a):
-                            Text(a).font(.callout).foregroundStyle(.secondary)
-                        case .spacer:
-                            Color.clear.frame(height: 2)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 12)
-                .transition(.opacity)
+                Divider().opacity(0.5).padding(.horizontal, 14)
+                body(content)
             }
         }
         .background {
@@ -1479,9 +1641,84 @@ private struct ChangelogCard: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                .strokeBorder(Color.primary.opacity(UX.Glass.outlineOpacity), lineWidth: UX.Glass.outlineWidth)
+                .strokeBorder(
+                    isLatest ? Color.accentColor.opacity(0.45) : Color.primary.opacity(UX.Glass.outlineOpacity),
+                    lineWidth: isLatest ? 1 : UX.Glass.outlineWidth
+                )
         }
         .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+    }
+
+    private var header: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.28)) { expanded.toggle() }
+        } label: {
+            HStack(spacing: 8) {
+                Text(versionParts.number)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                if let date = versionParts.date {
+                    Text(date)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                if isLatest {
+                    Text("LATEST")
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.5)
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(expanded ? 0 : -90))
+            }
+            .padding(14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder private var content: some View {
+        ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+            switch block {
+            case .section(let s):
+                HStack(spacing: 6) {
+                    Circle().fill(sectionColor(s)).frame(width: 6, height: 6)
+                    Text(s.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(sectionColor(s))
+                }
+                .padding(.top, 10)
+            case .bullet(let a):
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Circle().fill(.tertiary).frame(width: 4, height: 4)
+                        .padding(.top, 6)
+                    Text(a)
+                        .font(.callout)
+                        .foregroundStyle(.primary.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .paragraph(let a):
+                Text(a)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func body(_ inner: some View) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            inner
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .transition(.opacity)
     }
 }
 
