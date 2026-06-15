@@ -9,7 +9,6 @@ import Foundation
 //
 // Sources (see Tools/wordlists/README.md for download commands + licenses):
 //   - <xx>_50k.txt        hermitdave/FrequencyWords (OpenSubtitles 2018, CC-BY-SA 4.0)
-//   - count_2w.txt        Norvig's English bigram counts (Google trillion-word corpus)
 //   - <xx>_sentences.tsv  Tatoeba per-language sentence exports (CC-BY 2.0 FR)
 //
 // ── CLEX1 layout (little-endian) ────────────────────────────────────────────
@@ -46,7 +45,6 @@ let wordlists = toolsDir.appendingPathComponent("wordlists")
 let outDir = repoRoot.appendingPathComponent("Resources/Lexicons")
 
 enum BigramSource {
-    case norvig(String)      // count_2w.txt-style "w1 w2\tcount"
     case tatoeba(String)     // Tatoeba "id\tlang\tsentence" TSV
 }
 
@@ -60,7 +58,7 @@ struct LangConfig {
 
 let configs: [LangConfig] = [
     .init(code: "en", unigrams: "en_50k.txt", wordCap: 50_000,
-          bigrams: .norvig("count_2w.txt"), pairCap: 100_000),
+          bigrams: .tatoeba("en_sentences.tsv"), pairCap: 100_000),
     .init(code: "fr", unigrams: "fr_50k.txt", wordCap: 30_000,
           bigrams: .tatoeba("fr_sentences.tsv"), pairCap: 40_000),
     .init(code: "es", unigrams: "es_50k.txt", wordCap: 30_000,
@@ -202,18 +200,6 @@ for cfg in configs {
             pairCounts[UInt64(pa) << 32 | UInt64(pb), default: 0] += c
         }
         switch source {
-        case .norvig(let file):
-            let url = wordlists.appendingPathComponent(file)
-            guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-                fail("cannot read \(url.path)")
-            }
-            for line in text.split(separator: "\n") {
-                guard let tab = line.firstIndex(of: "\t"),
-                      let c = Double(line[line.index(after: tab)...]) else { continue }
-                let ws = line[..<tab].split(separator: " ")
-                guard ws.count == 2 else { continue }
-                record(normalise(String(ws[0])), normalise(String(ws[1])), c)
-            }
         case .tatoeba(let file):
             let url = wordlists.appendingPathComponent(file)
             guard let text = try? String(contentsOf: url, encoding: .utf8) else {

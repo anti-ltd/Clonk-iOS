@@ -18,21 +18,16 @@ done
 License: CC-BY-SA 4.0 — attribution shipped in the app's about screen.
 https://github.com/hermitdave/FrequencyWords
 
-## English word bigrams — Norvig / Google trillion-word corpus
-
-`w1 w2\tcount` per line, free to use (https://norvig.com/ngrams/):
-
-```sh
-curl -sfLO "https://norvig.com/ngrams/count_2w.txt"
-```
-
-## Non-English word bigrams — Tatoeba sentence exports (CC-BY 2.0 FR)
+## Word bigrams — Tatoeba sentence exports (CC-BY 2.0 FR)
 
 Per-language sentence TSVs (`id\tlang\tsentence`); bigram counts are derived
-by the generator. Leipzig Corpora was rejected (non-commercial license).
+by the generator. Used for every language, English included. (Norvig's
+`count_2w.txt` was dropped: its Google trillion-word origin carries no clear
+commercial-redistribution grant.) Leipzig Corpora was rejected (non-commercial
+license).
 
 ```sh
-for pair in "fr fra" "es spa" "de deu" "it ita" "pt por" "ru rus"; do
+for pair in "en eng" "fr fra" "es spa" "de deu" "it ita" "pt por" "ru rus"; do
   short=${pair%% *}; iso=${pair##* }
   curl -sfL --retry 3 -o ${short}_sentences.tsv.bz2 \
     "https://downloads.tatoeba.org/exports/per_language/${iso}/${iso}_sentences.tsv.bz2"

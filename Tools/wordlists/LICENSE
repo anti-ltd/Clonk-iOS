@@ -1,0 +1,23 @@
+Word list data license
+=======================
+
+The raw word lists downloaded into this directory (see README.md) are
+third-party data, NOT application code. They are licensed separately from the
+rest of the repository (which is under the Counter-Limitation License, see
+/LICENSE.md). The CLL does NOT apply to these files, nor to the compiled
+lexicons in Resources/Lexicons/ derived from them.
+
+  <xx>_50k.txt        hermitdave/FrequencyWords (OpenSubtitles 2018)
+                      CC-BY-SA 4.0
+                      https://github.com/hermitdave/FrequencyWords
+                      https://creativecommons.org/licenses/by-sa/4.0/
+
+  <xx>_sentences.tsv  Tatoeba sentence exports
+                      CC-BY 2.0 FR
+                      https://tatoeba.org/en/downloads
+                      https://creativecommons.org/licenses/by/2.0/fr/deed.en
+
+The unigram source is CC-BY-SA 4.0; any adaptation (including the compiled
+*.clex / *.cngm in Resources/Lexicons/) must be distributed under CC-BY-SA 4.0.
+Changes are documented in Tools/GenerateLexicons.swift. Attribution for all
+sources is shown in the app's About screen.

@@ -1087,6 +1087,15 @@ private struct ClinkContent: View {
         model.isKeyboardEnabled && model.hasFullAccess
     }
 
+    /// Brief enabled-language readout for the Localization row, e.g. "EN_US" or
+    /// "EN_US / ES_MX". Caps at two codes, with "+N" when there are more.
+    private var localizationSummary: String {
+        let langs = model.settings.keyboardLanguages.map { $0.uppercased() }
+        guard !langs.isEmpty else { return "" }
+        let shown = langs.prefix(2).joined(separator: " / ")
+        return langs.count > 2 ? "\(shown) +\(langs.count - 2)" : shown
+    }
+
     private var appVersion: String {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
@@ -1333,13 +1342,23 @@ private struct ClinkContent: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
-                // Permissions row: once the keyboard is enabled and Full Access
-                // is granted, swap the chevron for an accent checkmark so the
-                // whole setup reads as "done" at a glance.
-                if card.dest == .permissions && allPermissionsGranted {
-                    Image(systemName: "checkmark.circle.fill")
+                // Permissions row: show setup status at a glance instead of a
+                // chevron — an accent tick when the keyboard's enabled with Full
+                // Access, an accent cross when something's still missing.
+                if card.dest == .permissions {
+                    Image(systemName: allPermissionsGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .font(.body)
                         .foregroundStyle(themeAccent)
+                } else if card.dest == .localization {
+                    // Show the active languages next to the chevron, e.g. EN_US.
+                    HStack(spacing: 6) {
+                        Text(localizationSummary)
+                            .font(.caption).foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
                 } else {
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
@@ -1421,15 +1440,11 @@ private struct DictionarySource: Identifiable {
 
 private let dictionarySources: [DictionarySource] = [
     .init(name: "hermitdave / FrequencyWords",
-          role: "Word frequency lists (OpenSubtitles 2018) behind completions and ranking.",
+          role: "Word frequency lists (OpenSubtitles 2018) behind completions and ranking. Adapted into Clink's lexicon format.",
           license: "CC-BY-SA 4.0",
           url: "https://github.com/hermitdave/FrequencyWords"),
-    .init(name: "Norvig / Google trillion-word corpus",
-          role: "English word-pair counts behind next-word prediction.",
-          license: "Free to use",
-          url: "https://norvig.com/ngrams/"),
     .init(name: "Tatoeba sentence exports",
-          role: "Non-English word-pair counts behind next-word prediction.",
+          role: "Word-pair counts behind next-word prediction, all languages. Adapted into Clink's bigram format.",
           license: "CC-BY 2.0 FR",
           url: "https://tatoeba.org/en/downloads"),
 ]
@@ -1457,6 +1472,11 @@ private struct DictionariesContent: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 2)
+            Text("The CC-BY-SA lexicons are also published DRM-free at [github.com/anti-ltd/Clink-iOS](https://github.com/anti-ltd/Clink-iOS/tree/main/Resources/Lexicons), so the App Store's DRM never restricts your rights to that data.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .tint(cardTint)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -1,0 +1,48 @@
+Lexicon data license
+=====================
+
+This directory contains compiled prediction data, NOT application code. The
+files here are licensed separately from the rest of the repository (which is
+under the Counter-Limitation License, see /LICENSE.md). The CLL does NOT apply
+to these files.
+
+Files
+-----
+  *.clex   word-frequency lexicons   — adapted from the unigram sources below
+  *.cngm   word-bigram models        — adapted from the bigram sources below
+
+These are *adaptations* (in the Creative Commons sense) of third-party data:
+the words and counts have been filtered, re-ranked, quantized, and re-encoded
+into the binary CLEX1 / CNGM1 formats by Tools/GenerateLexicons.swift.
+
+Sources and licenses
+--------------------
+1. Unigrams (all languages) — hermitdave/FrequencyWords, derived from
+   OpenSubtitles 2018.
+   Licensed CC-BY-SA 4.0.  https://github.com/hermitdave/FrequencyWords
+   License: https://creativecommons.org/licenses/by-sa/4.0/
+
+2. Bigrams (all languages) — Tatoeba sentence exports.
+   Licensed CC-BY 2.0 FR.  https://tatoeba.org/en/downloads
+   License: https://creativecommons.org/licenses/by/2.0/fr/deed.en
+
+Because the unigram source is CC-BY-SA 4.0, its ShareAlike term applies: the
+adapted lexicon files in this directory (*.clex, and any *.cngm that mixes in
+unigram-derived data) are likewise licensed under
+
+    Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA 4.0)
+
+and may be redistributed under those terms. Changes were made (see above).
+Attribution for all sources is also shown in the app's About screen.
+
+DRM-free availability
+---------------------
+The App Store build of Clink is wrapped in Apple's FairPlay DRM. To ensure that
+DRM does not restrict any recipient's CC-BY-SA 4.0 rights to this data, the
+identical, unencumbered lexicon files are published DRM-free in the open-source
+repository:
+
+    https://github.com/anti-ltd/Clink-iOS/tree/main/Resources/Lexicons
+
+Anyone may obtain, use, modify, and redistribute the lexicons from there under
+CC-BY-SA 4.0, independent of the App Store distribution.
